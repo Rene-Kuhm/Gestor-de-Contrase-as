@@ -101,7 +101,7 @@ void main() {
       final conflicts = await localStore.readPendingConflicts(userId: 'user-1');
       expect(queue, hasLength(1));
       expect(queue.first.status, PushQueueStatus.conflict);
-      expect(queue.first.lastResultCode, 'casConflict');
+      expect(queue.first.lastResultCode, 'cas_conflict');
       expect(conflicts, hasLength(1));
       expect(conflicts.first.currentVersion, 7);
       expect(conflicts.first.kind, SyncConflictOperationKind.delete);

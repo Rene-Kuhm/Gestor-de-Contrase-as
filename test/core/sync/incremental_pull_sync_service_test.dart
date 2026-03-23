@@ -87,7 +87,7 @@ void main() {
 
       await service.onSessionStarted();
 
-      expect(repository.afterOpIds, [5, 7]);
+      expect(repository.afterOpIds, [5]);
       expect(
         await localStore.readCursor(userId: 'user-1', deviceId: 'device-1'),
         7,
@@ -162,6 +162,44 @@ void main() {
         12,
       );
     });
+
+    test('retries transient fetch error and completes pull', () async {
+      final storage = _InMemorySecureStorageService();
+      final localStore = LocalRemoteVaultStore(storage: storage);
+      final repository = _FakeRemoteVaultSyncRepository(
+        batches: {
+          0: [
+            RemoteVaultBlobChange(
+              opCursor: 1,
+              recordId: 'record-retry',
+              version: 1,
+              keyVersion: 1,
+              ciphertext: 'cipher',
+              nonce: 'nonce',
+              aad: 'aad',
+              updatedAt: DateTime.utc(2026, 3, 23, 12, 0),
+            ),
+          ],
+          1: const [],
+        },
+        failAfterOpIdCount: {0: 1},
+      );
+
+      final service = IncrementalPullSyncService(
+        repository: repository,
+        localStore: localStore,
+        readDeviceId: () async => 'device-1',
+        throttleInterval: const Duration(seconds: 1),
+        delay: (_) async {},
+        now: () => DateTime.utc(2026, 3, 23, 12, 30),
+      );
+
+      await service.onSessionStarted();
+
+      final snapshots = await localStore.readSnapshots(userId: 'user-1');
+      expect(snapshots['record-retry']?.version, 1);
+      expect(repository.afterOpIds, [0, 0]);
+    });
   });
 }
 
@@ -183,10 +221,14 @@ class _InMemorySecureStorageService implements SecureStorageService {
 }
 
 class _FakeRemoteVaultSyncRepository implements RemoteVaultSyncRepository {
-  _FakeRemoteVaultSyncRepository({required Map<int, List<RemoteVaultBlobChange>> batches})
-    : _batches = batches;
+  _FakeRemoteVaultSyncRepository({
+    required Map<int, List<RemoteVaultBlobChange>> batches,
+    Map<int, int>? failAfterOpIdCount,
+  }) : _batches = batches,
+       _failAfterOpIdCount = failAfterOpIdCount ?? {};
 
   final Map<int, List<RemoteVaultBlobChange>> _batches;
+  final Map<int, int> _failAfterOpIdCount;
   final List<int> afterOpIds = [];
 
   @override
@@ -195,6 +237,12 @@ class _FakeRemoteVaultSyncRepository implements RemoteVaultSyncRepository {
     int limit = 200,
   }) async {
     afterOpIds.add(afterOpId);
+    final failuresLeft = _failAfterOpIdCount[afterOpId] ?? 0;
+    if (failuresLeft > 0) {
+      _failAfterOpIdCount[afterOpId] = failuresLeft - 1;
+      throw Exception('offline');
+    }
+
     return _batches[afterOpId] ?? const [];
   }
 

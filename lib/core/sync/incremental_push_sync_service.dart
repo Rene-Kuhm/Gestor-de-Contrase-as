@@ -5,6 +5,7 @@ import 'local_vault_mutation.dart';
 import 'remote_vault_blob_change.dart';
 import 'remote_vault_sync_repository.dart';
 import 'sync_conflict.dart';
+import 'sync_runtime_hardening.dart';
 
 class IncrementalPushSyncService implements LocalVaultMutationSink {
   IncrementalPushSyncService({
@@ -15,6 +16,7 @@ class IncrementalPushSyncService implements LocalVaultMutationSink {
     this.maxItemsPerRun = 20,
     this.baseBackoff = const Duration(seconds: 2),
     this.maxBackoff = const Duration(minutes: 2),
+    this.diagnosticsHook,
     DateTime Function()? now,
   }) : _repository = repository,
        _localStore = localStore,
@@ -29,6 +31,7 @@ class IncrementalPushSyncService implements LocalVaultMutationSink {
   final int maxItemsPerRun;
   final Duration baseBackoff;
   final Duration maxBackoff;
+  final SyncDiagnosticsHook? diagnosticsHook;
   final DateTime Function() _now;
 
   bool _running = false;
@@ -213,15 +216,52 @@ class IncrementalPushSyncService implements LocalVaultMutationSink {
     try {
       final response = await _sendToRemote(deviceId: deviceId, item: item);
       return _interpretResponse(userId: userId, item: item, response: response);
-    } catch (_) {
+    } catch (error) {
+      final disposition = classifySyncError(error);
+      final code = syncErrorCode(error);
+      final message = syncMessageForCode(code, fallback: 'Push failed before receiving RPC result.');
+      if (disposition == SyncErrorDisposition.definitive) {
+        emitSyncDiagnostic(
+          scope: 'push',
+          operation: 'dispatch',
+          code: code,
+          message: message,
+          retriable: false,
+          timestamp: _now(),
+          hook: diagnosticsHook,
+          error: error,
+        );
+        return _DispatchResult(
+          item: item.copyWith(
+            status: PushQueueStatus.failed,
+            lastResultCode: code,
+            lastMessage: message,
+            nextAttemptAt: null,
+            updatedAt: _now().toUtc(),
+          ),
+          removeFromQueue: false,
+        );
+      }
+
       final retryCount = item.retryCount + 1;
+      emitSyncDiagnostic(
+        scope: 'push',
+        operation: 'dispatch',
+        code: code,
+        message: message,
+        retriable: true,
+        timestamp: _now(),
+        hook: diagnosticsHook,
+        attempt: retryCount,
+        error: error,
+      );
       return _DispatchResult(
         item: item.copyWith(
           status: PushQueueStatus.retry,
           retryCount: retryCount,
           nextAttemptAt: _now().toUtc().add(_backoffFor(retryCount)),
-          lastResultCode: 'transport_error',
-          lastMessage: 'Push failed before receiving RPC result.',
+          lastResultCode: code,
+          lastMessage: message,
           updatedAt: _now().toUtc(),
         ),
         removeFromQueue: false,
@@ -276,11 +316,22 @@ class IncrementalPushSyncService implements LocalVaultMutationSink {
 
     if (response.code == RemoteVaultPushResultCode.casConflict) {
       await _registerConflict(userId: userId, item: item, response: response);
+      final code = SyncStatusCodes.casConflict;
+      final message = syncMessageForCode(code, fallback: response.message);
+      emitSyncDiagnostic(
+        scope: 'push',
+        operation: 'dispatch',
+        code: code,
+        message: message,
+        retriable: false,
+        timestamp: _now(),
+        hook: diagnosticsHook,
+      );
       return _DispatchResult(
         item: item.copyWith(
           status: PushQueueStatus.conflict,
-          lastResultCode: response.code.name,
-          lastMessage: response.message,
+          lastResultCode: code,
+          lastMessage: message,
           nextAttemptAt: null,
           updatedAt: updatedAt,
         ),
@@ -289,11 +340,49 @@ class IncrementalPushSyncService implements LocalVaultMutationSink {
     }
 
     if (response.code == RemoteVaultPushResultCode.idempotencyMismatch) {
+      final code = SyncStatusCodes.idempotencyMismatch;
+      final message = syncMessageForCode(code, fallback: response.message);
+      emitSyncDiagnostic(
+        scope: 'push',
+        operation: 'dispatch',
+        code: code,
+        message: message,
+        retriable: false,
+        timestamp: _now(),
+        hook: diagnosticsHook,
+      );
       return _DispatchResult(
         item: item.copyWith(
           status: PushQueueStatus.failed,
-          lastResultCode: response.code.name,
-          lastMessage: response.message,
+          lastResultCode: code,
+          lastMessage: message,
+          nextAttemptAt: null,
+          updatedAt: updatedAt,
+        ),
+        removeFromQueue: false,
+      );
+    }
+
+    final unknownCode = _codeForUnknownResponse(response);
+    final unknownMessage = syncMessageForCode(
+      unknownCode,
+      fallback: response.message,
+    );
+    if (unknownCode == SyncStatusCodes.revokedSessionOrDevice) {
+      emitSyncDiagnostic(
+        scope: 'push',
+        operation: 'dispatch',
+        code: unknownCode,
+        message: unknownMessage,
+        retriable: false,
+        timestamp: _now(),
+        hook: diagnosticsHook,
+      );
+      return _DispatchResult(
+        item: item.copyWith(
+          status: PushQueueStatus.failed,
+          lastResultCode: unknownCode,
+          lastMessage: unknownMessage,
           nextAttemptAt: null,
           updatedAt: updatedAt,
         ),
@@ -302,17 +391,38 @@ class IncrementalPushSyncService implements LocalVaultMutationSink {
     }
 
     final retryCount = item.retryCount + 1;
+    emitSyncDiagnostic(
+      scope: 'push',
+      operation: 'dispatch',
+      code: unknownCode,
+      message: unknownMessage,
+      retriable: true,
+      timestamp: _now(),
+      hook: diagnosticsHook,
+      attempt: retryCount,
+    );
     return _DispatchResult(
       item: item.copyWith(
         status: PushQueueStatus.retry,
         retryCount: retryCount,
         nextAttemptAt: _now().toUtc().add(_backoffFor(retryCount)),
-        lastResultCode: response.code.name,
-        lastMessage: response.message,
+        lastResultCode: unknownCode,
+        lastMessage: unknownMessage,
         updatedAt: updatedAt,
       ),
       removeFromQueue: false,
     );
+  }
+
+  String _codeForUnknownResponse(RemoteVaultPushResult response) {
+    final message = (response.message ?? '').toLowerCase();
+    if (message.contains('revoked')) {
+      return SyncStatusCodes.revokedSessionOrDevice;
+    }
+    if (message.contains('offline') || message.contains('network')) {
+      return SyncStatusCodes.offlineNetworkError;
+    }
+    return SyncStatusCodes.unknown;
   }
 
   Future<void> _registerConflict({
@@ -338,8 +448,11 @@ class IncrementalPushSyncService implements LocalVaultMutationSink {
             : SyncConflictOperationKind.delete,
         createdAt: now,
         updatedAt: now,
-        lastResultCode: response.code.name,
-        message: response.message,
+        lastResultCode: SyncStatusCodes.casConflict,
+        message: syncMessageForCode(
+          SyncStatusCodes.casConflict,
+          fallback: response.message,
+        ),
         expectedVersion: item.expectedVersion,
         currentVersion: response.currentVersion,
         localSnapshot: SyncConflictSnapshot(

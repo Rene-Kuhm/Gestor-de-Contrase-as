@@ -1,5 +1,9 @@
+import 'package:flutter/foundation.dart';
+
 import 'local_remote_vault_store.dart';
+import 'remote_vault_blob_change.dart';
 import 'remote_vault_sync_repository.dart';
+import 'sync_runtime_hardening.dart';
 
 class IncrementalPullSyncService {
   IncrementalPullSyncService({
@@ -7,18 +11,27 @@ class IncrementalPullSyncService {
     required LocalRemoteVaultStore localStore,
     required Future<String> Function() readDeviceId,
     this.batchSize = 200,
+    this.maxRetryAttempts = 2,
+    this.baseRetryDelay = const Duration(seconds: 1),
     this.throttleInterval = const Duration(minutes: 2),
+    this.diagnosticsHook,
+    Future<void> Function(Duration delay)? delay,
     DateTime Function()? now,
   }) : _repository = repository,
        _localStore = localStore,
        _readDeviceId = readDeviceId,
+       _delay = delay ?? Future<void>.delayed,
        _now = now ?? DateTime.now;
 
   final RemoteVaultSyncRepository _repository;
   final LocalRemoteVaultStore _localStore;
   final Future<String> Function() _readDeviceId;
   final int batchSize;
+  final int maxRetryAttempts;
+  final Duration baseRetryDelay;
   final Duration throttleInterval;
+  final SyncDiagnosticsHook? diagnosticsHook;
+  final Future<void> Function(Duration delay) _delay;
   final DateTime Function() _now;
 
   Future<void> onSessionStarted() async {
@@ -53,10 +66,11 @@ class IncrementalPullSyncService {
     var cursor = await _localStore.readCursor(userId: userId, deviceId: deviceId);
 
     while (true) {
-      final changes = await _repository.fetchChangesSince(
-        afterOpId: cursor,
-        limit: batchSize,
-      );
+      final changes = await _fetchWithRetry(afterOpId: cursor);
+      if (changes == null) {
+        return;
+      }
+
       if (changes.isEmpty) {
         break;
       }
@@ -79,5 +93,60 @@ class IncrementalPullSyncService {
       deviceId: deviceId,
       lastPullAt: _now().toUtc(),
     );
+  }
+
+  Future<List<RemoteVaultBlobChange>?> _fetchWithRetry({
+    required int afterOpId,
+  }) async {
+    if (maxRetryAttempts < 1) {
+      return null;
+    }
+
+    Object? lastError;
+    for (var attempt = 1; attempt <= maxRetryAttempts; attempt += 1) {
+      try {
+        return await _repository.fetchChangesSince(
+          afterOpId: afterOpId,
+          limit: batchSize,
+        );
+      } catch (error) {
+        lastError = error;
+        final disposition = classifySyncError(error);
+        final code = syncErrorCode(error);
+        final message = syncMessageForCode(
+          code,
+          fallback:
+              'No se pudo obtener cambios remotos para el cursor $afterOpId.',
+        );
+        final retriable = disposition == SyncErrorDisposition.transient;
+        emitSyncDiagnostic(
+          scope: 'pull',
+          operation: 'fetch_changes',
+          code: code,
+          message: message,
+          retriable: retriable,
+          timestamp: _now(),
+          hook: diagnosticsHook,
+          attempt: attempt,
+          maxAttempts: maxRetryAttempts,
+          error: error,
+          metadata: {'afterOpId': afterOpId},
+        );
+        debugPrint(
+          '[sync][pull] fetch after=$afterOpId attempt=$attempt/$maxRetryAttempts failed: $error',
+        );
+        if (attempt >= maxRetryAttempts || !retriable) {
+          break;
+        }
+
+        final delayMs = baseRetryDelay.inMilliseconds * (1 << (attempt - 1));
+        await _delay(Duration(milliseconds: delayMs));
+      }
+    }
+
+    debugPrint(
+      '[sync][pull] aborting pull after $maxRetryAttempts attempts (after=$afterOpId): ${lastError ?? 'unknown error'}',
+    );
+    return null;
   }
 }
