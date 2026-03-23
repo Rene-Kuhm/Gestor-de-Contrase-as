@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 
 import 'biometric_auth_service.dart';
@@ -6,10 +8,11 @@ import 'master_password_service.dart';
 import 'secure_storage_service.dart';
 import 'vault_session.dart';
 
-typedef VaultRekeyEntries = Future<void> Function({
-  required VaultSession sourceSession,
-  required VaultSession targetSession,
-});
+typedef VaultRekeyEntries =
+    Future<void> Function({
+      required VaultSession sourceSession,
+      required VaultSession targetSession,
+    });
 
 enum VaultSecurityStage { loading, onboarding, locked, unlocked }
 
@@ -29,6 +32,9 @@ class VaultSecurityController extends ChangeNotifier {
   static const biometricSeedKey = 'vault_biometric_seed';
   static const autoLockOnBackgroundEnabledKey =
       'vault_auto_lock_on_background_enabled';
+  static const idleTimeoutSecondsKey = 'vault_idle_timeout_seconds';
+  static const defaultIdleTimeoutSeconds = 300;
+  static const _interactionResetThrottle = Duration(milliseconds: 750);
 
   final SecureStorageService _storage;
   final MasterPasswordService _masterPasswordService;
@@ -46,6 +52,9 @@ class VaultSecurityController extends ChangeNotifier {
   String? _message;
   VaultSession? _vaultSession;
   bool _autoLockOnBackgroundEnabled = true;
+  int _idleTimeoutSeconds = defaultIdleTimeoutSeconds;
+  Timer? _idleTimer;
+  DateTime? _lastInteractionAt;
 
   VaultSecurityStage get stage => _stage;
 
@@ -60,6 +69,11 @@ class VaultSecurityController extends ChangeNotifier {
   VaultSession? get vaultSession => _vaultSession;
 
   bool get autoLockOnBackgroundEnabled => _autoLockOnBackgroundEnabled;
+
+  int get idleTimeoutSeconds => _idleTimeoutSeconds;
+
+  Duration? get idleTimeout =>
+      _idleTimeoutSeconds <= 0 ? null : Duration(seconds: _idleTimeoutSeconds);
 
   bool get isUnlocked => _stage == VaultSecurityStage.unlocked;
 
@@ -85,6 +99,13 @@ class VaultSecurityController extends ChangeNotifier {
             fallback: true,
           ) ??
           true;
+      _idleTimeoutSeconds =
+          await _readInt(
+            key: idleTimeoutSecondsKey,
+            fallback: defaultIdleTimeoutSeconds,
+            min: 0,
+          ) ??
+          defaultIdleTimeoutSeconds;
 
       final record = await _readRecord();
       _stage = record == null
@@ -139,6 +160,7 @@ class VaultSecurityController extends ChangeNotifier {
       _message =
           'Master password creada. Tu sesion local queda protegida por el sistema.';
       _stage = VaultSecurityStage.unlocked;
+      _restartIdleTimer();
       return true;
     });
   }
@@ -176,6 +198,7 @@ class VaultSecurityController extends ChangeNotifier {
 
       _message = 'Vaulta desbloqueada.';
       _stage = VaultSecurityStage.unlocked;
+      _restartIdleTimer();
       return true;
     });
   }
@@ -209,6 +232,7 @@ class VaultSecurityController extends ChangeNotifier {
 
       _message = 'Sesion restaurada con biometria del sistema.';
       _stage = VaultSecurityStage.unlocked;
+      _restartIdleTimer();
       return true;
     });
   }
@@ -230,6 +254,8 @@ class VaultSecurityController extends ChangeNotifier {
   }
 
   Future<void> lock({String? reason}) async {
+    _cancelIdleTimer();
+    _lastInteractionAt = null;
     _vaultSession = null;
     _stage = VaultSecurityStage.locked;
     _message = reason ?? 'Vaulta bloqueada.';
@@ -245,6 +271,42 @@ class VaultSecurityController extends ChangeNotifier {
           : 'Auto-lock al ir a background desactivado.';
       return true;
     });
+  }
+
+  Future<void> setIdleTimeoutSeconds(int seconds) async {
+    if (seconds < 0) {
+      return;
+    }
+
+    await _runBusy(() async {
+      _idleTimeoutSeconds = seconds;
+      await _storage.save(idleTimeoutSecondsKey, seconds.toString());
+      if (_idleTimeoutSeconds == 0) {
+        _cancelIdleTimer();
+        _message = 'Auto-lock por inactividad desactivado.';
+      } else {
+        _restartIdleTimer();
+        _message =
+            'Auto-lock por inactividad activado (${_formatIdleTimeoutLabel(_idleTimeoutSeconds)}).';
+      }
+      return true;
+    });
+  }
+
+  void registerUserInteraction() {
+    if (!isUnlocked || _idleTimeoutSeconds == 0) {
+      return;
+    }
+
+    final now = DateTime.now();
+    final lastInteractionAt = _lastInteractionAt;
+    if (lastInteractionAt != null &&
+        now.difference(lastInteractionAt) < _interactionResetThrottle) {
+      return;
+    }
+
+    _lastInteractionAt = now;
+    _restartIdleTimer();
   }
 
   Future<bool> changeMasterPassword({
@@ -375,6 +437,7 @@ class VaultSecurityController extends ChangeNotifier {
       case AppLifecycleState.hidden:
       case AppLifecycleState.paused:
       case AppLifecycleState.detached:
+        _cancelIdleTimer();
         if (_autoLockOnBackgroundEnabled) {
           await lock(
             reason:
@@ -383,8 +446,15 @@ class VaultSecurityController extends ChangeNotifier {
         }
         return;
       case AppLifecycleState.resumed:
+        _restartIdleTimer();
         return;
     }
+  }
+
+  @override
+  void dispose() {
+    _cancelIdleTimer();
+    super.dispose();
   }
 
   Future<void> _persistBiometricPreference(bool enabled) async {
@@ -449,6 +519,63 @@ class VaultSecurityController extends ChangeNotifier {
     }
 
     return fallback;
+  }
+
+  Future<int?> _readInt({
+    required String key,
+    required int fallback,
+    int? min,
+  }) async {
+    final rawValue = await _storage.read(key);
+    if (rawValue == null) {
+      return fallback;
+    }
+
+    final parsed = int.tryParse(rawValue);
+    if (parsed == null) {
+      return fallback;
+    }
+
+    if (min != null && parsed < min) {
+      return fallback;
+    }
+
+    return parsed;
+  }
+
+  void _restartIdleTimer() {
+    _cancelIdleTimer();
+
+    final timeout = idleTimeout;
+    if (timeout == null || !isUnlocked) {
+      return;
+    }
+
+    _lastInteractionAt = DateTime.now();
+
+    _idleTimer = Timer(timeout, () {
+      if (!isUnlocked) {
+        return;
+      }
+
+      unawaited(
+        lock(reason: 'Vaulta bloqueada automaticamente por inactividad.'),
+      );
+    });
+  }
+
+  void _cancelIdleTimer() {
+    _idleTimer?.cancel();
+    _idleTimer = null;
+  }
+
+  String _formatIdleTimeoutLabel(int seconds) {
+    if (seconds < 60) {
+      return '${seconds}s';
+    }
+
+    final minutes = seconds ~/ 60;
+    return '$minutes min';
   }
 
   static Future<void> _unsupportedRekey({

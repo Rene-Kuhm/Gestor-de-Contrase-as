@@ -53,7 +53,29 @@ class _SecurityGateState extends State<SecurityGate>
           VaultSecurityStage.locked => _UnlockScreen(
             controller: widget.controller,
           ),
-          VaultSecurityStage.unlocked => widget.child,
+          VaultSecurityStage.unlocked => Focus(
+            canRequestFocus: false,
+            onKeyEvent: (_, _) {
+              widget.controller.registerUserInteraction();
+              return KeyEventResult.ignored;
+            },
+            child: Listener(
+              behavior: HitTestBehavior.translucent,
+              onPointerDown: (_) {
+                widget.controller.registerUserInteraction();
+              },
+              onPointerMove: (_) {
+                widget.controller.registerUserInteraction();
+              },
+              onPointerSignal: (_) {
+                widget.controller.registerUserInteraction();
+              },
+              onPointerPanZoomStart: (_) {
+                widget.controller.registerUserInteraction();
+              },
+              child: widget.child,
+            ),
+          ),
         };
       },
     );

@@ -46,6 +46,45 @@ void main() {
     expect(find.text('Unlock vault'), findsOneWidget);
     expect(find.text('Unlocked vault'), findsNothing);
   });
+
+  testWidgets('locks gate after foreground idle timeout', (tester) async {
+    final controller = VaultSecurityController(
+      storage: _InMemorySecureStorageService(),
+      masterPasswordService: MasterPasswordService(),
+      biometricAuthService: const _FakeBiometricAuthService(),
+    );
+    addTearDown(() async {
+      controller.dispose();
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+    });
+
+    await controller.initialize();
+    await controller.createMasterPassword(
+      password: 'StrongPass!2026',
+      confirmation: 'StrongPass!2026',
+      enableBiometrics: false,
+    );
+    await controller.setIdleTimeoutSeconds(1);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SecurityGate(
+          controller: controller,
+          child: const Scaffold(body: Center(child: Text('Unlocked vault'))),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('Unlocked vault'), findsOneWidget);
+
+    await tester.pump(const Duration(milliseconds: 1200));
+    await tester.pump();
+
+    expect(find.text('Unlock vault'), findsOneWidget);
+    expect(find.text('Unlocked vault'), findsNothing);
+  });
 }
 
 class _InMemorySecureStorageService implements SecureStorageService {

@@ -116,6 +116,55 @@ void main() {
       },
     );
 
+    test('locks after idle timeout and resets countdown on activity', () async {
+      final controller = VaultSecurityController(
+        storage: _InMemorySecureStorageService(),
+        masterPasswordService: MasterPasswordService(),
+        biometricAuthService: const _FakeBiometricAuthService(),
+      );
+      addTearDown(controller.dispose);
+
+      await controller.initialize();
+      await controller.createMasterPassword(
+        password: 'StrongPass!2026',
+        confirmation: 'StrongPass!2026',
+        enableBiometrics: false,
+      );
+      await controller.setIdleTimeoutSeconds(1);
+
+      await Future<void>.delayed(const Duration(milliseconds: 600));
+      controller.registerUserInteraction();
+      await Future<void>.delayed(const Duration(milliseconds: 600));
+
+      expect(controller.stage, VaultSecurityStage.unlocked);
+
+      await Future<void>.delayed(const Duration(milliseconds: 600));
+
+      expect(controller.stage, VaultSecurityStage.locked);
+      expect(controller.message, contains('inactividad'));
+    });
+
+    test('does not lock on idle when idle auto-lock is disabled', () async {
+      final controller = VaultSecurityController(
+        storage: _InMemorySecureStorageService(),
+        masterPasswordService: MasterPasswordService(),
+        biometricAuthService: const _FakeBiometricAuthService(),
+      );
+      addTearDown(controller.dispose);
+
+      await controller.initialize();
+      await controller.createMasterPassword(
+        password: 'StrongPass!2026',
+        confirmation: 'StrongPass!2026',
+        enableBiometrics: false,
+      );
+      await controller.setIdleTimeoutSeconds(0);
+
+      await Future<void>.delayed(const Duration(milliseconds: 1200));
+
+      expect(controller.stage, VaultSecurityStage.unlocked);
+    });
+
     test('changes master password and keeps session unlocked', () async {
       var rekeyCalls = 0;
       String? sourceKeyId;
@@ -156,7 +205,9 @@ void main() {
 
       await controller.lock();
       final oldUnlock = await controller.unlockWithPassword('StrongPass!2026');
-      final newUnlock = await controller.unlockWithPassword('AnotherStrong!2027');
+      final newUnlock = await controller.unlockWithPassword(
+        'AnotherStrong!2027',
+      );
 
       expect(oldUnlock, isFalse);
       expect(newUnlock, isTrue);
@@ -191,7 +242,6 @@ void main() {
       expect(rekeyCalls, 0);
       expect(controller.message, contains('actual no coincide'));
     });
-
   });
 }
 

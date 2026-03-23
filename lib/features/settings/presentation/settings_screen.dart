@@ -9,6 +9,21 @@ import '../../../core/security/vault_security_controller.dart';
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key, required this.securityController});
 
+  static const List<_IdleTimeoutPreset> _idleTimeoutPresets = [
+    _IdleTimeoutPreset(seconds: 0, label: 'Never', description: 'Disabled'),
+    _IdleTimeoutPreset(seconds: 60, label: '1 minute', description: 'Strict'),
+    _IdleTimeoutPreset(
+      seconds: 300,
+      label: '5 minutes',
+      description: 'Recommended',
+    ),
+    _IdleTimeoutPreset(
+      seconds: 900,
+      label: '15 minutes',
+      description: 'Relaxed',
+    ),
+  ];
+
   final VaultSecurityController securityController;
 
   Future<void> _openChangeMasterPasswordDialog(BuildContext context) async {
@@ -93,6 +108,36 @@ class SettingsScreen extends StatelessWidget {
                       subtitle: const Text(
                         'Bloquea Vaulta automaticamente si la app queda inactive, paused o detached.',
                       ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    DropdownButtonFormField<_IdleTimeoutPreset>(
+                      key: ValueKey<int>(securityController.idleTimeoutSeconds),
+                      initialValue: _resolveIdlePreset(
+                        securityController.idleTimeoutSeconds,
+                      ),
+                      decoration: const InputDecoration(
+                        labelText: 'Auto-lock por inactividad en foreground',
+                      ),
+                      items: _idleTimeoutPresets
+                          .map(
+                            (preset) => DropdownMenuItem<_IdleTimeoutPreset>(
+                              value: preset,
+                              child: Text(
+                                '${preset.label} - ${preset.description}',
+                              ),
+                            ),
+                          )
+                          .toList(growable: false),
+                      onChanged: securityController.busy
+                          ? null
+                          : (preset) {
+                              if (preset == null) {
+                                return;
+                              }
+                              securityController.setIdleTimeoutSeconds(
+                                preset.seconds,
+                              );
+                            },
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     FilledButton.icon(
@@ -182,6 +227,28 @@ class SettingsScreen extends StatelessWidget {
       ),
     );
   }
+
+  _IdleTimeoutPreset _resolveIdlePreset(int seconds) {
+    for (final preset in _idleTimeoutPresets) {
+      if (preset.seconds == seconds) {
+        return preset;
+      }
+    }
+
+    return _idleTimeoutPresets[2];
+  }
+}
+
+class _IdleTimeoutPreset {
+  const _IdleTimeoutPreset({
+    required this.seconds,
+    required this.label,
+    required this.description,
+  });
+
+  final int seconds;
+  final String label;
+  final String description;
 }
 
 class _CapabilityRow extends StatelessWidget {
@@ -222,7 +289,8 @@ class _ChangeMasterPasswordDialog extends StatefulWidget {
       _ChangeMasterPasswordDialogState();
 }
 
-class _ChangeMasterPasswordDialogState extends State<_ChangeMasterPasswordDialog> {
+class _ChangeMasterPasswordDialogState
+    extends State<_ChangeMasterPasswordDialog> {
   final _currentController = TextEditingController();
   final _newController = TextEditingController();
   final _confirmationController = TextEditingController();

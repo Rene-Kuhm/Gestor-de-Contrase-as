@@ -30,8 +30,14 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.enterText(find.byType(TextField).at(0), 'StrongPass!2026');
-      await tester.enterText(find.byType(TextField).at(1), 'AnotherStrong!2027');
-      await tester.enterText(find.byType(TextField).at(2), 'AnotherStrong!2027');
+      await tester.enterText(
+        find.byType(TextField).at(1),
+        'AnotherStrong!2027',
+      );
+      await tester.enterText(
+        find.byType(TextField).at(2),
+        'AnotherStrong!2027',
+      );
 
       await tester.tap(find.widgetWithText(FilledButton, 'Apply'));
       await tester.pumpAndSettle();
@@ -63,14 +69,43 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.enterText(find.byType(TextField).at(0), 'WrongPass!2026');
-      await tester.enterText(find.byType(TextField).at(1), 'AnotherStrong!2027');
-      await tester.enterText(find.byType(TextField).at(2), 'AnotherStrong!2027');
+      await tester.enterText(
+        find.byType(TextField).at(1),
+        'AnotherStrong!2027',
+      );
+      await tester.enterText(
+        find.byType(TextField).at(2),
+        'AnotherStrong!2027',
+      );
 
       await tester.tap(find.widgetWithText(FilledButton, 'Apply'));
       await tester.pumpAndSettle();
 
       expect(find.text('Change master password'), findsOneWidget);
-      expect(find.text('La master password actual no coincide.'), findsOneWidget);
+      expect(
+        find.text('La master password actual no coincide.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('updates idle timeout preset from settings', (tester) async {
+      final controller = await _buildUnlockedController();
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(
+        MaterialApp(home: SettingsScreen(securityController: controller)),
+      );
+      await tester.pumpAndSettle();
+
+      expect(controller.idleTimeoutSeconds, 300);
+
+      await tester.tap(find.byType(DropdownButtonFormField).first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Never - Disabled').last);
+      await tester.pumpAndSettle();
+
+      expect(controller.idleTimeoutSeconds, 0);
+      expect(controller.message, contains('inactividad desactivado'));
     });
   });
 }
