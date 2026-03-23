@@ -83,4 +83,67 @@ class SupabaseRemoteVaultSyncRepository implements RemoteVaultSyncRepository {
 
     return changes;
   }
+
+  @override
+  Future<RemoteVaultPushResult> pushUpsertBlob({
+    required String deviceId,
+    required String idempotencyKey,
+    required String recordId,
+    required int? expectedVersion,
+    required String ciphertext,
+    required String nonce,
+    required String? aad,
+    required int keyVersion,
+  }) async {
+    final response = await _client.rpc(
+      'rpc_vault_upsert_blob',
+      params: {
+        'p_device_id': deviceId,
+        'p_idempotency_key': idempotencyKey,
+        'p_record_id': recordId,
+        'p_expected_version': expectedVersion,
+        'p_ciphertext': ciphertext,
+        'p_nonce': nonce,
+        'p_aad': aad,
+        'p_key_version': keyVersion,
+      },
+    );
+
+    final row = _readSingleRpcRow(response);
+    return RemoteVaultPushResult.fromRpcRow(row);
+  }
+
+  @override
+  Future<RemoteVaultPushResult> pushDeleteBlob({
+    required String deviceId,
+    required String idempotencyKey,
+    required String recordId,
+    required int expectedVersion,
+  }) async {
+    final response = await _client.rpc(
+      'rpc_vault_delete_blob',
+      params: {
+        'p_device_id': deviceId,
+        'p_idempotency_key': idempotencyKey,
+        'p_record_id': recordId,
+        'p_expected_version': expectedVersion,
+      },
+    );
+
+    final row = _readSingleRpcRow(response);
+    return RemoteVaultPushResult.fromRpcRow(row);
+  }
+
+  Map<String, dynamic> _readSingleRpcRow(dynamic response) {
+    if (response is! List || response.isEmpty) {
+      throw const FormatException('RPC response is empty.');
+    }
+
+    final first = response.first;
+    if (first is! Map<String, dynamic>) {
+      throw const FormatException('RPC response row has invalid format.');
+    }
+
+    return first;
+  }
 }

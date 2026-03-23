@@ -4,6 +4,8 @@ import 'package:uuid/uuid.dart';
 
 import '../security/secure_storage_service.dart';
 import 'incremental_pull_sync_service.dart';
+import 'incremental_push_sync_service.dart';
+import 'local_vault_mutation.dart';
 import 'device_registration_repository.dart';
 
 abstract interface class AppVersionProvider {
@@ -141,14 +143,20 @@ class DeviceSyncLifecycle {
   DeviceSyncLifecycle({
     required DeviceRegistrationService service,
     IncrementalPullSyncService? pullSyncService,
+    IncrementalPushSyncService? pushSyncService,
+    RelayLocalVaultMutationSink? mutationSink,
     this.heartbeatInterval = const Duration(minutes: 5),
     DateTime Function()? now,
   }) : _service = service,
        _pullSyncService = pullSyncService,
+       _pushSyncService = pushSyncService,
+       _mutationSink = mutationSink,
        _now = now ?? DateTime.now;
 
   final DeviceRegistrationService _service;
   final IncrementalPullSyncService? _pullSyncService;
+  final IncrementalPushSyncService? _pushSyncService;
+  final RelayLocalVaultMutationSink? _mutationSink;
   final Duration heartbeatInterval;
   final DateTime Function() _now;
 
@@ -159,6 +167,12 @@ class DeviceSyncLifecycle {
     await _service.registerCurrentDevice();
     _registered = true;
     _lastHeartbeatAt = _now();
+    final pushSyncService = _pushSyncService;
+    final mutationSink = _mutationSink;
+    if (pushSyncService != null && mutationSink != null) {
+      mutationSink.attach(pushSyncService);
+    }
+    await pushSyncService?.onSessionStarted();
     await _pullSyncService?.onSessionStarted();
   }
 
@@ -177,6 +191,7 @@ class DeviceSyncLifecycle {
       _lastHeartbeatAt = _now();
     }
 
+    await _pushSyncService?.onAppResumed();
     await _pullSyncService?.onAppResumed();
   }
 }

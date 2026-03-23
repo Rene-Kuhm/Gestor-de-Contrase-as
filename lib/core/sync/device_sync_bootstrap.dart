@@ -3,12 +3,15 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../security/secure_storage_service.dart';
 import 'device_registration_service.dart';
 import 'incremental_pull_sync_service.dart';
+import 'incremental_push_sync_service.dart';
 import 'local_remote_vault_store.dart';
+import 'local_vault_mutation.dart';
 import 'supabase_device_registration_repository.dart';
 import 'supabase_remote_vault_sync_repository.dart';
 
 Future<DeviceSyncLifecycle?> buildDeviceSyncLifecycle({
   required SecureStorageService storage,
+  RelayLocalVaultMutationSink? mutationSink,
 }) async {
   const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
   const supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
@@ -26,6 +29,7 @@ Future<DeviceSyncLifecycle?> buildDeviceSyncLifecycle({
     client: Supabase.instance.client,
   );
   final identityService = LocalDeviceIdentityService(storage: storage);
+  final localStore = LocalRemoteVaultStore(storage: storage);
   final service = DeviceRegistrationService(
     repository: repository,
     identityService: identityService,
@@ -33,9 +37,20 @@ Future<DeviceSyncLifecycle?> buildDeviceSyncLifecycle({
   );
   final pullSyncService = IncrementalPullSyncService(
     repository: pullRepository,
-    localStore: LocalRemoteVaultStore(storage: storage),
+    localStore: localStore,
     readDeviceId: identityService.getOrCreateDeviceId,
   );
+  final pushSyncService = IncrementalPushSyncService(
+    repository: pullRepository,
+    localStore: localStore,
+    readDeviceId: identityService.getOrCreateDeviceId,
+  );
+  mutationSink?.attach(pushSyncService);
 
-  return DeviceSyncLifecycle(service: service, pullSyncService: pullSyncService);
+  return DeviceSyncLifecycle(
+    service: service,
+    pullSyncService: pullSyncService,
+    pushSyncService: pushSyncService,
+    mutationSink: mutationSink,
+  );
 }

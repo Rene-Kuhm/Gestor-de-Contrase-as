@@ -200,4 +200,28 @@ class _FakeRemoteVaultSyncRepository implements RemoteVaultSyncRepository {
 
   @override
   Future<String?> readCurrentUserId() async => 'user-1';
+
+  @override
+  Future<RemoteVaultPushResult> pushDeleteBlob({
+    required String deviceId,
+    required String idempotencyKey,
+    required String recordId,
+    required int expectedVersion,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<RemoteVaultPushResult> pushUpsertBlob({
+    required String deviceId,
+    required String idempotencyKey,
+    required String recordId,
+    required int? expectedVersion,
+    required String ciphertext,
+    required String nonce,
+    required String? aad,
+    required int keyVersion,
+  }) {
+    throw UnimplementedError();
+  }
 }

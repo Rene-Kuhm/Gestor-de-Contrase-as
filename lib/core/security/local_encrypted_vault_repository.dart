@@ -1,7 +1,9 @@
 import 'dart:convert';
+import 'dart:async';
 
 import '../../features/vault/domain/vault_item.dart';
 import '../../features/vault/domain/vault_summary.dart';
+import '../sync/local_vault_mutation.dart';
 import 'platform_security_plan.dart';
 import 'secure_storage_service.dart';
 import 'vault_crypto_service.dart';
@@ -15,9 +17,11 @@ class LocalEncryptedVaultRepository implements VaultRepository {
     required SecureStorageService storage,
     required VaultCryptoService cryptoService,
     required VaultSessionReader readSession,
+    LocalVaultMutationSink? mutationSink,
   }) : _storage = storage,
-       _cryptoService = cryptoService,
-       _readSession = readSession;
+        _cryptoService = cryptoService,
+        _readSession = readSession,
+        _mutationSink = mutationSink;
 
   static const encryptedVaultItemsKey = 'vault_encrypted_items_v1';
   static const encryptedVaultItemsStagingKey =
@@ -36,6 +40,7 @@ class LocalEncryptedVaultRepository implements VaultRepository {
   final SecureStorageService _storage;
   final VaultCryptoService _cryptoService;
   final VaultSessionReader _readSession;
+  final LocalVaultMutationSink? _mutationSink;
 
   @override
   Future<List<VaultItem>> fetchItems() async {
@@ -126,7 +131,24 @@ class LocalEncryptedVaultRepository implements VaultRepository {
       items[index] = persisted;
     }
 
-    await _saveEncryptedItems(items);
+    final encryptedById = await _saveEncryptedItems(items);
+    final syncPayload = _extractSyncPayload(encryptedById[persisted.id]);
+    if (syncPayload != null) {
+      unawaited(
+        _mutationSink
+            ?.onLocalMutation(
+              LocalVaultMutation.upsert(
+                localRecordId: persisted.id,
+                ciphertext: syncPayload.ciphertext,
+                nonce: syncPayload.nonce,
+                aad: syncPayload.aad,
+                keyVersion: syncPayload.keyVersion,
+                occurredAt: now.toUtc(),
+              ),
+            )
+            .catchError((_) {}),
+      );
+    }
     return persisted;
   }
 
@@ -135,6 +157,16 @@ class LocalEncryptedVaultRepository implements VaultRepository {
     final items = List<VaultItem>.of(await fetchItems());
     items.removeWhere((item) => item.id == id);
     await _saveEncryptedItems(items);
+    unawaited(
+      _mutationSink
+          ?.onLocalMutation(
+            LocalVaultMutation.delete(
+              localRecordId: id,
+              occurredAt: DateTime.now().toUtc(),
+            ),
+          )
+          .catchError((_) {}),
+    );
   }
 
   Future<void> rekeyEntries({
@@ -184,10 +216,11 @@ class LocalEncryptedVaultRepository implements VaultRepository {
     await _clearRekeyArtifacts(swallowErrors: true);
   }
 
-  Future<void> _saveEncryptedItems(List<VaultItem> items) async {
+  Future<Map<String, String>> _saveEncryptedItems(List<VaultItem> items) async {
     await _recoverFromInterruptedRekey();
     final session = _requireSession();
     final encryptedItems = <String>[];
+    final encryptedById = <String, String>{};
     for (final item in items) {
       final encrypted = await _cryptoService.encrypt(
         plaintext: jsonEncode(item.toJson()),
@@ -195,9 +228,37 @@ class LocalEncryptedVaultRepository implements VaultRepository {
         keyId: session.keyId,
       );
       encryptedItems.add(encrypted);
+      encryptedById[item.id] = encrypted;
     }
 
     await _storage.save(encryptedVaultItemsKey, jsonEncode(encryptedItems));
+    return encryptedById;
+  }
+
+  _SyncBlobPayload? _extractSyncPayload(String? encryptedItemPayload) {
+    if (encryptedItemPayload == null || encryptedItemPayload.isEmpty) {
+      return null;
+    }
+
+    final payload = jsonDecode(encryptedItemPayload);
+    if (payload is! Map<String, dynamic>) {
+      return null;
+    }
+
+    final ciphertext = payload['ciphertext'] as String?;
+    final nonce = payload['nonce'] as String?;
+    final aad = payload['mac'] as String?;
+
+    if (ciphertext == null || ciphertext.isEmpty || nonce == null || nonce.isEmpty) {
+      return null;
+    }
+
+    return _SyncBlobPayload(
+      ciphertext: ciphertext,
+      nonce: nonce,
+      aad: aad,
+      keyVersion: 1,
+    );
   }
 
   Future<void> _recoverFromInterruptedRekey() async {
@@ -253,4 +314,18 @@ class LocalEncryptedVaultRepository implements VaultRepository {
         .where((count) => count > 1)
         .fold<int>(0, (sum, count) => sum + count);
   }
+}
+
+class _SyncBlobPayload {
+  const _SyncBlobPayload({
+    required this.ciphertext,
+    required this.nonce,
+    required this.aad,
+    required this.keyVersion,
+  });
+
+  final String ciphertext;
+  final String nonce;
+  final String? aad;
+  final int keyVersion;
 }

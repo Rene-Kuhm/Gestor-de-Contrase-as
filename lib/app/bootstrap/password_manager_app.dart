@@ -12,6 +12,7 @@ import '../../core/security/vault_repository.dart';
 import '../../core/security/vault_security_controller.dart';
 import '../../core/sync/device_registration_service.dart';
 import '../../core/sync/device_sync_bootstrap.dart';
+import '../../core/sync/local_vault_mutation.dart';
 import '../../features/home/presentation/app_shell.dart';
 import '../../features/security/presentation/security_gate.dart';
 import '../theme/app_theme.dart';
@@ -21,11 +22,13 @@ Future<void> runPasswordManagerApp() async {
 
   final storage = FlutterSecureStorageService();
   final localeController = AppLocaleController(storage: storage);
+  final mutationSink = RelayLocalVaultMutationSink();
   late final VaultSecurityController securityController;
   final repository = LocalEncryptedVaultRepository(
     storage: storage,
     cryptoService: AesGcmVaultCryptoService(),
     readSession: () => securityController.vaultSession,
+    mutationSink: mutationSink,
   );
   securityController = VaultSecurityController(
     storage: storage,
@@ -37,7 +40,10 @@ Future<void> runPasswordManagerApp() async {
   await securityController.initialize();
   await localeController.initialize();
 
-  final deviceSyncLifecycle = await buildDeviceSyncLifecycle(storage: storage);
+  final deviceSyncLifecycle = await buildDeviceSyncLifecycle(
+    storage: storage,
+    mutationSink: mutationSink,
+  );
 
   runApp(
     PasswordManagerApp(
