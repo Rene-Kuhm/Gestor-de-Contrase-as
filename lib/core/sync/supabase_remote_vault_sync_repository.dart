@@ -1,0 +1,86 @@
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+import 'remote_vault_blob_change.dart';
+import 'remote_vault_sync_repository.dart';
+
+class SupabaseRemoteVaultSyncRepository implements RemoteVaultSyncRepository {
+  SupabaseRemoteVaultSyncRepository({required SupabaseClient client})
+    : _client = client;
+
+  final SupabaseClient _client;
+
+  @override
+  Future<String?> readCurrentUserId() async {
+    return _client.auth.currentUser?.id;
+  }
+
+  @override
+  Future<List<RemoteVaultBlobChange>> fetchChangesSince({
+    required int afterOpId,
+    int limit = 200,
+  }) async {
+    final opsResponse = await _client
+        .from('vault_ops')
+        .select('id,record_id')
+        .gt('id', afterOpId)
+        .order('id')
+        .limit(limit);
+
+    final opRows = (opsResponse as List<dynamic>)
+        .cast<Map<String, dynamic>>();
+    if (opRows.isEmpty) {
+      return const [];
+    }
+
+    final latestOpByRecord = <String, Map<String, dynamic>>{};
+    for (final row in opRows) {
+      final recordId = row['record_id'] as String?;
+      if (recordId == null || recordId.isEmpty) {
+        continue;
+      }
+      latestOpByRecord[recordId] = row;
+    }
+
+    if (latestOpByRecord.isEmpty) {
+      return const [];
+    }
+
+    final recordIds = latestOpByRecord.keys.toList(growable: false);
+    final blobsResponse = await _client
+        .from('vault_blobs')
+        .select('record_id,version,ciphertext,nonce,aad,key_version,deleted_at,updated_at')
+        .inFilter('record_id', recordIds);
+    final blobRows = (blobsResponse as List<dynamic>)
+        .cast<Map<String, dynamic>>();
+
+    final blobByRecord = <String, Map<String, dynamic>>{};
+    for (final row in blobRows) {
+      final recordId = row['record_id'] as String?;
+      if (recordId == null || recordId.isEmpty) {
+        continue;
+      }
+      blobByRecord[recordId] = row;
+    }
+
+    final sortedOps = latestOpByRecord.values.toList(growable: false)
+      ..sort((left, right) {
+        final leftId = (left['id'] as num).toInt();
+        final rightId = (right['id'] as num).toInt();
+        return leftId.compareTo(rightId);
+      });
+
+    final changes = <RemoteVaultBlobChange>[];
+    for (final opRow in sortedOps) {
+      final recordId = opRow['record_id'] as String;
+      final blobRow = blobByRecord[recordId];
+      if (blobRow == null) {
+        continue;
+      }
+      changes.add(
+        RemoteVaultBlobChange.fromSupabaseRows(opRow: opRow, blobRow: blobRow),
+      );
+    }
+
+    return changes;
+  }
+}

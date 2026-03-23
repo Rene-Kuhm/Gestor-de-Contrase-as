@@ -3,6 +3,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:uuid/uuid.dart';
 
 import '../security/secure_storage_service.dart';
+import 'incremental_pull_sync_service.dart';
 import 'device_registration_repository.dart';
 
 abstract interface class AppVersionProvider {
@@ -139,12 +140,15 @@ class DeviceRegistrationService {
 class DeviceSyncLifecycle {
   DeviceSyncLifecycle({
     required DeviceRegistrationService service,
+    IncrementalPullSyncService? pullSyncService,
     this.heartbeatInterval = const Duration(minutes: 5),
     DateTime Function()? now,
   }) : _service = service,
+       _pullSyncService = pullSyncService,
        _now = now ?? DateTime.now;
 
   final DeviceRegistrationService _service;
+  final IncrementalPullSyncService? _pullSyncService;
   final Duration heartbeatInterval;
   final DateTime Function() _now;
 
@@ -155,6 +159,7 @@ class DeviceSyncLifecycle {
     await _service.registerCurrentDevice();
     _registered = true;
     _lastHeartbeatAt = _now();
+    await _pullSyncService?.onSessionStarted();
   }
 
   Future<void> onAppResumed() async {
@@ -164,13 +169,15 @@ class DeviceSyncLifecycle {
     }
 
     final lastHeartbeatAt = _lastHeartbeatAt;
-    if (lastHeartbeatAt != null &&
-        _now().difference(lastHeartbeatAt) < heartbeatInterval) {
-      return;
+    final shouldSendHeartbeat =
+        lastHeartbeatAt == null ||
+        _now().difference(lastHeartbeatAt) >= heartbeatInterval;
+    if (shouldSendHeartbeat) {
+      await _service.sendHeartbeat();
+      _lastHeartbeatAt = _now();
     }
 
-    await _service.sendHeartbeat();
-    _lastHeartbeatAt = _now();
+    await _pullSyncService?.onAppResumed();
   }
 }
 

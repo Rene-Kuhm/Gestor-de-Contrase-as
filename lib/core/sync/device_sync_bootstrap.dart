@@ -2,7 +2,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../security/secure_storage_service.dart';
 import 'device_registration_service.dart';
+import 'incremental_pull_sync_service.dart';
+import 'local_remote_vault_store.dart';
 import 'supabase_device_registration_repository.dart';
+import 'supabase_remote_vault_sync_repository.dart';
 
 Future<DeviceSyncLifecycle?> buildDeviceSyncLifecycle({
   required SecureStorageService storage,
@@ -19,11 +22,20 @@ Future<DeviceSyncLifecycle?> buildDeviceSyncLifecycle({
   final repository = SupabaseDeviceRegistrationRepository(
     client: Supabase.instance.client,
   );
+  final pullRepository = SupabaseRemoteVaultSyncRepository(
+    client: Supabase.instance.client,
+  );
+  final identityService = LocalDeviceIdentityService(storage: storage);
   final service = DeviceRegistrationService(
     repository: repository,
-    identityService: LocalDeviceIdentityService(storage: storage),
+    identityService: identityService,
     appVersionProvider: PackageInfoAppVersionProvider(),
   );
+  final pullSyncService = IncrementalPullSyncService(
+    repository: pullRepository,
+    localStore: LocalRemoteVaultStore(storage: storage),
+    readDeviceId: identityService.getOrCreateDeviceId,
+  );
 
-  return DeviceSyncLifecycle(service: service);
+  return DeviceSyncLifecycle(service: service, pullSyncService: pullSyncService);
 }
