@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 
 import '../../../app/design_system/app_panel.dart';
+import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../core/security/demo_vault_repository.dart';
+import '../../../core/security/vault_security_controller.dart';
 
 class SettingsScreen extends StatelessWidget {
-  const SettingsScreen({super.key});
+  const SettingsScreen({super.key, required this.securityController});
+
+  final VaultSecurityController securityController;
 
   @override
   Widget build(BuildContext context) {
@@ -16,6 +20,85 @@ class SettingsScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [
+          AppPanel(
+            child: AnimatedBuilder(
+              animation: securityController,
+              builder: (context, _) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Local unlock posture',
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      'Vaulta ya guarda el estado sensible en Keychain / Keystore y usa biometria del sistema cuando el equipo lo permite.',
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    _CapabilityRow(
+                      title: 'Master password creada',
+                      enabled: true,
+                    ),
+                    _CapabilityRow(
+                      title: 'Biometria disponible',
+                      enabled: securityController.canOfferBiometricToggle,
+                    ),
+                    _CapabilityRow(
+                      title: 'Biometria activada',
+                      enabled: securityController.biometricEnabled,
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    SwitchListTile.adaptive(
+                      contentPadding: EdgeInsets.zero,
+                      value: securityController.biometricEnabled,
+                      onChanged: securityController.busy
+                          ? null
+                          : (value) {
+                              securityController.setBiometricEnabled(value);
+                            },
+                      title: const Text('Unlock with biometrics'),
+                      subtitle: Text(
+                        securityController.canOfferBiometricToggle
+                            ? 'Usa ${securityController.biometricAvailability.label} para restaurar la sesion local del dispositivo.'
+                            : 'No hay biometria configurada o soportada en este entorno.',
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    FilledButton.icon(
+                      onPressed: securityController.busy
+                          ? null
+                          : securityController.lock,
+                      icon: const Icon(Icons.lock_rounded),
+                      label: const Text('Lock now'),
+                    ),
+                    if (securityController.message case final message?) ...[
+                      const SizedBox(height: AppSpacing.sm),
+                      Container(
+                        padding: const EdgeInsets.all(AppSpacing.md),
+                        decoration: BoxDecoration(
+                          color: AppColors.cloud,
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        child: Text(
+                          message,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: AppColors.ink,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
           AppPanel(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -45,6 +128,11 @@ class SettingsScreen extends StatelessWidget {
                 _CapabilityRow(
                   title: 'Hardware-backed keys',
                   enabled: DemoVaultRepository.securityPlan.hardwareBackedKeys,
+                ),
+                _CapabilityRow(
+                  title: 'Vault item encryption wired end-to-end',
+                  enabled:
+                      DemoVaultRepository.securityPlan.vaultEncryptionReady,
                 ),
               ],
             ),

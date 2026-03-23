@@ -1,13 +1,19 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/security/demo_vault_repository.dart';
+import '../../../core/security/vault_security_controller.dart';
 import '../../settings/presentation/settings_screen.dart';
 import '../../vault/presentation/vault_dashboard_screen.dart';
 
 class AppShell extends StatefulWidget {
-  const AppShell({super.key, required this.repository});
+  const AppShell({
+    super.key,
+    required this.repository,
+    required this.securityController,
+  });
 
   final DemoVaultRepository repository;
+  final VaultSecurityController securityController;
 
   @override
   State<AppShell> createState() => _AppShellState();
@@ -24,7 +30,7 @@ class _AppShellState extends State<AppShell> {
         title: 'Autofill & access',
         subtitle: 'Tu flujo de desbloqueo y llenado automatico va a vivir aca.',
       ),
-      const SettingsScreen(),
+      SettingsScreen(securityController: widget.securityController),
     ];
 
     return Scaffold(

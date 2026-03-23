@@ -10,8 +10,9 @@ class DemoVaultRepository implements VaultRepository {
     secureStorage: true,
     biometricUnlock: true,
     hardwareBackedKeys: true,
+    vaultEncryptionReady: false,
     notes:
-        'La implementacion real debe apoyarse en Keychain/Keystore, autenticacion biometrica del sistema y una libreria criptografica auditada.',
+        'El acceso local ya usa Keychain/Keystore y biometria del sistema. El cifrado completo de items queda pendiente hasta integrar una libreria auditada sin inventar criptografia casera.',
   );
 
   @override
