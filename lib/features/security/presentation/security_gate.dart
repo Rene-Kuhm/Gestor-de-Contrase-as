@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../app/design_system/app_panel.dart';
@@ -5,16 +7,19 @@ import '../../../app/localization/l10n.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../core/security/vault_security_controller.dart';
+import '../../../core/sync/device_registration_service.dart';
 
 class SecurityGate extends StatefulWidget {
   const SecurityGate({
     super.key,
     required this.controller,
     required this.child,
+    this.deviceSyncLifecycle,
   });
 
   final VaultSecurityController controller;
   final Widget child;
+  final DeviceSyncLifecycle? deviceSyncLifecycle;
 
   @override
   State<SecurityGate> createState() => _SecurityGateState();
@@ -22,19 +27,66 @@ class SecurityGate extends StatefulWidget {
 
 class _SecurityGateState extends State<SecurityGate>
     with WidgetsBindingObserver {
+  late VaultSecurityStage _lastStage;
+
   @override
   void initState() {
     super.initState();
+    _lastStage = widget.controller.stage;
+    widget.controller.addListener(_handleSecurityStageChange);
     WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didUpdateWidget(covariant SecurityGate oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller == widget.controller) {
+      return;
+    }
+
+    oldWidget.controller.removeListener(_handleSecurityStageChange);
+    widget.controller.addListener(_handleSecurityStageChange);
+    _lastStage = widget.controller.stage;
+  }
+
+  void _handleSecurityStageChange() {
+    final currentStage = widget.controller.stage;
+    final movedToUnlocked =
+        _lastStage != VaultSecurityStage.unlocked &&
+        currentStage == VaultSecurityStage.unlocked;
+    _lastStage = currentStage;
+
+    if (!movedToUnlocked) {
+      return;
+    }
+
+    final lifecycle = widget.deviceSyncLifecycle;
+    if (lifecycle == null) {
+      return;
+    }
+
+    _runLifecycleAction(lifecycle.onSessionStarted());
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     widget.controller.handleAppLifecycleState(state);
+
+    final lifecycle = widget.deviceSyncLifecycle;
+    if (state == AppLifecycleState.resumed &&
+        widget.controller.isUnlocked &&
+        lifecycle != null) {
+      _runLifecycleAction(lifecycle.onAppResumed());
+    }
+  }
+
+  void _runLifecycleAction(Future<void> action) {
+    unawaited(action.catchError((_) {}));
   }
 
   @override
   void dispose() {
+    widget.controller.removeListener(_handleSecurityStageChange);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -148,7 +200,7 @@ class _OnboardingScreenState extends State<_OnboardingScreen> {
                       controller: _passwordController,
                       obscureText: _obscurePassword,
                       decoration: InputDecoration(
-                         labelText: l10n.securityCreateMasterPassword,
+                        labelText: l10n.securityCreateMasterPassword,
                         suffixIcon: IconButton(
                           onPressed: () {
                             setState(() {
@@ -168,7 +220,7 @@ class _OnboardingScreenState extends State<_OnboardingScreen> {
                       controller: _confirmationController,
                       obscureText: _obscureConfirmation,
                       decoration: InputDecoration(
-                         labelText: l10n.securityConfirmMasterPassword,
+                        labelText: l10n.securityConfirmMasterPassword,
                         suffixIcon: IconButton(
                           onPressed: () {
                             setState(() {
@@ -223,7 +275,7 @@ class _OnboardingScreenState extends State<_OnboardingScreen> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Icon(Icons.shield_rounded),
-                       label: Text(l10n.securityCreateSecureAccess),
+                      label: Text(l10n.securityCreateSecureAccess),
                     ),
                   ],
                 ),
@@ -293,7 +345,7 @@ class _UnlockScreenState extends State<_UnlockScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                     l10n.securityProtectedAccess,
+                    l10n.securityProtectedAccess,
                     style: theme.textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
@@ -304,7 +356,7 @@ class _UnlockScreenState extends State<_UnlockScreen> {
                     obscureText: _obscurePassword,
                     onSubmitted: (_) => _unlockWithPassword(),
                     decoration: InputDecoration(
-                       labelText: l10n.securityMasterPasswordTitle,
+                      labelText: l10n.securityMasterPasswordTitle,
                       suffixIcon: IconButton(
                         onPressed: () {
                           setState(() {
@@ -335,7 +387,7 @@ class _UnlockScreenState extends State<_UnlockScreen> {
                                     strokeWidth: 2,
                                   ),
                                 )
-                               : Text(l10n.securityUnlockVault),
+                              : Text(l10n.securityUnlockVault),
                         ),
                       ),
                       if (controller.canUnlockWithBiometrics) ...[
@@ -345,7 +397,7 @@ class _UnlockScreenState extends State<_UnlockScreen> {
                               ? null
                               : _unlockWithBiometrics,
                           icon: const Icon(Icons.fingerprint_rounded),
-                           label: Text(l10n.securityBiometricButton),
+                          label: Text(l10n.securityBiometricButton),
                         ),
                       ],
                     ],

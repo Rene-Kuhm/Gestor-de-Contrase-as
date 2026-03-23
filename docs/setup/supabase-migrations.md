@@ -1,4 +1,4 @@
-# Supabase migrations (B1 + B2)
+# Supabase migrations (B1 + B2 + B3)
 
 This project now includes an initial Supabase schema for zero-knowledge sync.
 
@@ -6,6 +6,7 @@ This project now includes an initial Supabase schema for zero-knowledge sync.
 
 - `supabase/migrations/20260323100000_initial_vault_schema.sql`
 - `supabase/migrations/20260323113000_add_vault_sync_rpc.sql`
+- `supabase/migrations/20260323153000_add_device_registration_rpc.sql`
 
 ## What these migrations create
 
@@ -17,6 +18,9 @@ This project now includes an initial Supabase schema for zero-knowledge sync.
 - RPC functions for sync writes with CAS + idempotency:
   - `public.rpc_vault_upsert_blob(...)`
   - `public.rpc_vault_delete_blob(...)`
+- RPC functions for device presence (Batch B3):
+  - `public.rpc_vault_register_device(...)`
+  - `public.rpc_vault_device_heartbeat(...)`
 
 ## RPC behavior (Batch B2)
 
@@ -26,6 +30,21 @@ This project now includes an initial Supabase schema for zero-knowledge sync.
 - If `idempotency_key` is reused with a different payload, result is `idempotency_mismatch`.
 - If `expected_version` does not match current row version, result is `cas_conflict`.
 - Every effective mutation writes an entry in `vault_ops` with `applied_version`.
+
+## Device registration behavior (Batch B3)
+
+- `vault_devices` now stores `platform` and `app_version` metadata.
+- `rpc_vault_register_device` performs idempotent upsert per `(auth.uid(), device_id)`.
+- `rpc_vault_device_heartbeat` updates `last_seen_at` and refreshes basic metadata.
+- Both RPCs accept `p_last_seen_at`; if omitted, they use `now()`.
+- Both RPCs are granted to `authenticated` and return a structured result row.
+
+High-level flow in app wiring:
+
+1. App startup resolves a persistent `device_id` from secure storage (creates one if absent).
+2. After local session unlock, app calls `rpc_vault_register_device`.
+3. On foreground resume, app sends `rpc_vault_device_heartbeat` with throttle (5 minutes).
+4. Full sync pipeline (pull/push conflict loop) remains for later batch.
 
 Example upsert call:
 

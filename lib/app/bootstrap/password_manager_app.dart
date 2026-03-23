@@ -10,6 +10,8 @@ import '../../core/security/local_encrypted_vault_repository.dart';
 import '../../core/security/master_password_service.dart';
 import '../../core/security/vault_repository.dart';
 import '../../core/security/vault_security_controller.dart';
+import '../../core/sync/device_registration_service.dart';
+import '../../core/sync/device_sync_bootstrap.dart';
 import '../../features/home/presentation/app_shell.dart';
 import '../../features/security/presentation/security_gate.dart';
 import '../theme/app_theme.dart';
@@ -35,11 +37,14 @@ Future<void> runPasswordManagerApp() async {
   await securityController.initialize();
   await localeController.initialize();
 
+  final deviceSyncLifecycle = await buildDeviceSyncLifecycle(storage: storage);
+
   runApp(
     PasswordManagerApp(
       repository: repository,
       securityController: securityController,
       localeController: localeController,
+      deviceSyncLifecycle: deviceSyncLifecycle,
     ),
   );
 }
@@ -50,11 +55,13 @@ class PasswordManagerApp extends StatelessWidget {
     required this.repository,
     required this.securityController,
     required this.localeController,
+    this.deviceSyncLifecycle,
   });
 
   final VaultRepository repository;
   final VaultSecurityController securityController;
   final AppLocaleController localeController;
+  final DeviceSyncLifecycle? deviceSyncLifecycle;
 
   @override
   Widget build(BuildContext context) {
@@ -77,6 +84,7 @@ class PasswordManagerApp extends StatelessWidget {
           supportedLocales: AppLocalizations.supportedLocales,
           home: SecurityGate(
             controller: securityController,
+            deviceSyncLifecycle: deviceSyncLifecycle,
             child: AppShell(
               repository: repository,
               securityController: securityController,
