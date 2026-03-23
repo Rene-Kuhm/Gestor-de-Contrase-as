@@ -20,6 +20,9 @@ class LocalEncryptedVaultRepository implements VaultRepository {
        _readSession = readSession;
 
   static const encryptedVaultItemsKey = 'vault_encrypted_items_v1';
+  static const encryptedVaultItemsStagingKey =
+      'vault_encrypted_items_v1_staging';
+  static const rekeyInProgressKey = 'vault_rekey_in_progress_v1';
 
   static const securityPlan = PlatformSecurityPlan(
     secureStorage: true,
@@ -27,7 +30,7 @@ class LocalEncryptedVaultRepository implements VaultRepository {
     hardwareBackedKeys: true,
     vaultEncryptionReady: true,
     notes:
-        'Los items del vault se guardan cifrados con AES-256-GCM usando una clave derivada por PBKDF2-HMAC-SHA256 desde la master password. La clave vive solo en memoria de la sesion actual; rekeying, sync confiable y recovery siguen pendientes.',
+        'Los items del vault se guardan cifrados con AES-256-GCM usando una clave derivada por PBKDF2-HMAC-SHA256 desde la master password. La clave vive solo en memoria de la sesion actual; sync confiable y recovery biometrico entre reinicios siguen pendientes.',
   );
 
   final SecureStorageService _storage;
@@ -36,6 +39,7 @@ class LocalEncryptedVaultRepository implements VaultRepository {
 
   @override
   Future<List<VaultItem>> fetchItems() async {
+    await _recoverFromInterruptedRekey();
     final session = _requireSession();
     final raw = await _storage.read(encryptedVaultItemsKey);
     if (raw == null || raw.isEmpty) {
@@ -133,7 +137,55 @@ class LocalEncryptedVaultRepository implements VaultRepository {
     await _saveEncryptedItems(items);
   }
 
+  Future<void> rekeyEntries({
+    required VaultSession sourceSession,
+    required VaultSession targetSession,
+  }) async {
+    await _recoverFromInterruptedRekey();
+
+    final raw = await _storage.read(encryptedVaultItemsKey);
+    if (raw == null || raw.isEmpty) {
+      await _clearRekeyArtifacts(swallowErrors: true);
+      return;
+    }
+
+    final encryptedItems = (jsonDecode(raw) as List<dynamic>).cast<String>();
+    final reencryptedItems = <String>[];
+
+    for (final encrypted in encryptedItems) {
+      final plaintext = await _cryptoService.decrypt(
+        ciphertext: encrypted,
+        secretKey: sourceSession.secretKey,
+        expectedKeyId: sourceSession.keyId,
+      );
+      final reencrypted = await _cryptoService.encrypt(
+        plaintext: plaintext,
+        secretKey: targetSession.secretKey,
+        keyId: targetSession.keyId,
+      );
+      reencryptedItems.add(reencrypted);
+    }
+
+    final stagedPayload = jsonEncode(reencryptedItems);
+
+    await _storage.save(rekeyInProgressKey, 'true');
+    await _storage.save(encryptedVaultItemsStagingKey, stagedPayload);
+
+    try {
+      await _storage.save(encryptedVaultItemsKey, stagedPayload);
+    } catch (_) {
+      final committed = await _didSwapCommit(stagedPayload);
+      if (!committed) {
+        await _clearRekeyArtifacts(swallowErrors: true);
+        rethrow;
+      }
+    }
+
+    await _clearRekeyArtifacts(swallowErrors: true);
+  }
+
   Future<void> _saveEncryptedItems(List<VaultItem> items) async {
+    await _recoverFromInterruptedRekey();
     final session = _requireSession();
     final encryptedItems = <String>[];
     for (final item in items) {
@@ -146,6 +198,39 @@ class LocalEncryptedVaultRepository implements VaultRepository {
     }
 
     await _storage.save(encryptedVaultItemsKey, jsonEncode(encryptedItems));
+  }
+
+  Future<void> _recoverFromInterruptedRekey() async {
+    final marker = await _storage.read(rekeyInProgressKey);
+    if (marker != 'true') {
+      final staleStaging = await _storage.read(encryptedVaultItemsStagingKey);
+      if (staleStaging != null) {
+        await _storage.delete(encryptedVaultItemsStagingKey);
+      }
+      return;
+    }
+
+    await _clearRekeyArtifacts(swallowErrors: true);
+  }
+
+  Future<bool> _didSwapCommit(String expectedPayload) async {
+    final committedPayload = await _storage.read(encryptedVaultItemsKey);
+    return committedPayload == expectedPayload;
+  }
+
+  Future<void> _clearRekeyArtifacts({required bool swallowErrors}) async {
+    Future<void> runDelete(String key) async {
+      try {
+        await _storage.delete(key);
+      } catch (_) {
+        if (!swallowErrors) {
+          rethrow;
+        }
+      }
+    }
+
+    await runDelete(encryptedVaultItemsStagingKey);
+    await runDelete(rekeyInProgressKey);
   }
 
   VaultSession _requireSession() {

@@ -11,6 +11,15 @@ class SettingsScreen extends StatelessWidget {
 
   final VaultSecurityController securityController;
 
+  Future<void> _openChangeMasterPasswordDialog(BuildContext context) async {
+    await showDialog<void>(
+      context: context,
+      builder: (context) {
+        return _ChangeMasterPasswordDialog(controller: securityController);
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -92,6 +101,16 @@ class SettingsScreen extends StatelessWidget {
                           : securityController.lock,
                       icon: const Icon(Icons.lock_rounded),
                       label: const Text('Lock now'),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    OutlinedButton.icon(
+                      onPressed: securityController.busy
+                          ? null
+                          : () {
+                              _openChangeMasterPasswordDialog(context);
+                            },
+                      icon: const Icon(Icons.password_rounded),
+                      label: const Text('Change master password'),
                     ),
                     if (securityController.message case final message?) ...[
                       const SizedBox(height: AppSpacing.sm),
@@ -190,5 +209,190 @@ class _CapabilityRow extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _ChangeMasterPasswordDialog extends StatefulWidget {
+  const _ChangeMasterPasswordDialog({required this.controller});
+
+  final VaultSecurityController controller;
+
+  @override
+  State<_ChangeMasterPasswordDialog> createState() =>
+      _ChangeMasterPasswordDialogState();
+}
+
+class _ChangeMasterPasswordDialogState extends State<_ChangeMasterPasswordDialog> {
+  final _currentController = TextEditingController();
+  final _newController = TextEditingController();
+  final _confirmationController = TextEditingController();
+  bool _obscureCurrent = true;
+  bool _obscureNew = true;
+  bool _obscureConfirmation = true;
+  String? _formFeedback;
+
+  @override
+  void dispose() {
+    _currentController.dispose();
+    _newController.dispose();
+    _confirmationController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final controller = widget.controller;
+
+    return AlertDialog(
+      title: const Text('Change master password'),
+      content: AnimatedBuilder(
+        animation: controller,
+        builder: (context, _) {
+          return SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: _currentController,
+                  obscureText: _obscureCurrent,
+                  decoration: InputDecoration(
+                    labelText: 'Current master password',
+                    suffixIcon: IconButton(
+                      onPressed: () {
+                        setState(() {
+                          _obscureCurrent = !_obscureCurrent;
+                        });
+                      },
+                      icon: Icon(
+                        _obscureCurrent
+                            ? Icons.visibility_off_rounded
+                            : Icons.visibility_rounded,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                TextField(
+                  controller: _newController,
+                  obscureText: _obscureNew,
+                  decoration: InputDecoration(
+                    labelText: 'New master password',
+                    suffixIcon: IconButton(
+                      onPressed: () {
+                        setState(() {
+                          _obscureNew = !_obscureNew;
+                        });
+                      },
+                      icon: Icon(
+                        _obscureNew
+                            ? Icons.visibility_off_rounded
+                            : Icons.visibility_rounded,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                TextField(
+                  controller: _confirmationController,
+                  obscureText: _obscureConfirmation,
+                  decoration: InputDecoration(
+                    labelText: 'Confirm new master password',
+                    suffixIcon: IconButton(
+                      onPressed: () {
+                        setState(() {
+                          _obscureConfirmation = !_obscureConfirmation;
+                        });
+                      },
+                      icon: Icon(
+                        _obscureConfirmation
+                            ? Icons.visibility_off_rounded
+                            : Icons.visibility_rounded,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  'Este cambio vuelve a cifrar todo el vault con una clave nueva.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                if (_formFeedback case final feedback?) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(AppSpacing.sm),
+                    decoration: BoxDecoration(
+                      color: AppColors.cloud,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Text(
+                      feedback,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: AppColors.ink,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          );
+        },
+      ),
+      actions: [
+        TextButton(
+          onPressed: controller.busy
+              ? null
+              : () {
+                  Navigator.of(context).pop();
+                },
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: controller.busy ? null : _submit,
+          child: controller.busy
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Apply'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _submit() async {
+    setState(() {
+      _formFeedback = null;
+    });
+
+    final changed = await widget.controller.changeMasterPassword(
+      currentPassword: _currentController.text,
+      newPassword: _newController.text,
+      confirmation: _confirmationController.text,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    if (changed) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Master password actualizada correctamente.'),
+        ),
+      );
+      Navigator.of(context).pop();
+      return;
+    }
+
+    setState(() {
+      _formFeedback =
+          widget.controller.message ??
+          'No pudimos cambiar la master password. Revisa los datos e intenta de nuevo.';
+    });
   }
 }

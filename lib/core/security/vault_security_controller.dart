@@ -6,6 +6,11 @@ import 'master_password_service.dart';
 import 'secure_storage_service.dart';
 import 'vault_session.dart';
 
+typedef VaultRekeyEntries = Future<void> Function({
+  required VaultSession sourceSession,
+  required VaultSession targetSession,
+});
+
 enum VaultSecurityStage { loading, onboarding, locked, unlocked }
 
 class VaultSecurityController extends ChangeNotifier {
@@ -13,9 +18,11 @@ class VaultSecurityController extends ChangeNotifier {
     required SecureStorageService storage,
     required MasterPasswordService masterPasswordService,
     required BiometricAuthService biometricAuthService,
+    VaultRekeyEntries? rekeyEntries,
   }) : _storage = storage,
        _masterPasswordService = masterPasswordService,
-       _biometricAuthService = biometricAuthService;
+       _biometricAuthService = biometricAuthService,
+       _rekeyEntries = rekeyEntries ?? _unsupportedRekey;
 
   static const masterPasswordRecordKey = 'vault_master_password_record';
   static const biometricEnabledKey = 'vault_biometric_enabled';
@@ -26,6 +33,7 @@ class VaultSecurityController extends ChangeNotifier {
   final SecureStorageService _storage;
   final MasterPasswordService _masterPasswordService;
   final BiometricAuthService _biometricAuthService;
+  final VaultRekeyEntries _rekeyEntries;
 
   VaultSecurityStage _stage = VaultSecurityStage.loading;
   BiometricAvailability _biometricAvailability = const BiometricAvailability(
@@ -239,6 +247,124 @@ class VaultSecurityController extends ChangeNotifier {
     });
   }
 
+  Future<bool> changeMasterPassword({
+    required String currentPassword,
+    required String newPassword,
+    required String confirmation,
+  }) async {
+    if (!isUnlocked || _vaultSession == null) {
+      _message = 'Desbloquea Vaulta antes de cambiar la master password.';
+      notifyListeners();
+      return false;
+    }
+
+    final validationError = _masterPasswordService.validate(newPassword);
+    if (validationError != null) {
+      _message = validationError;
+      notifyListeners();
+      return false;
+    }
+
+    if (newPassword != confirmation) {
+      _message = 'La confirmacion no coincide con la nueva master password.';
+      notifyListeners();
+      return false;
+    }
+
+    if (currentPassword == newPassword) {
+      _message = 'La nueva master password debe ser distinta de la actual.';
+      notifyListeners();
+      return false;
+    }
+
+    return _runBusy(() async {
+      final currentRecord = await _readRecord();
+      if (currentRecord == null) {
+        _stage = VaultSecurityStage.onboarding;
+        _message = 'Todavia no configuraste una master password.';
+        return false;
+      }
+
+      final matches = await _masterPasswordService.verify(
+        record: currentRecord,
+        password: currentPassword,
+      );
+
+      if (!matches) {
+        _message = 'La master password actual no coincide.';
+        return false;
+      }
+
+      final sourceSession = _vaultSession;
+      if (sourceSession == null) {
+        _stage = VaultSecurityStage.locked;
+        _message =
+            'No hay una sesion de vault valida en memoria. Volve a desbloquear.';
+        return false;
+      }
+
+      if (sourceSession.keyId != currentRecord.keyId) {
+        _vaultSession = null;
+        _stage = VaultSecurityStage.locked;
+        _message =
+            'La sesion activa no coincide con la clave maestra vigente. Volve a desbloquear antes de reintentar.';
+        return false;
+      }
+
+      final newRecord = await _masterPasswordService.createRecord(newPassword);
+      final targetSession = VaultSession(
+        keyId: newRecord.keyId,
+        secretKey: await _masterPasswordService.deriveVaultKey(
+          record: newRecord,
+          password: newPassword,
+        ),
+      );
+
+      try {
+        await _rekeyEntries(
+          sourceSession: sourceSession,
+          targetSession: targetSession,
+        );
+      } catch (_) {
+        _message =
+            'No pudimos completar el re-cifrado del vault. Se mantuvo tu clave actual para evitar inconsistencias.';
+        return false;
+      }
+
+      try {
+        await _storage.save(masterPasswordRecordKey, newRecord.encode());
+      } catch (_) {
+        var rollbackSucceeded = false;
+        try {
+          await _rekeyEntries(
+            sourceSession: targetSession,
+            targetSession: sourceSession,
+          );
+          rollbackSucceeded = true;
+        } catch (_) {
+          rollbackSucceeded = false;
+        }
+
+        if (!rollbackSucceeded) {
+          _vaultSession = null;
+          _stage = VaultSecurityStage.locked;
+          _message =
+              'Fallo al persistir la nueva master password y no pudimos confirmar rollback completo. Vaulta queda bloqueada por seguridad.';
+          return false;
+        }
+
+        _message =
+            'No pudimos guardar la nueva master password. Se mantuvo tu clave actual para evitar inconsistencias.';
+        return false;
+      }
+
+      _vaultSession = targetSession;
+      _message =
+          'Master password actualizada y vault re-cifrado con una nueva clave.';
+      return true;
+    });
+  }
+
   Future<void> handleAppLifecycleState(AppLifecycleState state) async {
     if (!isUnlocked) {
       return;
@@ -323,5 +449,12 @@ class VaultSecurityController extends ChangeNotifier {
     }
 
     return fallback;
+  }
+
+  static Future<void> _unsupportedRekey({
+    required VaultSession sourceSession,
+    required VaultSession targetSession,
+  }) async {
+    throw UnsupportedError('Vault rekeying operation is not configured.');
   }
 }

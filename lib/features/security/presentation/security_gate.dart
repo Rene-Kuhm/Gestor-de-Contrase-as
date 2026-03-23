@@ -335,7 +335,7 @@ class _UnlockScreenState extends State<_UnlockScreen> {
                 items: [
                   'El registro de acceso vive en almacenamiento seguro del sistema.',
                   'La biometria usa LocalAuthentication; no reemplaza la derivacion de clave desde la master password.',
-                  'El vault local ya cifra cada item con AES-256-GCM; rekeying, recovery y sync quedan pendientes.',
+                  'El vault local cifra con AES-256-GCM y ya soporta rekeying al cambiar master password; recovery y sync quedan pendientes.',
                 ],
               ),
             ),

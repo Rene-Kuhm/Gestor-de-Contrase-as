@@ -15,15 +15,17 @@ Future<void> runPasswordManagerApp() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   final storage = FlutterSecureStorageService();
-  final securityController = VaultSecurityController(
-    storage: storage,
-    masterPasswordService: MasterPasswordService(),
-    biometricAuthService: LocalBiometricAuthService(),
-  );
+  late final VaultSecurityController securityController;
   final repository = LocalEncryptedVaultRepository(
     storage: storage,
     cryptoService: AesGcmVaultCryptoService(),
     readSession: () => securityController.vaultSession,
+  );
+  securityController = VaultSecurityController(
+    storage: storage,
+    masterPasswordService: MasterPasswordService(),
+    biometricAuthService: LocalBiometricAuthService(),
+    rekeyEntries: repository.rekeyEntries,
   );
 
   await securityController.initialize();

@@ -8,6 +8,7 @@ import 'package:gestor_contrasenas/core/security/local_encrypted_vault_repositor
 import 'package:gestor_contrasenas/core/security/master_password_service.dart';
 import 'package:gestor_contrasenas/core/security/secure_storage_service.dart';
 import 'package:gestor_contrasenas/core/security/vault_security_controller.dart';
+import 'package:gestor_contrasenas/core/security/vault_session.dart';
 import 'package:gestor_contrasenas/features/vault/domain/vault_item.dart';
 
 void main() {
@@ -127,6 +128,66 @@ void main() {
 
       final items = await repository.fetchItems();
       expect(items, isEmpty);
+    });
+
+    test('rekeys all entries with a new master-derived key', () async {
+      final storage = _InMemorySecureStorageService();
+      final masterPasswordService = MasterPasswordService();
+      final controller = VaultSecurityController(
+        storage: storage,
+        masterPasswordService: masterPasswordService,
+        biometricAuthService: const _FakeBiometricAuthService(),
+      );
+      await controller.initialize();
+      await controller.createMasterPassword(
+        password: 'StrongPass!2026',
+        confirmation: 'StrongPass!2026',
+        enableBiometrics: false,
+      );
+
+      final oldSession = controller.vaultSession!;
+      var activeSession = oldSession;
+      final repository = LocalEncryptedVaultRepository(
+        storage: storage,
+        cryptoService: AesGcmVaultCryptoService(),
+        readSession: () => activeSession,
+      );
+
+      await repository.saveItem(
+        const VaultItem(
+          id: 'mail',
+          title: 'Mail',
+          username: 'leo@mail.com',
+          secret: 'MailPass!2026',
+          category: VaultCategory.personal,
+          strengthScore: 0,
+          lastUpdatedLabel: '',
+        ),
+      );
+
+      final newRecord = await masterPasswordService.createRecord(
+        'AnotherStrong!2027',
+      );
+      final newSession = VaultSession(
+        keyId: newRecord.keyId,
+        secretKey: await masterPasswordService.deriveVaultKey(
+          record: newRecord,
+          password: 'AnotherStrong!2027',
+        ),
+      );
+
+      await repository.rekeyEntries(
+        sourceSession: oldSession,
+        targetSession: newSession,
+      );
+
+      activeSession = newSession;
+      final itemsWithNewSession = await repository.fetchItems();
+      expect(itemsWithNewSession, hasLength(1));
+      expect(itemsWithNewSession.first.secret, 'MailPass!2026');
+
+      activeSession = oldSession;
+      expect(repository.fetchItems(), throwsStateError);
     });
   });
 }

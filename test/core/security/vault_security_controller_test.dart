@@ -116,6 +116,82 @@ void main() {
       },
     );
 
+    test('changes master password and keeps session unlocked', () async {
+      var rekeyCalls = 0;
+      String? sourceKeyId;
+      String? targetKeyId;
+
+      final storage = _InMemorySecureStorageService();
+      final controller = VaultSecurityController(
+        storage: storage,
+        masterPasswordService: MasterPasswordService(),
+        biometricAuthService: const _FakeBiometricAuthService(),
+        rekeyEntries: ({required sourceSession, required targetSession}) async {
+          rekeyCalls += 1;
+          sourceKeyId = sourceSession.keyId;
+          targetKeyId = targetSession.keyId;
+        },
+      );
+      addTearDown(controller.dispose);
+
+      await controller.initialize();
+      await controller.createMasterPassword(
+        password: 'StrongPass!2026',
+        confirmation: 'StrongPass!2026',
+        enableBiometrics: false,
+      );
+
+      final changed = await controller.changeMasterPassword(
+        currentPassword: 'StrongPass!2026',
+        newPassword: 'AnotherStrong!2027',
+        confirmation: 'AnotherStrong!2027',
+      );
+
+      expect(changed, isTrue);
+      expect(rekeyCalls, 1);
+      expect(sourceKeyId, isNotNull);
+      expect(targetKeyId, isNotNull);
+      expect(targetKeyId, isNot(equals(sourceKeyId)));
+      expect(controller.isUnlocked, isTrue);
+
+      await controller.lock();
+      final oldUnlock = await controller.unlockWithPassword('StrongPass!2026');
+      final newUnlock = await controller.unlockWithPassword('AnotherStrong!2027');
+
+      expect(oldUnlock, isFalse);
+      expect(newUnlock, isTrue);
+    });
+
+    test('rejects change when current master password is wrong', () async {
+      var rekeyCalls = 0;
+      final controller = VaultSecurityController(
+        storage: _InMemorySecureStorageService(),
+        masterPasswordService: MasterPasswordService(),
+        biometricAuthService: const _FakeBiometricAuthService(),
+        rekeyEntries: ({required sourceSession, required targetSession}) async {
+          rekeyCalls += 1;
+        },
+      );
+      addTearDown(controller.dispose);
+
+      await controller.initialize();
+      await controller.createMasterPassword(
+        password: 'StrongPass!2026',
+        confirmation: 'StrongPass!2026',
+        enableBiometrics: false,
+      );
+
+      final changed = await controller.changeMasterPassword(
+        currentPassword: 'WrongPass!2026',
+        newPassword: 'AnotherStrong!2027',
+        confirmation: 'AnotherStrong!2027',
+      );
+
+      expect(changed, isFalse);
+      expect(rekeyCalls, 0);
+      expect(controller.message, contains('actual no coincide'));
+    });
+
   });
 }
 
