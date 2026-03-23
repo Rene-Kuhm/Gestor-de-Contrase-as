@@ -3,9 +3,10 @@ import 'package:flutter/material.dart';
 import '../../features/vault/domain/vault_item.dart';
 
 class VaultEntryTile extends StatelessWidget {
-  const VaultEntryTile({super.key, required this.item});
+  const VaultEntryTile({super.key, required this.item, this.onTap});
 
   final VaultItem item;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -13,6 +14,7 @@ class VaultEntryTile extends StatelessWidget {
 
     return ListTile(
       contentPadding: EdgeInsets.zero,
+      onTap: onTap,
       leading: CircleAvatar(
         backgroundColor: item.accentColor.withValues(alpha: 0.14),
         child: Icon(item.icon, color: item.accentColor),
@@ -24,19 +26,23 @@ class VaultEntryTile extends StatelessWidget {
         ),
       ),
       subtitle: Text('${item.username} - ${item.category.label}'),
-      trailing: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          _StrengthBadge(score: item.strengthScore),
-          const SizedBox(height: 6),
-          Text(
-            item.lastUpdatedLabel,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
+      trailing: SizedBox(
+        width: 96,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            _StrengthBadge(score: item.strengthScore),
+            const SizedBox(height: 6),
+            Text(
+              item.lastUpdatedLabel,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              textAlign: TextAlign.right,
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

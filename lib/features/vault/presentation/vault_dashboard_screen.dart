@@ -8,26 +8,75 @@ import '../../../app/theme/app_spacing.dart';
 import '../../../core/security/vault_repository.dart';
 import '../domain/vault_item.dart';
 import '../domain/vault_summary.dart';
+import 'vault_entry_detail_screen.dart';
+import 'vault_entry_editor_screen.dart';
 
-class VaultDashboardScreen extends StatelessWidget {
+class VaultDashboardScreen extends StatefulWidget {
   const VaultDashboardScreen({super.key, required this.repository});
 
   final VaultRepository repository;
 
   @override
+  State<VaultDashboardScreen> createState() => _VaultDashboardScreenState();
+}
+
+class _VaultDashboardScreenState extends State<VaultDashboardScreen> {
+  late Future<({VaultSummary summary, List<VaultItem> items})> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = _load();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return FutureBuilder<({VaultSummary summary, List<VaultItem> items})>(
-      future: _load(),
+      future: _future,
       builder: (context, snapshot) {
-        if (!snapshot.hasData) {
+        if (snapshot.connectionState != ConnectionState.done) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        if (snapshot.hasError) {
+          return Scaffold(
+            body: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.lock_clock_rounded, size: 42),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Vaulta could not decrypt the local vault right now.',
+                      style: Theme.of(context).textTheme.titleLarge,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    Text('${snapshot.error}', textAlign: TextAlign.center),
+                    const SizedBox(height: 16),
+                    FilledButton(
+                      onPressed: _refresh,
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           );
         }
 
         final data = snapshot.data!;
 
         return Scaffold(
+          floatingActionButton: FloatingActionButton.extended(
+            onPressed: _createEntry,
+            icon: const Icon(Icons.add_rounded),
+            label: const Text('New entry'),
+          ),
           body: DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -46,25 +95,35 @@ class VaultDashboardScreen extends StatelessWidget {
               children: [
                 const _AmbientOrbs(),
                 SafeArea(
-                  child: CustomScrollView(
-                    slivers: [
-                      SliverPadding(
-                        padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
-                        sliver: SliverList.list(
-                          children: [
-                            _DashboardHeader(summary: data.summary),
-                            const SizedBox(height: AppSpacing.lg),
-                            _HeroSecurityCard(summary: data.summary),
-                            const SizedBox(height: AppSpacing.lg),
-                            _MetricsGrid(summary: data.summary),
-                            const SizedBox(height: AppSpacing.lg),
-                            _QuickActions(summary: data.summary),
-                            const SizedBox(height: AppSpacing.lg),
-                            _RecentVaultSection(items: data.items),
-                          ],
+                  child: RefreshIndicator(
+                    onRefresh: () async => _refresh(),
+                    child: CustomScrollView(
+                      slivers: [
+                        SliverPadding(
+                          padding: const EdgeInsets.fromLTRB(20, 12, 20, 120),
+                          sliver: SliverList.list(
+                            children: [
+                              _DashboardHeader(summary: data.summary),
+                              const SizedBox(height: AppSpacing.lg),
+                              _HeroSecurityCard(summary: data.summary),
+                              const SizedBox(height: AppSpacing.lg),
+                              _MetricsGrid(summary: data.summary),
+                              const SizedBox(height: AppSpacing.lg),
+                              _QuickActions(
+                                summary: data.summary,
+                                onCreateEntry: _createEntry,
+                              ),
+                              const SizedBox(height: AppSpacing.lg),
+                              _VaultSection(
+                                items: data.items,
+                                onCreateEntry: _createEntry,
+                                onOpenEntry: _openEntry,
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -76,9 +135,64 @@ class VaultDashboardScreen extends StatelessWidget {
   }
 
   Future<({VaultSummary summary, List<VaultItem> items})> _load() async {
-    final summary = await repository.fetchSummary();
-    final items = await repository.fetchRecentItems();
+    final summary = await widget.repository.fetchSummary();
+    final items = await widget.repository.fetchItems();
     return (summary: summary, items: items);
+  }
+
+  void _refresh() {
+    setState(() {
+      _future = _load();
+    });
+  }
+
+  Future<void> _createEntry() async {
+    final draft = await Navigator.of(context).push<VaultItem>(
+      MaterialPageRoute(builder: (_) => const VaultEntryEditorScreen()),
+    );
+
+    if (draft == null) {
+      return;
+    }
+
+    await widget.repository.saveItem(draft);
+    if (!mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Encrypted entry created.')));
+    _refresh();
+  }
+
+  Future<void> _openEntry(VaultItem item) async {
+    final changed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => VaultEntryDetailScreen(
+          item: item,
+          onEdit: () async {
+            final updated = await Navigator.of(context).push<VaultItem>(
+              MaterialPageRoute(
+                builder: (_) => VaultEntryEditorScreen(initialItem: item),
+              ),
+            );
+            if (updated == null) {
+              return false;
+            }
+            await widget.repository.saveItem(updated);
+            return true;
+          },
+          onDelete: () => widget.repository.deleteItem(item.id),
+        ),
+      ),
+    );
+
+    if (changed == true && mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Vault updated locally.')));
+      _refresh();
+    }
   }
 }
 
@@ -180,7 +294,7 @@ class _HeroSecurityCard extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
-            'El vault local ya cifra cada item con AES-256-GCM. Biometria persistente entre reinicios, rekeying y sync confiable siguen explicitamente pendientes.',
+            'El vault local ya cifra cada entry con AES-256-GCM. CRUD local real listo; busqueda, tags, generador y sync confiable siguen pendientes.',
             style: theme.textTheme.bodyLarge?.copyWith(color: Colors.white70),
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -271,9 +385,10 @@ class _MetricsGrid extends StatelessWidget {
 }
 
 class _QuickActions extends StatelessWidget {
-  const _QuickActions({required this.summary});
+  const _QuickActions({required this.summary, required this.onCreateEntry});
 
   final VaultSummary summary;
+  final Future<void> Function() onCreateEntry;
 
   @override
   Widget build(BuildContext context) {
@@ -291,7 +406,7 @@ class _QuickActions extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            'Una base profesional arranca por seguridad visible y decisiones de plataforma explicitas.',
+            'Ahora si hay vault real: alta, edicion, detalle y borrado cifrado sin bypassear la capa criptografica.',
             style: theme.textTheme.bodyLarge?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
@@ -299,13 +414,17 @@ class _QuickActions extends StatelessWidget {
           const SizedBox(height: AppSpacing.md),
           ListTile(
             contentPadding: EdgeInsets.zero,
+            onTap: onCreateEntry,
             leading: const CircleAvatar(
-              backgroundColor: Color(0x1AF2C14E),
-              child: Icon(Icons.fingerprint_rounded, color: AppColors.warning),
+              backgroundColor: Color(0x1A2D936C),
+              child: Icon(
+                Icons.add_moderator_rounded,
+                color: AppColors.success,
+              ),
             ),
-            title: const Text('Enable biometric recovery'),
+            title: const Text('Create encrypted entry'),
             subtitle: const Text(
-              'Keep real device-backed key wrapping separate from the master password flow.',
+              'Add new credentials and persist them encrypted at rest.',
             ),
             trailing: Icon(
               Icons.chevron_right_rounded,
@@ -316,14 +435,17 @@ class _QuickActions extends StatelessWidget {
           ListTile(
             contentPadding: EdgeInsets.zero,
             leading: const CircleAvatar(
-              backgroundColor: Color(0x1A2D936C),
-              child: Icon(Icons.cloud_sync_rounded, color: AppColors.success),
+              backgroundColor: Color(0x1AF2C14E),
+              child: Icon(
+                Icons.manage_search_rounded,
+                color: AppColors.warning,
+              ),
             ),
-            title: const Text('Review sync trust model'),
+            title: const Text('Plan next hardening step'),
             subtitle: Text(
               summary.syncEnabled
-                  ? 'Cross-device sync currently planned.'
-                  : 'Encrypted local-only mode selected.',
+                  ? 'Sync is on the roadmap, but trust boundaries still need design.'
+                  : 'Search, tags, generator and attachments remain intentionally out of scope.',
             ),
             trailing: Icon(
               Icons.chevron_right_rounded,
@@ -336,10 +458,16 @@ class _QuickActions extends StatelessWidget {
   }
 }
 
-class _RecentVaultSection extends StatelessWidget {
-  const _RecentVaultSection({required this.items});
+class _VaultSection extends StatelessWidget {
+  const _VaultSection({
+    required this.items,
+    required this.onCreateEntry,
+    required this.onOpenEntry,
+  });
 
   final List<VaultItem> items;
+  final Future<void> Function() onCreateEntry;
+  final Future<void> Function(VaultItem item) onOpenEntry;
 
   @override
   Widget build(BuildContext context) {
@@ -353,20 +481,79 @@ class _RecentVaultSection extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  'Recent vault activity',
+                  'Vault entries',
                   style: theme.textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
-              TextButton(onPressed: () {}, child: const Text('See all')),
+              Text(
+                '${items.length} total',
+                style: theme.textTheme.labelLarge?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: AppSpacing.sm),
-          for (var index = 0; index < items.length; index++) ...[
-            VaultEntryTile(item: items[index]),
-            if (index != items.length - 1) const Divider(height: 24),
-          ],
+          if (items.isEmpty)
+            _EmptyVaultState(onCreateEntry: onCreateEntry)
+          else
+            for (var index = 0; index < items.length; index++) ...[
+              VaultEntryTile(
+                item: items[index],
+                onTap: () => onOpenEntry(items[index]),
+              ),
+              if (index != items.length - 1) const Divider(height: 24),
+            ],
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyVaultState extends StatelessWidget {
+  const _EmptyVaultState({required this.onCreateEntry});
+
+  final Future<void> Function() onCreateEntry;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest.withValues(
+          alpha: 0.45,
+        ),
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.vpn_key_rounded, size: 36, color: AppColors.ocean),
+          const SizedBox(height: 12),
+          Text(
+            'Your vault is empty',
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Crea tu primera entry y Vaulta la cifra en reposo antes de persistirla.',
+            style: theme.textTheme.bodyLarge?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          FilledButton.icon(
+            onPressed: onCreateEntry,
+            icon: const Icon(Icons.add_rounded),
+            label: const Text('Create first entry'),
+          ),
         ],
       ),
     );

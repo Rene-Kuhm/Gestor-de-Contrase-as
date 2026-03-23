@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:local_auth/local_auth.dart';
 
@@ -8,6 +9,9 @@ import 'package:gestor_contrasenas/core/security/local_encrypted_vault_repositor
 import 'package:gestor_contrasenas/core/security/master_password_service.dart';
 import 'package:gestor_contrasenas/core/security/secure_storage_service.dart';
 import 'package:gestor_contrasenas/core/security/vault_security_controller.dart';
+import 'package:gestor_contrasenas/features/vault/domain/vault_item.dart';
+import 'package:gestor_contrasenas/features/vault/presentation/vault_entry_detail_screen.dart';
+import 'package:gestor_contrasenas/features/vault/presentation/vault_entry_editor_screen.dart';
 
 void main() {
   testWidgets('shows onboarding when no master password exists', (
@@ -35,7 +39,153 @@ void main() {
     expect(find.text('Vaulta'), findsOneWidget);
     expect(find.text('Create secure vault access'), findsOneWidget);
     expect(find.text('Onboarding seguro'), findsOneWidget);
+
+    await _disposeTree(tester);
   });
+
+  testWidgets('builds a new vault entry from the editor form', (tester) async {
+    VaultItem? savedItem;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) {
+            return Scaffold(
+              body: Center(
+                child: FilledButton(
+                  onPressed: () async {
+                    savedItem = await Navigator.of(context).push<VaultItem>(
+                      MaterialPageRoute(
+                        builder: (_) => const VaultEntryEditorScreen(),
+                      ),
+                    );
+                  },
+                  child: const Text('Open editor'),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open editor'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextFormField).at(0), 'GitHub');
+    await tester.enterText(find.byType(TextFormField).at(1), 'leo@example.com');
+    await tester.enterText(
+      find.byType(TextFormField).at(2),
+      'StrongSecret!2026',
+    );
+    await tester.enterText(
+      find.byType(TextFormField).at(3),
+      'https://github.com',
+    );
+    await tester.enterText(
+      find.byType(TextFormField).at(4),
+      'Personal access token backup.',
+    );
+
+    await tester.ensureVisible(find.text('Create entry'));
+    await tester.tap(find.text('Create entry'));
+    await tester.pumpAndSettle();
+
+    expect(savedItem, isNotNull);
+    expect(savedItem!.title, 'GitHub');
+    expect(savedItem!.username, 'leo@example.com');
+    expect(savedItem!.secret, 'StrongSecret!2026');
+    expect(savedItem!.website, 'https://github.com');
+    expect(savedItem!.notes, 'Personal access token backup.');
+    expect(savedItem!.strengthScore, greaterThanOrEqualTo(80));
+
+    await _disposeTree(tester);
+  });
+
+  testWidgets('reveals edits and deletes an entry from detail view', (
+    tester,
+  ) async {
+    var editCalls = 0;
+    var deleteCalls = 0;
+    bool? routeResult;
+
+    const item = VaultItem(
+      id: 'bank',
+      title: 'Bank',
+      username: 'finance@vaulta.app',
+      secret: 'BankPass!2026',
+      category: VaultCategory.finance,
+      strengthScore: 80,
+      lastUpdatedLabel: 'Updated now',
+      notes: 'Recovery branch code.',
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) {
+            return Scaffold(
+              body: Center(
+                child: FilledButton(
+                  onPressed: () async {
+                    routeResult = await Navigator.of(context).push<bool>(
+                      MaterialPageRoute(
+                        builder: (_) => VaultEntryDetailScreen(
+                          item: item,
+                          onEdit: () async {
+                            editCalls += 1;
+                            return true;
+                          },
+                          onDelete: () async {
+                            deleteCalls += 1;
+                          },
+                        ),
+                      ),
+                    );
+                  },
+                  child: const Text('Open detail'),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open detail'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('*********2026'), findsOneWidget);
+
+    await tester.tap(find.text('Show'));
+    await tester.pumpAndSettle();
+    expect(find.text('BankPass!2026'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Edit entry'));
+    await tester.pumpAndSettle();
+
+    expect(editCalls, 1);
+    expect(routeResult, true);
+
+    routeResult = null;
+    await tester.tap(find.text('Open detail'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Delete entry'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
+    await tester.pumpAndSettle();
+
+    expect(deleteCalls, 1);
+    expect(routeResult, true);
+
+    await _disposeTree(tester);
+  });
+}
+
+Future<void> _disposeTree(WidgetTester tester) async {
+  await tester.pumpWidget(const SizedBox.shrink());
+  await tester.pumpAndSettle();
 }
 
 class _InMemorySecureStorageService implements SecureStorageService {

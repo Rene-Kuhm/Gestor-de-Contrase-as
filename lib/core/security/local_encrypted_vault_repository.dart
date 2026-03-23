@@ -35,8 +35,7 @@ class LocalEncryptedVaultRepository implements VaultRepository {
   final VaultSessionReader _readSession;
 
   @override
-  Future<List<VaultItem>> fetchRecentItems() async {
-    await _ensureSeedData();
+  Future<List<VaultItem>> fetchItems() async {
     final session = _requireSession();
     final raw = await _storage.read(encryptedVaultItemsKey);
     if (raw == null || raw.isEmpty) {
@@ -57,12 +56,27 @@ class LocalEncryptedVaultRepository implements VaultRepository {
       );
     }
 
+    items.sort((left, right) {
+      final leftUpdated = left.updatedAt;
+      final rightUpdated = right.updatedAt;
+      if (leftUpdated == null && rightUpdated == null) {
+        return right.lastUpdatedLabel.compareTo(left.lastUpdatedLabel);
+      }
+      if (leftUpdated == null) {
+        return 1;
+      }
+      if (rightUpdated == null) {
+        return -1;
+      }
+      return rightUpdated.compareTo(leftUpdated);
+    });
+
     return items;
   }
 
   @override
   Future<VaultSummary> fetchSummary() async {
-    final items = await fetchRecentItems();
+    final items = await fetchItems();
     final weakItems = items.where((item) => item.strengthScore < 80).length;
     final reusedItems = _countReusedSecrets(items);
     final averageScore = items.isEmpty
@@ -80,15 +94,49 @@ class LocalEncryptedVaultRepository implements VaultRepository {
     );
   }
 
-  Future<void> _ensureSeedData() async {
-    final existing = await _storage.read(encryptedVaultItemsKey);
-    if (existing != null && existing.isNotEmpty) {
-      return;
+  @override
+  Future<VaultItem?> fetchItemById(String id) async {
+    final items = await fetchItems();
+    for (final item in items) {
+      if (item.id == id) {
+        return item;
+      }
+    }
+    return null;
+  }
+
+  @override
+  Future<VaultItem> saveItem(VaultItem item) async {
+    final items = List<VaultItem>.of(await fetchItems());
+    final now = DateTime.now();
+    final persisted = item.copyWith(
+      strengthScore: estimatePasswordStrength(item.secret),
+      updatedAt: now,
+      lastUpdatedLabel: formatVaultUpdatedLabel(now, now: now),
+    );
+    final index = items.indexWhere((candidate) => candidate.id == persisted.id);
+
+    if (index == -1) {
+      items.add(persisted);
+    } else {
+      items[index] = persisted;
     }
 
+    await _saveEncryptedItems(items);
+    return persisted;
+  }
+
+  @override
+  Future<void> deleteItem(String id) async {
+    final items = List<VaultItem>.of(await fetchItems());
+    items.removeWhere((item) => item.id == id);
+    await _saveEncryptedItems(items);
+  }
+
+  Future<void> _saveEncryptedItems(List<VaultItem> items) async {
     final session = _requireSession();
     final encryptedItems = <String>[];
-    for (final item in _seedItems) {
+    for (final item in items) {
       final encrypted = await _cryptoService.encrypt(
         plaintext: jsonEncode(item.toJson()),
         secretKey: session.secretKey,
@@ -120,34 +168,4 @@ class LocalEncryptedVaultRepository implements VaultRepository {
         .where((count) => count > 1)
         .fold<int>(0, (sum, count) => sum + count);
   }
-
-  List<VaultItem> get _seedItems => const [
-    VaultItem(
-      id: 'figma-workspace',
-      title: 'Figma Workspace',
-      username: 'product@vaulta.app',
-      secret: 'StudioPrototype!2026',
-      category: VaultCategory.work,
-      strengthScore: 96,
-      lastUpdatedLabel: 'Updated 2d ago',
-    ),
-    VaultItem(
-      id: 'mercado-pago',
-      title: 'Mercado Pago',
-      username: 'finanzas@vaulta.app',
-      secret: 'LedgerShield#8841',
-      category: VaultCategory.finance,
-      strengthScore: 88,
-      lastUpdatedLabel: 'Updated today',
-    ),
-    VaultItem(
-      id: 'notion-personal',
-      title: 'Notion Personal',
-      username: 'leo@vaulta.app',
-      secret: 'StudioPrototype!2026',
-      category: VaultCategory.personal,
-      strengthScore: 72,
-      lastUpdatedLabel: 'Review now',
-    ),
-  ];
 }
