@@ -1,4 +1,4 @@
-# Supabase migrations (B1 + B2 + B3)
+# Supabase migrations (B1 + B2 + B3 + B7A)
 
 This project now includes an initial Supabase schema for zero-knowledge sync.
 
@@ -7,6 +7,7 @@ This project now includes an initial Supabase schema for zero-knowledge sync.
 - `supabase/migrations/20260323100000_initial_vault_schema.sql`
 - `supabase/migrations/20260323113000_add_vault_sync_rpc.sql`
 - `supabase/migrations/20260323153000_add_device_registration_rpc.sql`
+- `supabase/migrations/20260323183000_add_device_revocation_rpc.sql`
 
 ## What these migrations create
 
@@ -21,6 +22,12 @@ This project now includes an initial Supabase schema for zero-knowledge sync.
 - RPC functions for device presence (Batch B3):
   - `public.rpc_vault_register_device(...)`
   - `public.rpc_vault_device_heartbeat(...)`
+- Session controls and revocation RPC (Batch B7A):
+  - `public.rpc_vault_device_access_status(...)`
+  - `public.rpc_vault_list_devices()`
+  - `public.rpc_vault_revoke_device(...)`
+  - `public.rpc_vault_revoke_all_other_devices(...)`
+  - `public.vault_session_controls` (`revoke_all_after` per user)
 
 ## RPC behavior (Batch B2)
 
@@ -45,6 +52,14 @@ High-level flow in app wiring:
 2. After local session unlock, app calls `rpc_vault_register_device`.
 3. On foreground resume, app sends `rpc_vault_device_heartbeat` with throttle (5 minutes).
 4. Full sync pipeline (pull/push conflict loop) remains for later batch.
+
+## Session revocation flow (Batch B7A)
+
+1. On unlock/session start, Flutter runs `rpc_vault_device_access_status` before register/heartbeat.
+2. If status is revoked (`revoked_device` or `revoked_all`), client triggers security action and blocks sync.
+3. If allowed, client continues with register or heartbeat and normal sync lifecycle.
+4. Device management uses `rpc_vault_list_devices` for status, `rpc_vault_revoke_device` for single device, and `rpc_vault_revoke_all_other_devices` for incident response.
+5. Global revocation uses `vault_session_controls.revoke_all_after`; any device older than the marker is treated as revoked.
 
 Example upsert call:
 
