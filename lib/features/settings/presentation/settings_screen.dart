@@ -7,30 +7,90 @@ import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../core/security/local_encrypted_vault_repository.dart';
 import '../../../core/security/vault_security_controller.dart';
+import '../../../core/sync/sync_conflict.dart';
+import '../../../core/sync/sync_conflict_resolver.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   const SettingsScreen({
     super.key,
     required this.securityController,
     required this.localeController,
+    this.conflictResolver,
   });
 
   final VaultSecurityController securityController;
   final AppLocaleController localeController;
 
+  final SyncConflictResolver? conflictResolver;
+
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
+  late Future<List<SyncConflictRecord>> _conflictsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _conflictsFuture = _loadConflicts();
+  }
+
   Future<void> _openChangeMasterPasswordDialog(BuildContext context) async {
     await showDialog<void>(
       context: context,
       builder: (context) {
-        return _ChangeMasterPasswordDialog(controller: securityController);
+        return _ChangeMasterPasswordDialog(controller: widget.securityController);
       },
     );
+  }
+
+  Future<List<SyncConflictRecord>> _loadConflicts() async {
+    final resolver = widget.conflictResolver;
+    if (resolver == null) {
+      return const [];
+    }
+
+    return resolver.readPendingConflicts();
+  }
+
+  void _refreshConflicts() {
+    setState(() {
+      _conflictsFuture = _loadConflicts();
+    });
+  }
+
+  Future<void> _resolveConflict(
+    BuildContext context,
+    SyncConflictRecord conflict,
+    SyncConflictResolution resolution,
+  ) async {
+    final resolver = widget.conflictResolver;
+    if (resolver == null) {
+      return;
+    }
+
+    final result = await resolver.resolve(
+      conflictId: conflict.id,
+      resolution: resolution,
+    );
+
+    if (!context.mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(result.message)),
+    );
+    _refreshConflicts();
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final theme = Theme.of(context);
+    final securityController = widget.securityController;
+    final localeController = widget.localeController;
     final idleTimeoutPresets = <_IdleTimeoutPreset>[
       _IdleTimeoutPreset(
         seconds: 0,
@@ -194,6 +254,74 @@ class SettingsScreen extends StatelessWidget {
               },
             ),
           ),
+          if (widget.conflictResolver != null) ...[
+            const SizedBox(height: AppSpacing.md),
+            AppPanel(
+              child: FutureBuilder<List<SyncConflictRecord>>(
+                future: _conflictsFuture,
+                builder: (context, snapshot) {
+                  final conflicts = snapshot.data ?? const <SyncConflictRecord>[];
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Sync conflicts',
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            tooltip: 'Refresh',
+                            onPressed: _refreshConflicts,
+                            icon: const Icon(Icons.refresh_rounded),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      if (snapshot.connectionState != ConnectionState.done)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                          child: LinearProgressIndicator(),
+                        )
+                      else if (conflicts.isEmpty)
+                        Text(
+                          'No pending conflicts. Sync queue is clean.',
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        )
+                      else
+                        for (final conflict in conflicts) ...[
+                          _SyncConflictCard(
+                            conflict: conflict,
+                            onKeepLocal: () {
+                              _resolveConflict(
+                                context,
+                                conflict,
+                                SyncConflictResolution.keepLocal,
+                              );
+                            },
+                            onKeepRemote: () {
+                              _resolveConflict(
+                                context,
+                                conflict,
+                                SyncConflictResolution.keepRemote,
+                              );
+                            },
+                          ),
+                          if (conflict != conflicts.last)
+                            const SizedBox(height: AppSpacing.sm),
+                        ],
+                    ],
+                  );
+                },
+              ),
+            ),
+          ],
           const SizedBox(height: AppSpacing.md),
           AppPanel(
             child: Column(
@@ -313,6 +441,86 @@ class _IdleTimeoutPreset {
   final int seconds;
   final String label;
   final String description;
+}
+
+class _SyncConflictCard extends StatelessWidget {
+  const _SyncConflictCard({
+    required this.conflict,
+    required this.onKeepLocal,
+    required this.onKeepRemote,
+  });
+
+  final SyncConflictRecord conflict;
+  final VoidCallback onKeepLocal;
+  final VoidCallback onKeepRemote;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final expectedVersion = conflict.expectedVersion?.toString() ?? 'unknown';
+    final remoteVersion = conflict.currentVersion?.toString() ?? 'unknown';
+    final subtitle = conflict.message ?? 'CAS conflict detected while pushing mutation.';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.sync_problem_rounded, color: AppColors.warning),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  conflict.localRecordId,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            subtitle,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Local base v$expectedVersion - Remote v$remoteVersion',
+            style: theme.textTheme.labelLarge,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: onKeepRemote,
+                  icon: const Icon(Icons.cloud_done_rounded),
+                  label: const Text('Keep remote'),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: onKeepLocal,
+                  icon: const Icon(Icons.upload_rounded),
+                  label: const Text('Keep local'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _CapabilityRow extends StatelessWidget {

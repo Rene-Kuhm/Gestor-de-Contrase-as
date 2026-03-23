@@ -7,6 +7,7 @@ import 'incremental_pull_sync_service.dart';
 import 'incremental_push_sync_service.dart';
 import 'local_vault_mutation.dart';
 import 'device_registration_repository.dart';
+import 'sync_conflict_resolver.dart';
 
 abstract interface class AppVersionProvider {
   Future<String> readAppVersion();
@@ -144,6 +145,7 @@ class DeviceSyncLifecycle {
     required DeviceRegistrationService service,
     IncrementalPullSyncService? pullSyncService,
     IncrementalPushSyncService? pushSyncService,
+    this.conflictResolver,
     RelayLocalVaultMutationSink? mutationSink,
     this.heartbeatInterval = const Duration(minutes: 5),
     DateTime Function()? now,
@@ -156,6 +158,7 @@ class DeviceSyncLifecycle {
   final DeviceRegistrationService _service;
   final IncrementalPullSyncService? _pullSyncService;
   final IncrementalPushSyncService? _pushSyncService;
+  final SyncConflictResolver? conflictResolver;
   final RelayLocalVaultMutationSink? _mutationSink;
   final Duration heartbeatInterval;
   final DateTime Function() _now;

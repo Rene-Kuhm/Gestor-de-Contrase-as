@@ -4,6 +4,7 @@ import '../../../app/localization/app_locale_controller.dart';
 import '../../../app/localization/l10n.dart';
 import '../../../core/security/vault_security_controller.dart';
 import '../../../core/security/vault_repository.dart';
+import '../../../core/sync/sync_conflict_resolver.dart';
 import '../../settings/presentation/settings_screen.dart';
 import '../../vault/presentation/vault_dashboard_screen.dart';
 
@@ -13,11 +14,13 @@ class AppShell extends StatefulWidget {
     required this.repository,
     required this.securityController,
     required this.localeController,
+    this.conflictResolver,
   });
 
   final VaultRepository repository;
   final VaultSecurityController securityController;
   final AppLocaleController localeController;
+  final SyncConflictResolver? conflictResolver;
 
   @override
   State<AppShell> createState() => _AppShellState();
@@ -38,6 +41,7 @@ class _AppShellState extends State<AppShell> {
       SettingsScreen(
         securityController: widget.securityController,
         localeController: widget.localeController,
+        conflictResolver: widget.conflictResolver,
       ),
     ];
 

@@ -4,6 +4,7 @@ import 'local_remote_vault_store.dart';
 import 'local_vault_mutation.dart';
 import 'remote_vault_blob_change.dart';
 import 'remote_vault_sync_repository.dart';
+import 'sync_conflict.dart';
 
 class IncrementalPushSyncService implements LocalVaultMutationSink {
   IncrementalPushSyncService({
@@ -63,6 +64,10 @@ class IncrementalPushSyncService implements LocalVaultMutationSink {
     await _triggerSync();
   }
 
+  Future<void> runNow() async {
+    await _triggerSync();
+  }
+
   Future<void> _triggerSync() async {
     if (_running) {
       _rerunRequested = true;
@@ -115,7 +120,11 @@ class IncrementalPushSyncService implements LocalVaultMutationSink {
       }
 
       queue[index] = prepared;
-      final result = await _dispatch(deviceId: deviceId, item: prepared);
+      final result = await _dispatch(
+        userId: userId,
+        deviceId: deviceId,
+        item: prepared,
+      );
       if (result.removeFromQueue) {
         queue.removeAt(index);
       } else {
@@ -139,7 +148,8 @@ class IncrementalPushSyncService implements LocalVaultMutationSink {
   }
 
   bool _isDispatchable(PushQueueItem item, {required DateTime now}) {
-    if (item.status == PushQueueStatus.failed) {
+    if (item.status == PushQueueStatus.failed ||
+        item.status == PushQueueStatus.conflict) {
       return false;
     }
 
@@ -196,12 +206,13 @@ class IncrementalPushSyncService implements LocalVaultMutationSink {
   }
 
   Future<_DispatchResult> _dispatch({
+    required String userId,
     required String deviceId,
     required PushQueueItem item,
   }) async {
     try {
       final response = await _sendToRemote(deviceId: deviceId, item: item);
-      return _interpretResponse(item: item, response: response);
+      return _interpretResponse(userId: userId, item: item, response: response);
     } catch (_) {
       final retryCount = item.retryCount + 1;
       return _DispatchResult(
@@ -247,10 +258,11 @@ class IncrementalPushSyncService implements LocalVaultMutationSink {
     };
   }
 
-  _DispatchResult _interpretResponse({
+  Future<_DispatchResult> _interpretResponse({
+    required String userId,
     required PushQueueItem item,
     required RemoteVaultPushResult response,
-  }) {
+  }) async {
     final updatedAt = _now().toUtc();
     if (response.code == RemoteVaultPushResultCode.applied ||
         response.code == RemoteVaultPushResultCode.idempotentReplay) {
@@ -262,8 +274,21 @@ class IncrementalPushSyncService implements LocalVaultMutationSink {
       );
     }
 
-    if (response.code == RemoteVaultPushResultCode.casConflict ||
-        response.code == RemoteVaultPushResultCode.idempotencyMismatch) {
+    if (response.code == RemoteVaultPushResultCode.casConflict) {
+      await _registerConflict(userId: userId, item: item, response: response);
+      return _DispatchResult(
+        item: item.copyWith(
+          status: PushQueueStatus.conflict,
+          lastResultCode: response.code.name,
+          lastMessage: response.message,
+          nextAttemptAt: null,
+          updatedAt: updatedAt,
+        ),
+        removeFromQueue: false,
+      );
+    }
+
+    if (response.code == RemoteVaultPushResultCode.idempotencyMismatch) {
       return _DispatchResult(
         item: item.copyWith(
           status: PushQueueStatus.failed,
@@ -287,6 +312,59 @@ class IncrementalPushSyncService implements LocalVaultMutationSink {
         updatedAt: updatedAt,
       ),
       removeFromQueue: false,
+    );
+  }
+
+  Future<void> _registerConflict({
+    required String userId,
+    required PushQueueItem item,
+    required RemoteVaultPushResult response,
+  }) async {
+    final now = _now().toUtc();
+    final snapshot = await _localStore.readSnapshot(
+      userId: userId,
+      recordId: item.remoteRecordId,
+    );
+
+    await _localStore.upsertPendingConflict(
+      userId: userId,
+      conflict: SyncConflictRecord(
+        id: _uuid.v4(),
+        opId: item.opId,
+        localRecordId: item.localRecordId,
+        remoteRecordId: item.remoteRecordId,
+        kind: item.kind == PushQueueOperationKind.upsert
+            ? SyncConflictOperationKind.upsert
+            : SyncConflictOperationKind.delete,
+        createdAt: now,
+        updatedAt: now,
+        lastResultCode: response.code.name,
+        message: response.message,
+        expectedVersion: item.expectedVersion,
+        currentVersion: response.currentVersion,
+        localSnapshot: SyncConflictSnapshot(
+          version: item.expectedVersion,
+          keyVersion: item.keyVersion,
+          ciphertext: item.ciphertext,
+          nonce: item.nonce,
+          aad: item.aad,
+          updatedAt: item.updatedAt,
+        ),
+        remoteSnapshot: snapshot == null
+            ? SyncConflictSnapshot(
+                version: response.currentVersion,
+                updatedAt: now,
+              )
+            : SyncConflictSnapshot(
+                version: response.currentVersion ?? snapshot.version,
+                keyVersion: snapshot.keyVersion,
+                ciphertext: snapshot.ciphertext,
+                nonce: snapshot.nonce,
+                aad: snapshot.aad,
+                deletedAt: snapshot.deletedAt,
+                updatedAt: snapshot.updatedAt,
+              ),
+      ),
     );
   }
 

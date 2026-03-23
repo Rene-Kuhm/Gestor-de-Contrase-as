@@ -95,6 +95,7 @@ class PasswordManagerApp extends StatelessWidget {
               repository: repository,
               securityController: securityController,
               localeController: localeController,
+              conflictResolver: deviceSyncLifecycle?.conflictResolver,
             ),
           ),
         );

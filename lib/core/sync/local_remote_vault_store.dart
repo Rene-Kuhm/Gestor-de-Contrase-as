@@ -3,6 +3,7 @@ import 'dart:convert';
 import '../security/secure_storage_service.dart';
 import 'local_vault_mutation.dart';
 import 'remote_vault_blob_change.dart';
+import 'sync_conflict.dart';
 
 class LocalRemoteVaultStore {
   LocalRemoteVaultStore({required SecureStorageService storage})
@@ -12,6 +13,7 @@ class LocalRemoteVaultStore {
   static const _lastPullPrefix = 'vault_sync_pull_last_at_v1';
   static const _blobPrefix = 'vault_sync_remote_blobs_v1';
   static const _pushQueuePrefix = 'vault_sync_push_queue_v1';
+  static const _conflictPrefix = 'vault_sync_conflicts_v1';
 
   final SecureStorageService _storage;
 
@@ -160,6 +162,55 @@ class LocalRemoteVaultStore {
     await savePushQueue(userId: userId, items: queue);
   }
 
+  Future<List<SyncConflictRecord>> readPendingConflicts({
+    required String userId,
+  }) async {
+    final raw = await _storage.read(_conflictKey(userId: userId));
+    if (raw == null || raw.isEmpty) {
+      return [];
+    }
+
+    final payload = jsonDecode(raw) as List<dynamic>;
+    return payload
+        .cast<Map<String, dynamic>>()
+        .map(SyncConflictRecord.fromJson)
+        .toList(growable: true);
+  }
+
+  Future<void> savePendingConflicts({
+    required String userId,
+    required List<SyncConflictRecord> conflicts,
+  }) async {
+    final encoded = conflicts
+        .map((conflict) => conflict.toJson())
+        .toList(growable: false);
+    await _storage.save(_conflictKey(userId: userId), jsonEncode(encoded));
+  }
+
+  Future<void> upsertPendingConflict({
+    required String userId,
+    required SyncConflictRecord conflict,
+  }) async {
+    final conflicts = await readPendingConflicts(userId: userId);
+    final index = conflicts.indexWhere((item) => item.opId == conflict.opId);
+    if (index == -1) {
+      conflicts.add(conflict);
+    } else {
+      conflicts[index] = conflict;
+    }
+
+    await savePendingConflicts(userId: userId, conflicts: conflicts);
+  }
+
+  Future<void> removePendingConflict({
+    required String userId,
+    required String conflictId,
+  }) async {
+    final conflicts = await readPendingConflicts(userId: userId);
+    conflicts.removeWhere((item) => item.id == conflictId);
+    await savePendingConflicts(userId: userId, conflicts: conflicts);
+  }
+
   bool _shouldApply({
     required RemoteVaultBlobSnapshot? existing,
     required RemoteVaultBlobChange incoming,
@@ -194,9 +245,13 @@ class LocalRemoteVaultStore {
   String _pushQueueKey({required String userId}) {
     return '$_pushQueuePrefix:$userId';
   }
+
+  String _conflictKey({required String userId}) {
+    return '$_conflictPrefix:$userId';
+  }
 }
 
-enum PushQueueStatus { pending, inFlight, retry, failed }
+enum PushQueueStatus { pending, inFlight, retry, failed, conflict }
 
 enum PushQueueOperationKind { upsert, delete }
 
@@ -358,6 +413,7 @@ class PushQueueItem {
       'inFlight' => PushQueueStatus.inFlight,
       'retry' => PushQueueStatus.retry,
       'failed' => PushQueueStatus.failed,
+      'conflict' => PushQueueStatus.conflict,
       _ => PushQueueStatus.pending,
     };
   }

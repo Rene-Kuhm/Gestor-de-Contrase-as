@@ -8,6 +8,7 @@ import 'local_remote_vault_store.dart';
 import 'local_vault_mutation.dart';
 import 'supabase_device_registration_repository.dart';
 import 'supabase_remote_vault_sync_repository.dart';
+import 'sync_conflict_resolver.dart';
 
 Future<DeviceSyncLifecycle?> buildDeviceSyncLifecycle({
   required SecureStorageService storage,
@@ -45,12 +46,18 @@ Future<DeviceSyncLifecycle?> buildDeviceSyncLifecycle({
     localStore: localStore,
     readDeviceId: identityService.getOrCreateDeviceId,
   );
+  final conflictResolver = SyncConflictResolver(
+    repository: pullRepository,
+    localStore: localStore,
+    triggerPushSync: pushSyncService.runNow,
+  );
   mutationSink?.attach(pushSyncService);
 
   return DeviceSyncLifecycle(
     service: service,
     pullSyncService: pullSyncService,
     pushSyncService: pushSyncService,
+    conflictResolver: conflictResolver,
     mutationSink: mutationSink,
   );
 }

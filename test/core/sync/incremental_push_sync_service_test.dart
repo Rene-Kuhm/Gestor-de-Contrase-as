@@ -7,6 +7,7 @@ import 'package:gestor_contrasenas/core/sync/local_remote_vault_store.dart';
 import 'package:gestor_contrasenas/core/sync/local_vault_mutation.dart';
 import 'package:gestor_contrasenas/core/sync/remote_vault_blob_change.dart';
 import 'package:gestor_contrasenas/core/sync/remote_vault_sync_repository.dart';
+import 'package:gestor_contrasenas/core/sync/sync_conflict.dart';
 
 void main() {
   group('IncrementalPushSyncService', () {
@@ -53,7 +54,7 @@ void main() {
       expect(snapshots.values.first.version, 1);
     });
 
-    test('marks queue item as failed on cas conflict', () async {
+    test('captures conflict details and marks queue item as conflict', () async {
       final storage = _InMemorySecureStorageService();
       final localStore = LocalRemoteVaultStore(storage: storage);
       final repository = _FakeRemoteVaultSyncRepository(
@@ -97,9 +98,13 @@ void main() {
       );
 
       final queue = await localStore.readPushQueue(userId: 'user-1');
+      final conflicts = await localStore.readPendingConflicts(userId: 'user-1');
       expect(queue, hasLength(1));
-      expect(queue.first.status, PushQueueStatus.failed);
+      expect(queue.first.status, PushQueueStatus.conflict);
       expect(queue.first.lastResultCode, 'casConflict');
+      expect(conflicts, hasLength(1));
+      expect(conflicts.first.currentVersion, 7);
+      expect(conflicts.first.kind, SyncConflictOperationKind.delete);
     });
 
     test('keeps retry state and idempotency key on transient error', () async {
