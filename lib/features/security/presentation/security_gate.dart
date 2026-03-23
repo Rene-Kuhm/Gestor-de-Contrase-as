@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../app/design_system/app_panel.dart';
+import '../../../app/localization/l10n.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../core/security/vault_security_controller.dart';
@@ -108,6 +109,7 @@ class _OnboardingScreenState extends State<_OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final theme = Theme.of(context);
     final controller = widget.controller;
 
@@ -116,11 +118,10 @@ class _OnboardingScreenState extends State<_OnboardingScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
           children: [
-            const _BrandHero(
-              eyebrow: 'Onboarding seguro',
-              title: 'Creamos tu llave maestra sin atajos peligrosos.',
-              subtitle:
-                  'La master password valida acceso local y deriva la clave que cifra los items del vault. Nada de guardar secretos en claro ni inventar criptografia casera.',
+            _BrandHero(
+              eyebrow: l10n.securityOnboardingEyebrow,
+              title: l10n.securityOnboardingTitle,
+              subtitle: l10n.securityOnboardingSubtitle,
             ),
             const SizedBox(height: AppSpacing.lg),
             AppPanel(
@@ -130,14 +131,14 @@ class _OnboardingScreenState extends State<_OnboardingScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Master password',
+                      l10n.securityMasterPasswordTitle,
                       style: theme.textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     Text(
-                      'Pedimos 12+ caracteres con mezcla real. Nada de guardar la clave en texto plano.',
+                      l10n.securityMasterPasswordDescription,
                       style: theme.textTheme.bodyLarge?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
@@ -147,7 +148,7 @@ class _OnboardingScreenState extends State<_OnboardingScreen> {
                       controller: _passwordController,
                       obscureText: _obscurePassword,
                       decoration: InputDecoration(
-                        labelText: 'Create master password',
+                         labelText: l10n.securityCreateMasterPassword,
                         suffixIcon: IconButton(
                           onPressed: () {
                             setState(() {
@@ -167,7 +168,7 @@ class _OnboardingScreenState extends State<_OnboardingScreen> {
                       controller: _confirmationController,
                       obscureText: _obscureConfirmation,
                       decoration: InputDecoration(
-                        labelText: 'Confirm master password',
+                         labelText: l10n.securityConfirmMasterPassword,
                         suffixIcon: IconButton(
                           onPressed: () {
                             setState(() {
@@ -185,9 +186,9 @@ class _OnboardingScreenState extends State<_OnboardingScreen> {
                     const SizedBox(height: AppSpacing.md),
                     _SecurityChecklist(
                       items: [
-                        'PBKDF2-HMAC-SHA256 para verificar la master password.',
-                        'PBKDF2-HMAC-SHA256 separado para derivar la clave del vault.',
-                        'Items locales cifrados con AES-256-GCM y record guardado con Keychain / Keystore.',
+                        l10n.securityChecklistHash,
+                        l10n.securityChecklistDerive,
+                        l10n.securityChecklistEncrypt,
                       ],
                     ),
                     const SizedBox(height: AppSpacing.md),
@@ -199,11 +200,13 @@ class _OnboardingScreenState extends State<_OnboardingScreen> {
                               setState(() => _enableBiometrics = value);
                             }
                           : null,
-                      title: const Text('Habilitar biometria local'),
+                      title: Text(l10n.securityEnableBiometrics),
                       subtitle: Text(
                         controller.canOfferBiometricToggle
-                            ? 'Vincula ${controller.biometricAvailability.label} para desbloqueo rapido del dispositivo actual.'
-                            : 'No detectamos biometria disponible. Igual vas a poder entrar con tu master password.',
+                            ? l10n.securityBiometricAvailable(
+                                controller.biometricAvailability.label,
+                              )
+                            : l10n.securityBiometricUnavailable,
                       ),
                     ),
                     if (controller.message case final message?) ...[
@@ -220,7 +223,7 @@ class _OnboardingScreenState extends State<_OnboardingScreen> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Icon(Icons.shield_rounded),
-                      label: const Text('Create secure vault access'),
+                       label: Text(l10n.securityCreateSecureAccess),
                     ),
                   ],
                 ),
@@ -266,6 +269,7 @@ class _UnlockScreenState extends State<_UnlockScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final theme = Theme.of(context);
     final controller = widget.controller;
 
@@ -275,11 +279,13 @@ class _UnlockScreenState extends State<_UnlockScreen> {
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
           children: [
             _BrandHero(
-              eyebrow: 'Unlock',
-              title: 'Tu vault queda cerrado hasta validar identidad real.',
+              eyebrow: l10n.securityUnlockEyebrow,
+              title: l10n.securityUnlockTitle,
               subtitle: controller.canUnlockWithBiometrics
-                  ? 'Podes entrar con master password o ${controller.biometricAvailability.label}. La biometria restaura la sesion local del dispositivo, incluso despues de reiniciar la app, mientras la clave biometrica siga vigente.'
-                  : 'Usa tu master password para recuperar acceso. La biometria queda lista cuando el dispositivo la soporte y la vincules.',
+                  ? l10n.securityUnlockBiometricSubtitle(
+                      controller.biometricAvailability.label,
+                    )
+                  : l10n.securityUnlockPasswordSubtitle,
             ),
             const SizedBox(height: AppSpacing.lg),
             AppPanel(
@@ -287,7 +293,7 @@ class _UnlockScreenState extends State<_UnlockScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Protected access',
+                     l10n.securityProtectedAccess,
                     style: theme.textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
@@ -298,7 +304,7 @@ class _UnlockScreenState extends State<_UnlockScreen> {
                     obscureText: _obscurePassword,
                     onSubmitted: (_) => _unlockWithPassword(),
                     decoration: InputDecoration(
-                      labelText: 'Master password',
+                       labelText: l10n.securityMasterPasswordTitle,
                       suffixIcon: IconButton(
                         onPressed: () {
                           setState(() {
@@ -329,7 +335,7 @@ class _UnlockScreenState extends State<_UnlockScreen> {
                                     strokeWidth: 2,
                                   ),
                                 )
-                              : const Text('Unlock vault'),
+                               : Text(l10n.securityUnlockVault),
                         ),
                       ),
                       if (controller.canUnlockWithBiometrics) ...[
@@ -339,7 +345,7 @@ class _UnlockScreenState extends State<_UnlockScreen> {
                               ? null
                               : _unlockWithBiometrics,
                           icon: const Icon(Icons.fingerprint_rounded),
-                          label: const Text('Biometric'),
+                           label: Text(l10n.securityBiometricButton),
                         ),
                       ],
                     ],
@@ -352,12 +358,12 @@ class _UnlockScreenState extends State<_UnlockScreen> {
               ),
             ),
             const SizedBox(height: AppSpacing.lg),
-            const AppPanel(
+            AppPanel(
               child: _SecurityChecklist(
                 items: [
-                  'El registro de acceso vive en almacenamiento seguro del sistema.',
-                  'La biometria usa LocalAuthentication y un artefacto local protegido en Keychain/Keystore para recovery post-reinicio.',
-                  'El vault local cifra con AES-256-GCM y ya soporta rekeying al cambiar master password; recovery y sync quedan pendientes.',
+                  l10n.securityChecklistHash,
+                  l10n.securityChecklistDerive,
+                  l10n.securityChecklistEncrypt,
                 ],
               ),
             ),
@@ -443,6 +449,7 @@ class _BrandHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final theme = Theme.of(context);
 
     return Column(
@@ -464,7 +471,7 @@ class _BrandHero extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.md),
         Text(
-          'Vaulta',
+          l10n.appTitle,
           style: theme.textTheme.displaySmall?.copyWith(
             fontWeight: FontWeight.w700,
           ),

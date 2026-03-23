@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:local_auth/local_auth.dart';
 
+import 'package:gestor_contrasenas/app/localization/app_locale_controller.dart';
 import 'package:gestor_contrasenas/core/security/biometric_auth_service.dart';
 import 'package:gestor_contrasenas/core/security/master_password_service.dart';
 import 'package:gestor_contrasenas/core/security/secure_storage_service.dart';
 import 'package:gestor_contrasenas/core/security/vault_security_controller.dart';
 import 'package:gestor_contrasenas/features/settings/presentation/settings_screen.dart';
+import 'package:gestor_contrasenas/l10n/app_localizations.dart';
 
 void main() {
   group('SettingsScreen change master password', () {
@@ -19,10 +21,19 @@ void main() {
           rekeyCalls += 1;
         },
       );
+      final localeController = AppLocaleController(
+        storage: _InMemorySecureStorageService(),
+      );
+      await localeController.initialize();
       addTearDown(controller.dispose);
 
       await tester.pumpWidget(
-        MaterialApp(home: SettingsScreen(securityController: controller)),
+        _testApp(
+          SettingsScreen(
+            securityController: controller,
+            localeController: localeController,
+          ),
+        ),
       );
       await tester.pumpAndSettle();
 
@@ -58,10 +69,19 @@ void main() {
       tester,
     ) async {
       final controller = await _buildUnlockedController();
+      final localeController = AppLocaleController(
+        storage: _InMemorySecureStorageService(),
+      );
+      await localeController.initialize();
       addTearDown(controller.dispose);
 
       await tester.pumpWidget(
-        MaterialApp(home: SettingsScreen(securityController: controller)),
+        _testApp(
+          SettingsScreen(
+            securityController: controller,
+            localeController: localeController,
+          ),
+        ),
       );
       await tester.pumpAndSettle();
 
@@ -90,10 +110,19 @@ void main() {
 
     testWidgets('updates idle timeout preset from settings', (tester) async {
       final controller = await _buildUnlockedController();
+      final localeController = AppLocaleController(
+        storage: _InMemorySecureStorageService(),
+      );
+      await localeController.initialize();
       addTearDown(controller.dispose);
 
       await tester.pumpWidget(
-        MaterialApp(home: SettingsScreen(securityController: controller)),
+        _testApp(
+          SettingsScreen(
+            securityController: controller,
+            localeController: localeController,
+          ),
+        ),
       );
       await tester.pumpAndSettle();
 
@@ -108,6 +137,14 @@ void main() {
       expect(controller.message, contains('inactividad desactivado'));
     });
   });
+}
+
+Widget _testApp(Widget home) {
+  return MaterialApp(
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    home: home,
+  );
 }
 
 Future<VaultSecurityController> _buildUnlockedController({

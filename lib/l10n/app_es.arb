@@ -1,0 +1,193 @@
+{
+  "@@locale": "es",
+  "appTitle": "Vaulta",
+  "navVault": "Vault",
+  "navAccess": "Acceso",
+  "navSettings": "Ajustes",
+  "languageSectionTitle": "Idioma",
+  "languageSelectorLabel": "Idioma de la app",
+  "languageEnglish": "Ingles",
+  "languageSpanish": "Espanol",
+
+  "settingsTitle": "Ajustes",
+  "settingsLocalUnlockPostureTitle": "Postura de desbloqueo local",
+  "settingsLocalUnlockPostureDescription": "Vaulta guarda el estado sensible en Keychain / Keystore y usa biometria del sistema cuando esta disponible.",
+  "settingsMasterPasswordCreated": "Master password creada",
+  "settingsBiometricsAvailable": "Biometria disponible",
+  "settingsBiometricsEnabled": "Biometria activada",
+  "settingsUnlockWithBiometrics": "Desbloquear con biometria",
+  "settingsBiometricSupportedSubtitle": "Usa {biometricLabel} para reabrir la sesion local. Si el recovery biometrico del dispositivo sigue vigente, tambien funciona despues de reiniciar la app.",
+  "@settingsBiometricSupportedSubtitle": {
+    "placeholders": {
+      "biometricLabel": {}
+    }
+  },
+  "settingsBiometricUnavailableSubtitle": "No hay biometria configurada o soportada en este entorno.",
+  "settingsAutoLockBackgroundTitle": "Auto-lock al pasar a background",
+  "settingsAutoLockBackgroundSubtitle": "Bloquea Vaulta automaticamente si la app queda inactive, paused o detached.",
+  "settingsIdleTimeoutLabel": "Auto-lock por inactividad en foreground",
+  "settingsLockNow": "Bloquear ahora",
+  "settingsChangeMasterPassword": "Cambiar master password",
+  "settingsRoadmapTitle": "Roadmap de seguridad de plataforma",
+  "settingsRoadmapNotes": "Los items del vault se guardan cifrados con AES-256-GCM usando una clave derivada por PBKDF2-HMAC-SHA256 desde la master password. La clave vive solo en memoria de la sesion actual; sync confiable y recovery biometrico entre reinicios siguen pendientes.",
+  "settingsSecureStorage": "Almacenamiento seguro",
+  "settingsBiometricUnlock": "Desbloqueo biometrico",
+  "settingsHardwareBackedKeys": "Claves con respaldo de hardware",
+  "settingsVaultEncryptionReady": "Cifrado del vault conectado end-to-end",
+  "idleNever": "Nunca",
+  "idleDisabled": "Desactivado",
+  "idleOneMinute": "1 minuto",
+  "idleFiveMinutes": "5 minutos",
+  "idleFifteenMinutes": "15 minutos",
+  "idleStrict": "Estricto",
+  "idleRecommended": "Recomendado",
+  "idleRelaxed": "Relajado",
+  "changeMasterPasswordTitle": "Cambiar master password",
+  "changeMasterPasswordCurrent": "Master password actual",
+  "changeMasterPasswordNew": "Nueva master password",
+  "changeMasterPasswordConfirm": "Confirmar nueva master password",
+  "changeMasterPasswordHint": "Este cambio vuelve a cifrar todo el vault con una clave nueva.",
+  "cancel": "Cancelar",
+  "apply": "Aplicar",
+  "masterPasswordUpdatedSuccess": "Master password actualizada correctamente.",
+  "changeMasterPasswordErrorFallback": "No pudimos cambiar la master password. Revisa los datos e intenta de nuevo.",
+
+  "securityOnboardingEyebrow": "Onboarding seguro",
+  "securityOnboardingTitle": "Creamos tu llave maestra sin atajos peligrosos.",
+  "securityOnboardingSubtitle": "La master password valida acceso local y deriva la clave que cifra los items del vault.",
+  "securityMasterPasswordTitle": "Master password",
+  "securityMasterPasswordDescription": "Pedimos 12+ caracteres con mezcla real. Nada de guardar la clave en texto plano.",
+  "securityCreateMasterPassword": "Crear master password",
+  "securityConfirmMasterPassword": "Confirmar master password",
+  "securityChecklistHash": "PBKDF2-HMAC-SHA256 para verificar la master password.",
+  "securityChecklistDerive": "PBKDF2-HMAC-SHA256 separado para derivar la clave del vault.",
+  "securityChecklistEncrypt": "Items locales cifrados con AES-256-GCM y record guardado con Keychain / Keystore.",
+  "securityEnableBiometrics": "Habilitar biometria local",
+  "securityBiometricAvailable": "Vincula {biometricLabel} para desbloqueo rapido del dispositivo actual.",
+  "@securityBiometricAvailable": {
+    "placeholders": {
+      "biometricLabel": {}
+    }
+  },
+  "securityBiometricUnavailable": "No detectamos biometria disponible. Igual vas a poder entrar con tu master password.",
+  "securityCreateSecureAccess": "Crear acceso seguro al vault",
+  "securityUnlockEyebrow": "Desbloquear",
+  "securityUnlockTitle": "Tu vault queda cerrado hasta validar identidad real.",
+  "securityUnlockBiometricSubtitle": "Podes entrar con master password o {biometricLabel}.",
+  "@securityUnlockBiometricSubtitle": {
+    "placeholders": {
+      "biometricLabel": {}
+    }
+  },
+  "securityUnlockPasswordSubtitle": "Usa tu master password para recuperar acceso.",
+  "securityProtectedAccess": "Acceso protegido",
+  "securityUnlockVault": "Desbloquear vault",
+  "securityBiometricButton": "Biometria",
+
+  "dashboardDecryptError": "Vaulta no pudo descifrar el vault local en este momento.",
+  "retry": "Reintentar",
+  "newEntry": "Nueva entrada",
+  "entryCreatedMessage": "Entrada cifrada creada.",
+  "vaultUpdatedMessage": "Vault actualizado de forma local.",
+  "dashboardSubtitle": "Tu centro de control cifrado",
+  "dashboardHeroTitle": "Protegido por hardware del sistema",
+  "dashboardHeroBody": "El vault local ya cifra cada entrada con AES-256-GCM. El CRUD local real esta listo; busqueda, tags, generador y sync confiable siguen pendientes.",
+  "dashboardPillTrustedDevices": "{count} dispositivos confiables",
+  "@dashboardPillTrustedDevices": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dashboardPillSyncEnabled": "Sync seguro activo",
+  "dashboardPillSyncDisabled": "Vault cifrado offline",
+  "dashboardPillWeakNeedRotation": "{count} passwords necesitan rotacion",
+  "@dashboardPillWeakNeedRotation": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "securityScore": "Puntaje de seguridad",
+  "vaultEntries": "Entradas del vault",
+  "weakPasswords": "Passwords debiles",
+  "reusedItems": "Items reutilizados",
+  "trustedDevices": "Dispositivos confiables",
+  "priorityActions": "Acciones prioritarias",
+  "dashboardQuickActionsSummary": "Ahora el vault es real: alta, edicion, detalle y borrado con cifrado preservado end-to-end.",
+  "createEncryptedEntry": "Crear entrada cifrada",
+  "createEncryptedEntrySubtitle": "Agrega nuevas credenciales y guardalas cifradas en reposo.",
+  "planNextHardeningStep": "Planificar siguiente hardening",
+  "dashboardRoadmapSyncEnabled": "El sync esta en roadmap, pero los limites de confianza todavia necesitan diseno.",
+  "dashboardRoadmapSyncDisabled": "Busqueda, tags, generador y adjuntos siguen intencionalmente fuera de alcance.",
+  "vaultEntriesSectionTitle": "Entradas del vault",
+  "searchVault": "Buscar titulo, usuario o sitio",
+  "filter": "Filtro",
+  "filterAllEntries": "Todas las entradas",
+  "filterWeakOnly": "Solo passwords debiles",
+  "filterWithNotes": "Entradas con notas",
+  "resetFilters": "Restablecer filtros",
+  "noResultsTitle": "Ninguna entrada coincide con los filtros",
+  "noResultsSubtitle": "Proba otra busqueda o reinicia filtros para ver todo otra vez.",
+  "emptyVaultTitle": "Tu vault esta vacio",
+  "emptyVaultSubtitle": "Crea tu primera entrada y Vaulta la cifra antes de persistirla.",
+  "createFirstEntry": "Crear primera entrada",
+  "itemsTotal": "{count} total",
+  "@itemsTotal": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "itemsShownOfTotal": "{shown} visibles - {total} total",
+  "@itemsShownOfTotal": {
+    "placeholders": {
+      "shown": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+
+  "editorTitleEdit": "Editar entrada",
+  "editorTitleNew": "Nueva entrada",
+  "editorIdentityTitle": "Identidad",
+  "editorTitleLabel": "Titulo",
+  "editorTitleHint": "GitHub, banco, Wi-Fi...",
+  "editorTitleValidation": "Dale un titulo claro a esta entrada.",
+  "editorUsernameLabel": "Usuario o email",
+  "editorUsernameValidation": "Agrega el identificador de la cuenta.",
+  "editorCategoryLabel": "Categoria",
+  "editorCategoryWork": "Trabajo",
+  "editorCategoryFinance": "Finanzas",
+  "editorCategoryPersonal": "Personal",
+  "editorCategoryInfrastructure": "Infraestructura",
+  "editorSecretTitle": "Secreto",
+  "editorSecretDescription": "Vaulta recalcula la fortaleza localmente antes de recifrar la entrada.",
+  "editorSecretLabel": "Password o secreto",
+  "editorSecretRequiredValidation": "Guarda un secreto real, no un campo vacio.",
+  "editorSecretMinValidation": "Usa al menos 8 caracteres.",
+  "editorGeneratorTitle": "Generador de passwords",
+  "editorGeneratorChars": "{count} caracteres",
+  "@editorGeneratorChars": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "editorGenerateInsert": "Generar e insertar",
+  "editorWebsiteLabel": "Sitio web o app",
+  "editorWebsiteHint": "https://ejemplo.com",
+  "editorNotesLabel": "Notas",
+  "editorNotesHint": "Codigos de recuperacion, contexto, recordatorios...",
+  "editorSaveChanges": "Guardar cambios",
+  "editorCreateEntry": "Crear entrada",
+  "editorGeneratorSetRequired": "Elegi al menos un set de caracteres para generar.",
+  "editorGeneratedInserted": "Password generada e insertada."
+}

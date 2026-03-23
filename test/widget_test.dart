@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:local_auth/local_auth.dart';
 
 import 'package:gestor_contrasenas/app/bootstrap/password_manager_app.dart';
+import 'package:gestor_contrasenas/app/localization/app_locale_controller.dart';
 import 'package:gestor_contrasenas/core/security/aes_gcm_vault_crypto_service.dart';
 import 'package:gestor_contrasenas/core/security/biometric_auth_service.dart';
 import 'package:gestor_contrasenas/core/security/local_encrypted_vault_repository.dart';
@@ -12,6 +13,7 @@ import 'package:gestor_contrasenas/core/security/vault_security_controller.dart'
 import 'package:gestor_contrasenas/features/vault/domain/vault_item.dart';
 import 'package:gestor_contrasenas/features/vault/presentation/vault_entry_detail_screen.dart';
 import 'package:gestor_contrasenas/features/vault/presentation/vault_entry_editor_screen.dart';
+import 'package:gestor_contrasenas/l10n/app_localizations.dart';
 
 void main() {
   testWidgets('shows onboarding when no master password exists', (
@@ -22,7 +24,11 @@ void main() {
       masterPasswordService: MasterPasswordService(),
       biometricAuthService: const _FakeBiometricAuthService(),
     );
+    final localeController = AppLocaleController(
+      storage: _InMemorySecureStorageService(),
+    );
     await controller.initialize();
+    await localeController.initialize();
 
     await tester.pumpWidget(
       PasswordManagerApp(
@@ -32,13 +38,14 @@ void main() {
           readSession: () => controller.vaultSession,
         ),
         securityController: controller,
+        localeController: localeController,
       ),
     );
     await tester.pumpAndSettle();
 
     expect(find.text('Vaulta'), findsOneWidget);
     expect(find.text('Create secure vault access'), findsOneWidget);
-    expect(find.text('Onboarding seguro'), findsOneWidget);
+    expect(find.text('Secure onboarding'), findsOneWidget);
 
     await _disposeTree(tester);
   });
@@ -48,6 +55,8 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Builder(
           builder: (context) {
             return Scaffold(
@@ -122,6 +131,8 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Builder(
           builder: (context) {
             return Scaffold(

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../app/design_system/app_panel.dart';
 import '../../../app/design_system/metric_card.dart';
 import '../../../app/design_system/vault_entry_tile.dart';
+import '../../../app/localization/l10n.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../core/security/vault_repository.dart';
@@ -41,6 +42,7 @@ class _VaultDashboardScreenState extends State<VaultDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return FutureBuilder<({VaultSummary summary, List<VaultItem> items})>(
       future: _future,
       builder: (context, snapshot) {
@@ -61,7 +63,7 @@ class _VaultDashboardScreenState extends State<VaultDashboardScreen> {
                     const Icon(Icons.lock_clock_rounded, size: 42),
                     const SizedBox(height: 16),
                     Text(
-                      'Vaulta could not decrypt the local vault right now.',
+                      l10n.dashboardDecryptError,
                       style: Theme.of(context).textTheme.titleLarge,
                       textAlign: TextAlign.center,
                     ),
@@ -70,7 +72,7 @@ class _VaultDashboardScreenState extends State<VaultDashboardScreen> {
                     const SizedBox(height: 16),
                     FilledButton(
                       onPressed: _refresh,
-                      child: const Text('Retry'),
+                      child: Text(l10n.retry),
                     ),
                   ],
                 ),
@@ -86,7 +88,7 @@ class _VaultDashboardScreenState extends State<VaultDashboardScreen> {
           floatingActionButton: FloatingActionButton.extended(
             onPressed: _createEntry,
             icon: const Icon(Icons.add_rounded),
-            label: const Text('New entry'),
+            label: Text(l10n.newEntry),
           ),
           body: DecoratedBox(
             decoration: BoxDecoration(
@@ -210,7 +212,7 @@ class _VaultDashboardScreenState extends State<VaultDashboardScreen> {
     }
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(const SnackBar(content: Text('Encrypted entry created.')));
+    ).showSnackBar(SnackBar(content: Text(context.l10n.entryCreatedMessage)));
     _refresh();
   }
 
@@ -239,7 +241,7 @@ class _VaultDashboardScreenState extends State<VaultDashboardScreen> {
     if (changed == true && mounted) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Vault updated locally.')));
+      ).showSnackBar(SnackBar(content: Text(context.l10n.vaultUpdatedMessage)));
       _refresh();
     }
   }
@@ -261,14 +263,14 @@ class _DashboardHeader extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Vaulta',
+                context.l10n.appTitle,
                 style: theme.textTheme.headlineMedium?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
               ),
               const SizedBox(height: 4),
               Text(
-                'Your encrypted control room',
+                context.l10n.dashboardSubtitle,
                 style: theme.textTheme.titleMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -293,7 +295,7 @@ class _DashboardHeader extends StatelessWidget {
                 ),
               ),
               Text(
-                'Security score',
+                context.l10n.securityScore,
                 style: theme.textTheme.labelMedium?.copyWith(
                   color: Colors.white70,
                 ),
@@ -333,7 +335,7 @@ class _HeroSecurityCard extends StatelessWidget {
               const Icon(Icons.shield_moon_rounded, color: Colors.white),
               const SizedBox(width: 10),
               Text(
-                'Protected by system hardware',
+                context.l10n.dashboardHeroTitle,
                 style: theme.textTheme.titleMedium?.copyWith(
                   color: Colors.white,
                   fontWeight: FontWeight.w700,
@@ -343,7 +345,7 @@ class _HeroSecurityCard extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
-            'El vault local ya cifra cada entry con AES-256-GCM. CRUD local real listo; busqueda, tags, generador y sync confiable siguen pendientes.',
+            context.l10n.dashboardHeroBody,
             style: theme.textTheme.bodyLarge?.copyWith(color: Colors.white70),
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -351,13 +353,21 @@ class _HeroSecurityCard extends StatelessWidget {
             spacing: 10,
             runSpacing: 10,
             children: [
-              _Pill(label: '${summary.connectedDevices} devices trusted'),
+              _Pill(
+                label: context.l10n.dashboardPillTrustedDevices(
+                  summary.connectedDevices,
+                ),
+              ),
               _Pill(
                 label: summary.syncEnabled
-                    ? 'Secure sync on'
-                    : 'Offline encrypted vault',
+                    ? context.l10n.dashboardPillSyncEnabled
+                    : context.l10n.dashboardPillSyncDisabled,
               ),
-              _Pill(label: '${summary.weakItems} passwords need rotation'),
+              _Pill(
+                label: context.l10n.dashboardPillWeakNeedRotation(
+                  summary.weakItems,
+                ),
+              ),
             ],
           ),
         ],
@@ -405,25 +415,25 @@ class _MetricsGrid extends StatelessWidget {
       childAspectRatio: 1.2,
       children: [
         MetricCard(
-          label: 'Vault entries',
+          label: context.l10n.vaultEntries,
           value: '${summary.totalItems}',
           icon: Icons.lock_open_rounded,
           tint: AppColors.ocean,
         ),
         MetricCard(
-          label: 'Weak passwords',
+          label: context.l10n.weakPasswords,
           value: '${summary.weakItems}',
           icon: Icons.warning_amber_rounded,
           tint: AppColors.warning,
         ),
         MetricCard(
-          label: 'Reused items',
+          label: context.l10n.reusedItems,
           value: '${summary.reusedItems}',
           icon: Icons.copy_all_rounded,
           tint: AppColors.danger,
         ),
         MetricCard(
-          label: 'Trusted devices',
+          label: context.l10n.trustedDevices,
           value: '${summary.connectedDevices}',
           icon: Icons.devices_rounded,
           tint: AppColors.success,
@@ -448,14 +458,14 @@ class _QuickActions extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Priority actions',
+            context.l10n.priorityActions,
             style: theme.textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            'Ahora si hay vault real: alta, edicion, detalle y borrado cifrado sin bypassear la capa criptografica.',
+            context.l10n.dashboardQuickActionsSummary,
             style: theme.textTheme.bodyLarge?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
@@ -471,10 +481,8 @@ class _QuickActions extends StatelessWidget {
                 color: AppColors.success,
               ),
             ),
-            title: const Text('Create encrypted entry'),
-            subtitle: const Text(
-              'Add new credentials and persist them encrypted at rest.',
-            ),
+            title: Text(context.l10n.createEncryptedEntry),
+            subtitle: Text(context.l10n.createEncryptedEntrySubtitle),
             trailing: Icon(
               Icons.chevron_right_rounded,
               color: theme.colorScheme.primary,
@@ -490,11 +498,11 @@ class _QuickActions extends StatelessWidget {
                 color: AppColors.warning,
               ),
             ),
-            title: const Text('Plan next hardening step'),
+            title: Text(context.l10n.planNextHardeningStep),
             subtitle: Text(
               summary.syncEnabled
-                  ? 'Sync is on the roadmap, but trust boundaries still need design.'
-                  : 'Search, tags, generator and attachments remain intentionally out of scope.',
+                  ? context.l10n.dashboardRoadmapSyncEnabled
+                  : context.l10n.dashboardRoadmapSyncDisabled,
             ),
             trailing: Icon(
               Icons.chevron_right_rounded,
@@ -542,7 +550,7 @@ class _VaultSection extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  'Vault entries',
+                  context.l10n.vaultEntriesSectionTitle,
                   style: theme.textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
@@ -550,8 +558,8 @@ class _VaultSection extends StatelessWidget {
               ),
               Text(
                 totalItems == items.length
-                    ? '${items.length} total'
-                    : '${items.length} shown · $totalItems total',
+                    ? context.l10n.itemsTotal(items.length)
+                    : context.l10n.itemsShownOfTotal(items.length, totalItems),
                 style: theme.textTheme.labelLarge?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -564,7 +572,7 @@ class _VaultSection extends StatelessWidget {
             textInputAction: TextInputAction.search,
             onChanged: onSearchChanged,
             decoration: InputDecoration(
-              labelText: 'Search title, username or website',
+              labelText: context.l10n.searchVault,
               prefixIcon: const Icon(Icons.search_rounded),
               suffixIcon: searchController.text.isEmpty
                   ? null
@@ -578,12 +586,12 @@ class _VaultSection extends StatelessWidget {
           DropdownButtonFormField<_VaultFilter>(
             key: ValueKey(activeFilter),
             initialValue: activeFilter,
-            decoration: const InputDecoration(labelText: 'Filter'),
+            decoration: InputDecoration(labelText: context.l10n.filter),
             items: _VaultFilter.values
                 .map(
                   (filter) => DropdownMenuItem<_VaultFilter>(
                     value: filter,
-                    child: Text(filter.label),
+                    child: Text(filter.label(context)),
                   ),
                 )
                 .toList(growable: false),
@@ -631,17 +639,17 @@ class _NoResultsState extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.filter_alt_off_rounded, size: 32),
+           const Icon(Icons.filter_alt_off_rounded, size: 32),
           const SizedBox(height: 8),
           Text(
-            'No entries match your current filters',
+            context.l10n.noResultsTitle,
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(height: 6),
           Text(
-            'Try a different query or reset filters to see all items again.',
+            context.l10n.noResultsSubtitle,
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
@@ -650,7 +658,7 @@ class _NoResultsState extends StatelessWidget {
           OutlinedButton.icon(
             onPressed: onClearFilters,
             icon: const Icon(Icons.restart_alt_rounded),
-            label: const Text('Reset filters'),
+            label: Text(context.l10n.resetFilters),
           ),
         ],
       ),
@@ -682,14 +690,14 @@ class _EmptyVaultState extends StatelessWidget {
           const Icon(Icons.vpn_key_rounded, size: 36, color: AppColors.ocean),
           const SizedBox(height: 12),
           Text(
-            'Your vault is empty',
+            context.l10n.emptyVaultTitle,
             style: theme.textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            'Crea tu primera entry y Vaulta la cifra en reposo antes de persistirla.',
+            context.l10n.emptyVaultSubtitle,
             style: theme.textTheme.bodyLarge?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
@@ -698,7 +706,7 @@ class _EmptyVaultState extends StatelessWidget {
           FilledButton.icon(
             onPressed: onCreateEntry,
             icon: const Icon(Icons.add_rounded),
-            label: const Text('Create first entry'),
+            label: Text(context.l10n.createFirstEntry),
           ),
         ],
       ),
@@ -755,12 +763,15 @@ class _Orb extends StatelessWidget {
   }
 }
 
-enum _VaultFilter {
-  all('All entries'),
-  weak('Weak passwords only'),
-  withNotes('Entries with notes');
+enum _VaultFilter { all, weak, withNotes }
 
-  const _VaultFilter(this.label);
-
-  final String label;
+extension on _VaultFilter {
+  String label(BuildContext context) {
+    final l10n = context.l10n;
+    return switch (this) {
+      _VaultFilter.all => l10n.filterAllEntries,
+      _VaultFilter.weak => l10n.filterWeakOnly,
+      _VaultFilter.withNotes => l10n.filterWithNotes,
+    };
+  }
 }

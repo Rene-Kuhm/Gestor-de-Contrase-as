@@ -7,6 +7,7 @@ import 'package:gestor_contrasenas/core/security/master_password_service.dart';
 import 'package:gestor_contrasenas/core/security/secure_storage_service.dart';
 import 'package:gestor_contrasenas/core/security/vault_security_controller.dart';
 import 'package:gestor_contrasenas/features/security/presentation/security_gate.dart';
+import 'package:gestor_contrasenas/l10n/app_localizations.dart';
 
 void main() {
   testWidgets('locks gate when app moves to background state', (tester) async {
@@ -30,6 +31,8 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: SecurityGate(
           controller: controller,
           child: const Scaffold(body: Center(child: Text('Unlocked vault'))),
@@ -69,6 +72,8 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: SecurityGate(
           controller: controller,
           child: const Scaffold(body: Center(child: Text('Unlocked vault'))),

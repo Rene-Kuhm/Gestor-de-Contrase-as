@@ -1,0 +1,193 @@
+{
+  "@@locale": "en",
+  "appTitle": "Vaulta",
+  "navVault": "Vault",
+  "navAccess": "Access",
+  "navSettings": "Settings",
+  "languageSectionTitle": "Language",
+  "languageSelectorLabel": "App language",
+  "languageEnglish": "English",
+  "languageSpanish": "Spanish",
+
+  "settingsTitle": "Settings",
+  "settingsLocalUnlockPostureTitle": "Local unlock posture",
+  "settingsLocalUnlockPostureDescription": "Vaulta keeps sensitive state in Keychain / Keystore and uses device biometrics when available.",
+  "settingsMasterPasswordCreated": "Master password created",
+  "settingsBiometricsAvailable": "Biometrics available",
+  "settingsBiometricsEnabled": "Biometrics enabled",
+  "settingsUnlockWithBiometrics": "Unlock with biometrics",
+  "settingsBiometricSupportedSubtitle": "Use {biometricLabel} to reopen the local session. If device biometric recovery remains valid, it also works after app restart.",
+  "@settingsBiometricSupportedSubtitle": {
+    "placeholders": {
+      "biometricLabel": {}
+    }
+  },
+  "settingsBiometricUnavailableSubtitle": "Biometrics are not configured or supported in this environment.",
+  "settingsAutoLockBackgroundTitle": "Auto-lock on background",
+  "settingsAutoLockBackgroundSubtitle": "Locks Vaulta automatically if the app becomes inactive, paused, or detached.",
+  "settingsIdleTimeoutLabel": "Foreground idle auto-lock",
+  "settingsLockNow": "Lock now",
+  "settingsChangeMasterPassword": "Change master password",
+  "settingsRoadmapTitle": "Platform security roadmap",
+  "settingsRoadmapNotes": "Vault items are encrypted with AES-256-GCM using a PBKDF2-HMAC-SHA256-derived key from the master password. The key stays only in memory for the current session; reliable sync and biometric recovery across restarts are still pending.",
+  "settingsSecureStorage": "Secure storage",
+  "settingsBiometricUnlock": "Biometric unlock",
+  "settingsHardwareBackedKeys": "Hardware-backed keys",
+  "settingsVaultEncryptionReady": "Vault item encryption wired end-to-end",
+  "idleNever": "Never",
+  "idleDisabled": "Disabled",
+  "idleOneMinute": "1 minute",
+  "idleFiveMinutes": "5 minutes",
+  "idleFifteenMinutes": "15 minutes",
+  "idleStrict": "Strict",
+  "idleRecommended": "Recommended",
+  "idleRelaxed": "Relaxed",
+  "changeMasterPasswordTitle": "Change master password",
+  "changeMasterPasswordCurrent": "Current master password",
+  "changeMasterPasswordNew": "New master password",
+  "changeMasterPasswordConfirm": "Confirm new master password",
+  "changeMasterPasswordHint": "This re-encrypts the entire vault with a new key.",
+  "cancel": "Cancel",
+  "apply": "Apply",
+  "masterPasswordUpdatedSuccess": "Master password updated successfully.",
+  "changeMasterPasswordErrorFallback": "We could not change the master password. Review the data and try again.",
+
+  "securityOnboardingEyebrow": "Secure onboarding",
+  "securityOnboardingTitle": "We create your master key with no dangerous shortcuts.",
+  "securityOnboardingSubtitle": "The master password validates local access and derives the key that encrypts vault items.",
+  "securityMasterPasswordTitle": "Master password",
+  "securityMasterPasswordDescription": "Use 12+ characters with real variety. Never store this key in plaintext.",
+  "securityCreateMasterPassword": "Create master password",
+  "securityConfirmMasterPassword": "Confirm master password",
+  "securityChecklistHash": "PBKDF2-HMAC-SHA256 verifies the master password.",
+  "securityChecklistDerive": "A separate PBKDF2-HMAC-SHA256 derives the vault key.",
+  "securityChecklistEncrypt": "Local items are encrypted with AES-256-GCM and records are stored with Keychain / Keystore.",
+  "securityEnableBiometrics": "Enable local biometrics",
+  "securityBiometricAvailable": "Link {biometricLabel} for quick unlock on this device.",
+  "@securityBiometricAvailable": {
+    "placeholders": {
+      "biometricLabel": {}
+    }
+  },
+  "securityBiometricUnavailable": "No biometrics detected. You can still unlock with your master password.",
+  "securityCreateSecureAccess": "Create secure vault access",
+  "securityUnlockEyebrow": "Unlock",
+  "securityUnlockTitle": "Your vault stays closed until real identity is verified.",
+  "securityUnlockBiometricSubtitle": "Unlock with master password or {biometricLabel}.",
+  "@securityUnlockBiometricSubtitle": {
+    "placeholders": {
+      "biometricLabel": {}
+    }
+  },
+  "securityUnlockPasswordSubtitle": "Use your master password to recover access.",
+  "securityProtectedAccess": "Protected access",
+  "securityUnlockVault": "Unlock vault",
+  "securityBiometricButton": "Biometric",
+
+  "dashboardDecryptError": "Vaulta could not decrypt the local vault right now.",
+  "retry": "Retry",
+  "newEntry": "New entry",
+  "entryCreatedMessage": "Encrypted entry created.",
+  "vaultUpdatedMessage": "Vault updated locally.",
+  "dashboardSubtitle": "Your encrypted control room",
+  "dashboardHeroTitle": "Protected by system hardware",
+  "dashboardHeroBody": "The local vault already encrypts every entry with AES-256-GCM. Real local CRUD is ready; search, tags, generator, and reliable sync are still pending.",
+  "dashboardPillTrustedDevices": "{count} devices trusted",
+  "@dashboardPillTrustedDevices": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dashboardPillSyncEnabled": "Secure sync on",
+  "dashboardPillSyncDisabled": "Offline encrypted vault",
+  "dashboardPillWeakNeedRotation": "{count} passwords need rotation",
+  "@dashboardPillWeakNeedRotation": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "securityScore": "Security score",
+  "vaultEntries": "Vault entries",
+  "weakPasswords": "Weak passwords",
+  "reusedItems": "Reused items",
+  "trustedDevices": "Trusted devices",
+  "priorityActions": "Priority actions",
+  "dashboardQuickActionsSummary": "The vault is now real: create, edit, view details, and delete with encryption preserved end-to-end.",
+  "createEncryptedEntry": "Create encrypted entry",
+  "createEncryptedEntrySubtitle": "Add new credentials and store them encrypted at rest.",
+  "planNextHardeningStep": "Plan next hardening step",
+  "dashboardRoadmapSyncEnabled": "Sync is on the roadmap, but trust boundaries still need design.",
+  "dashboardRoadmapSyncDisabled": "Search, tags, generator, and attachments remain intentionally out of scope.",
+  "vaultEntriesSectionTitle": "Vault entries",
+  "searchVault": "Search title, username, or website",
+  "filter": "Filter",
+  "filterAllEntries": "All entries",
+  "filterWeakOnly": "Weak passwords only",
+  "filterWithNotes": "Entries with notes",
+  "resetFilters": "Reset filters",
+  "noResultsTitle": "No entries match your current filters",
+  "noResultsSubtitle": "Try a different query or reset filters to see all items again.",
+  "emptyVaultTitle": "Your vault is empty",
+  "emptyVaultSubtitle": "Create your first entry and Vaulta encrypts it before persisting.",
+  "createFirstEntry": "Create first entry",
+  "itemsTotal": "{count} total",
+  "@itemsTotal": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "itemsShownOfTotal": "{shown} shown - {total} total",
+  "@itemsShownOfTotal": {
+    "placeholders": {
+      "shown": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+
+  "editorTitleEdit": "Edit entry",
+  "editorTitleNew": "New entry",
+  "editorIdentityTitle": "Identity",
+  "editorTitleLabel": "Title",
+  "editorTitleHint": "GitHub, banking, Wi-Fi...",
+  "editorTitleValidation": "Give this entry a clear title.",
+  "editorUsernameLabel": "Username or email",
+  "editorUsernameValidation": "Add the account identifier.",
+  "editorCategoryLabel": "Category",
+  "editorCategoryWork": "Work",
+  "editorCategoryFinance": "Finance",
+  "editorCategoryPersonal": "Personal",
+  "editorCategoryInfrastructure": "Infrastructure",
+  "editorSecretTitle": "Secret",
+  "editorSecretDescription": "Vaulta recalculates strength locally before re-encrypting the entry.",
+  "editorSecretLabel": "Password or secret",
+  "editorSecretRequiredValidation": "Store a real secret, not an empty field.",
+  "editorSecretMinValidation": "Use at least 8 characters.",
+  "editorGeneratorTitle": "Password generator",
+  "editorGeneratorChars": "{count} chars",
+  "@editorGeneratorChars": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "editorGenerateInsert": "Generate and insert",
+  "editorWebsiteLabel": "Website or app",
+  "editorWebsiteHint": "https://example.com",
+  "editorNotesLabel": "Notes",
+  "editorNotesHint": "Recovery codes, context, reminders...",
+  "editorSaveChanges": "Save changes",
+  "editorCreateEntry": "Create entry",
+  "editorGeneratorSetRequired": "Choose at least one character set to generate.",
+  "editorGeneratedInserted": "Generated password inserted."
+}

@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 
 import '../../../app/design_system/app_panel.dart';
+import '../../../app/localization/l10n.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../domain/vault_item.dart';
 
@@ -59,11 +60,12 @@ class _VaultEntryEditorScreenState extends State<VaultEntryEditorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.isEditing ? 'Edit entry' : 'New entry'),
+        title: Text(widget.isEditing ? l10n.editorTitleEdit : l10n.editorTitleNew),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -78,7 +80,7 @@ class _VaultEntryEditorScreenState extends State<VaultEntryEditorScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Identity',
+                        l10n.editorIdentityTitle,
                         style: theme.textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.w700,
                         ),
@@ -87,13 +89,13 @@ class _VaultEntryEditorScreenState extends State<VaultEntryEditorScreen> {
                       TextFormField(
                         controller: _titleController,
                         textInputAction: TextInputAction.next,
-                        decoration: const InputDecoration(
-                          labelText: 'Title',
-                          hintText: 'GitHub, banking, Wi-Fi...',
+                        decoration: InputDecoration(
+                          labelText: l10n.editorTitleLabel,
+                          hintText: l10n.editorTitleHint,
                         ),
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
-                            return 'Give this entry a clear title.';
+                            return l10n.editorTitleValidation;
                           }
                           return null;
                         },
@@ -102,12 +104,12 @@ class _VaultEntryEditorScreenState extends State<VaultEntryEditorScreen> {
                       TextFormField(
                         controller: _usernameController,
                         textInputAction: TextInputAction.next,
-                        decoration: const InputDecoration(
-                          labelText: 'Username or email',
+                        decoration: InputDecoration(
+                          labelText: l10n.editorUsernameLabel,
                         ),
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
-                            return 'Add the account identifier.';
+                            return l10n.editorUsernameValidation;
                           }
                           return null;
                         },
@@ -115,14 +117,14 @@ class _VaultEntryEditorScreenState extends State<VaultEntryEditorScreen> {
                       const SizedBox(height: AppSpacing.md),
                       DropdownButtonFormField<VaultCategory>(
                         initialValue: _category,
-                        decoration: const InputDecoration(
-                          labelText: 'Category',
+                        decoration: InputDecoration(
+                          labelText: l10n.editorCategoryLabel,
                         ),
                         items: VaultCategory.values
                             .map(
                               (category) => DropdownMenuItem(
                                 value: category,
-                                child: Text(category.label),
+                                child: Text(category.localizedLabel(context)),
                               ),
                             )
                             .toList(),
@@ -141,14 +143,14 @@ class _VaultEntryEditorScreenState extends State<VaultEntryEditorScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Secret',
+                        l10n.editorSecretTitle,
                         style: theme.textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.w700,
                         ),
                       ),
                       const SizedBox(height: AppSpacing.sm),
                       Text(
-                        'Vaulta recalculates strength locally before re-encrypting the entry.',
+                        l10n.editorSecretDescription,
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
                         ),
@@ -159,7 +161,7 @@ class _VaultEntryEditorScreenState extends State<VaultEntryEditorScreen> {
                         obscureText: _obscureSecret,
                         textInputAction: TextInputAction.next,
                         decoration: InputDecoration(
-                          labelText: 'Password or secret',
+                          labelText: l10n.editorSecretLabel,
                           suffixIcon: IconButton(
                             onPressed: () {
                               setState(() => _obscureSecret = !_obscureSecret);
@@ -173,10 +175,10 @@ class _VaultEntryEditorScreenState extends State<VaultEntryEditorScreen> {
                         ),
                         validator: (value) {
                           if (value == null || value.isEmpty) {
-                            return 'Store a real secret, not an empty field.';
+                            return l10n.editorSecretRequiredValidation;
                           }
                           if (value.trim().length < 8) {
-                            return 'Use at least 8 characters.';
+                            return l10n.editorSecretMinValidation;
                           }
                           return null;
                         },
@@ -197,7 +199,7 @@ class _VaultEntryEditorScreenState extends State<VaultEntryEditorScreen> {
                               children: [
                                 Expanded(
                                   child: Text(
-                                    'Password generator',
+                                    l10n.editorGeneratorTitle,
                                     style: theme.textTheme.titleMedium
                                         ?.copyWith(
                                           fontWeight: FontWeight.w700,
@@ -205,7 +207,9 @@ class _VaultEntryEditorScreenState extends State<VaultEntryEditorScreen> {
                                   ),
                                 ),
                                 Text(
-                                  '${_generatedLength.round()} chars',
+                                  l10n.editorGeneratorChars(
+                                    _generatedLength.round(),
+                                  ),
                                   style: theme.textTheme.labelLarge,
                                 ),
                               ],
@@ -258,8 +262,8 @@ class _VaultEntryEditorScreenState extends State<VaultEntryEditorScreen> {
                             FilledButton.tonalIcon(
                               onPressed: _generateAndInsertPassword,
                               icon: const Icon(Icons.auto_awesome_rounded),
-                              label: const Text('Generate and insert'),
-                            ),
+                               label: Text(l10n.editorGenerateInsert),
+                             ),
                           ],
                         ),
                       ),
@@ -267,9 +271,9 @@ class _VaultEntryEditorScreenState extends State<VaultEntryEditorScreen> {
                       TextFormField(
                         controller: _websiteController,
                         textInputAction: TextInputAction.next,
-                        decoration: const InputDecoration(
-                          labelText: 'Website or app',
-                          hintText: 'https://example.com',
+                        decoration: InputDecoration(
+                          labelText: l10n.editorWebsiteLabel,
+                          hintText: l10n.editorWebsiteHint,
                         ),
                       ),
                       const SizedBox(height: AppSpacing.md),
@@ -277,9 +281,9 @@ class _VaultEntryEditorScreenState extends State<VaultEntryEditorScreen> {
                         controller: _notesController,
                         minLines: 3,
                         maxLines: 5,
-                        decoration: const InputDecoration(
-                          labelText: 'Notes',
-                          hintText: 'Recovery codes, context, reminders...',
+                        decoration: InputDecoration(
+                          labelText: l10n.editorNotesLabel,
+                          hintText: l10n.editorNotesHint,
                         ),
                       ),
                     ],
@@ -291,9 +295,11 @@ class _VaultEntryEditorScreenState extends State<VaultEntryEditorScreen> {
                   child: FilledButton.icon(
                     onPressed: _submit,
                     icon: const Icon(Icons.lock_rounded),
-                    label: Text(
-                      widget.isEditing ? 'Save changes' : 'Create entry',
-                    ),
+                      label: Text(
+                        widget.isEditing
+                            ? l10n.editorSaveChanges
+                            : l10n.editorCreateEntry,
+                      ),
                   ),
                 ),
               ],
@@ -339,8 +345,8 @@ class _VaultEntryEditorScreenState extends State<VaultEntryEditorScreen> {
 
     if (generated == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Choose at least one character set to generate.'),
+        SnackBar(
+          content: Text(context.l10n.editorGeneratorSetRequired),
         ),
       );
       return;
@@ -353,7 +359,7 @@ class _VaultEntryEditorScreenState extends State<VaultEntryEditorScreen> {
     setState(() => _obscureSecret = true);
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Generated password inserted.')),
+      SnackBar(content: Text(context.l10n.editorGeneratedInserted)),
     );
   }
 
@@ -404,5 +410,17 @@ class _VaultEntryEditorScreenState extends State<VaultEntryEditorScreen> {
   String? _normalizeOptional(String value) {
     final trimmed = value.trim();
     return trimmed.isEmpty ? null : trimmed;
+  }
+}
+
+extension on VaultCategory {
+  String localizedLabel(BuildContext context) {
+    final l10n = context.l10n;
+    return switch (this) {
+      VaultCategory.work => l10n.editorCategoryWork,
+      VaultCategory.finance => l10n.editorCategoryFinance,
+      VaultCategory.personal => l10n.editorCategoryPersonal,
+      VaultCategory.infrastructure => l10n.editorCategoryInfrastructure,
+    };
   }
 }

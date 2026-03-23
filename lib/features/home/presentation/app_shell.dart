@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../app/localization/app_locale_controller.dart';
+import '../../../app/localization/l10n.dart';
 import '../../../core/security/vault_security_controller.dart';
 import '../../../core/security/vault_repository.dart';
 import '../../settings/presentation/settings_screen.dart';
@@ -10,10 +12,12 @@ class AppShell extends StatefulWidget {
     super.key,
     required this.repository,
     required this.securityController,
+    required this.localeController,
   });
 
   final VaultRepository repository;
   final VaultSecurityController securityController;
+  final AppLocaleController localeController;
 
   @override
   State<AppShell> createState() => _AppShellState();
@@ -24,13 +28,17 @@ class _AppShellState extends State<AppShell> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final screens = [
       VaultDashboardScreen(repository: widget.repository),
       const _PlaceholderScreen(
         title: 'Autofill & access',
         subtitle: 'Tu flujo de desbloqueo y llenado automatico va a vivir aca.',
       ),
-      SettingsScreen(securityController: widget.securityController),
+      SettingsScreen(
+        securityController: widget.securityController,
+        localeController: widget.localeController,
+      ),
     ];
 
     return Scaffold(
@@ -40,21 +48,21 @@ class _AppShellState extends State<AppShell> {
         onDestinationSelected: (index) {
           setState(() => _currentIndex = index);
         },
-        destinations: const [
+        destinations: [
           NavigationDestination(
             icon: Icon(Icons.lock_outline_rounded),
             selectedIcon: Icon(Icons.lock_rounded),
-            label: 'Vault',
+            label: l10n.navVault,
           ),
           NavigationDestination(
             icon: Icon(Icons.flash_on_outlined),
             selectedIcon: Icon(Icons.flash_on_rounded),
-            label: 'Access',
+            label: l10n.navAccess,
           ),
           NavigationDestination(
             icon: Icon(Icons.tune_outlined),
             selectedIcon: Icon(Icons.tune_rounded),
-            label: 'Settings',
+            label: l10n.navSettings,
           ),
         ],
       ),

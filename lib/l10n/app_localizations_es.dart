@@ -1,0 +1,425 @@
+// ignore: unused_import
+import 'package:intl/intl.dart' as intl;
+import 'app_localizations.dart';
+
+// ignore_for_file: type=lint
+
+/// The translations for Spanish Castilian (`es`).
+class AppLocalizationsEs extends AppLocalizations {
+  AppLocalizationsEs([String locale = 'es']) : super(locale);
+
+  @override
+  String get appTitle => 'Vaulta';
+
+  @override
+  String get navVault => 'Vault';
+
+  @override
+  String get navAccess => 'Acceso';
+
+  @override
+  String get navSettings => 'Ajustes';
+
+  @override
+  String get languageSectionTitle => 'Idioma';
+
+  @override
+  String get languageSelectorLabel => 'Idioma de la app';
+
+  @override
+  String get languageEnglish => 'Ingles';
+
+  @override
+  String get languageSpanish => 'Espanol';
+
+  @override
+  String get settingsTitle => 'Ajustes';
+
+  @override
+  String get settingsLocalUnlockPostureTitle => 'Postura de desbloqueo local';
+
+  @override
+  String get settingsLocalUnlockPostureDescription => 'Vaulta guarda el estado sensible en Keychain / Keystore y usa biometria del sistema cuando esta disponible.';
+
+  @override
+  String get settingsMasterPasswordCreated => 'Master password creada';
+
+  @override
+  String get settingsBiometricsAvailable => 'Biometria disponible';
+
+  @override
+  String get settingsBiometricsEnabled => 'Biometria activada';
+
+  @override
+  String get settingsUnlockWithBiometrics => 'Desbloquear con biometria';
+
+  @override
+  String settingsBiometricSupportedSubtitle(Object biometricLabel) {
+    return 'Usa $biometricLabel para reabrir la sesion local. Si el recovery biometrico del dispositivo sigue vigente, tambien funciona despues de reiniciar la app.';
+  }
+
+  @override
+  String get settingsBiometricUnavailableSubtitle => 'No hay biometria configurada o soportada en este entorno.';
+
+  @override
+  String get settingsAutoLockBackgroundTitle => 'Auto-lock al pasar a background';
+
+  @override
+  String get settingsAutoLockBackgroundSubtitle => 'Bloquea Vaulta automaticamente si la app queda inactive, paused o detached.';
+
+  @override
+  String get settingsIdleTimeoutLabel => 'Auto-lock por inactividad en foreground';
+
+  @override
+  String get settingsLockNow => 'Bloquear ahora';
+
+  @override
+  String get settingsChangeMasterPassword => 'Cambiar master password';
+
+  @override
+  String get settingsRoadmapTitle => 'Roadmap de seguridad de plataforma';
+
+  @override
+  String get settingsRoadmapNotes => 'Los items del vault se guardan cifrados con AES-256-GCM usando una clave derivada por PBKDF2-HMAC-SHA256 desde la master password. La clave vive solo en memoria de la sesion actual; sync confiable y recovery biometrico entre reinicios siguen pendientes.';
+
+  @override
+  String get settingsSecureStorage => 'Almacenamiento seguro';
+
+  @override
+  String get settingsBiometricUnlock => 'Desbloqueo biometrico';
+
+  @override
+  String get settingsHardwareBackedKeys => 'Claves con respaldo de hardware';
+
+  @override
+  String get settingsVaultEncryptionReady => 'Cifrado del vault conectado end-to-end';
+
+  @override
+  String get idleNever => 'Nunca';
+
+  @override
+  String get idleDisabled => 'Desactivado';
+
+  @override
+  String get idleOneMinute => '1 minuto';
+
+  @override
+  String get idleFiveMinutes => '5 minutos';
+
+  @override
+  String get idleFifteenMinutes => '15 minutos';
+
+  @override
+  String get idleStrict => 'Estricto';
+
+  @override
+  String get idleRecommended => 'Recomendado';
+
+  @override
+  String get idleRelaxed => 'Relajado';
+
+  @override
+  String get changeMasterPasswordTitle => 'Cambiar master password';
+
+  @override
+  String get changeMasterPasswordCurrent => 'Master password actual';
+
+  @override
+  String get changeMasterPasswordNew => 'Nueva master password';
+
+  @override
+  String get changeMasterPasswordConfirm => 'Confirmar nueva master password';
+
+  @override
+  String get changeMasterPasswordHint => 'Este cambio vuelve a cifrar todo el vault con una clave nueva.';
+
+  @override
+  String get cancel => 'Cancelar';
+
+  @override
+  String get apply => 'Aplicar';
+
+  @override
+  String get masterPasswordUpdatedSuccess => 'Master password actualizada correctamente.';
+
+  @override
+  String get changeMasterPasswordErrorFallback => 'No pudimos cambiar la master password. Revisa los datos e intenta de nuevo.';
+
+  @override
+  String get securityOnboardingEyebrow => 'Onboarding seguro';
+
+  @override
+  String get securityOnboardingTitle => 'Creamos tu llave maestra sin atajos peligrosos.';
+
+  @override
+  String get securityOnboardingSubtitle => 'La master password valida acceso local y deriva la clave que cifra los items del vault.';
+
+  @override
+  String get securityMasterPasswordTitle => 'Master password';
+
+  @override
+  String get securityMasterPasswordDescription => 'Pedimos 12+ caracteres con mezcla real. Nada de guardar la clave en texto plano.';
+
+  @override
+  String get securityCreateMasterPassword => 'Crear master password';
+
+  @override
+  String get securityConfirmMasterPassword => 'Confirmar master password';
+
+  @override
+  String get securityChecklistHash => 'PBKDF2-HMAC-SHA256 para verificar la master password.';
+
+  @override
+  String get securityChecklistDerive => 'PBKDF2-HMAC-SHA256 separado para derivar la clave del vault.';
+
+  @override
+  String get securityChecklistEncrypt => 'Items locales cifrados con AES-256-GCM y record guardado con Keychain / Keystore.';
+
+  @override
+  String get securityEnableBiometrics => 'Habilitar biometria local';
+
+  @override
+  String securityBiometricAvailable(Object biometricLabel) {
+    return 'Vincula $biometricLabel para desbloqueo rapido del dispositivo actual.';
+  }
+
+  @override
+  String get securityBiometricUnavailable => 'No detectamos biometria disponible. Igual vas a poder entrar con tu master password.';
+
+  @override
+  String get securityCreateSecureAccess => 'Crear acceso seguro al vault';
+
+  @override
+  String get securityUnlockEyebrow => 'Desbloquear';
+
+  @override
+  String get securityUnlockTitle => 'Tu vault queda cerrado hasta validar identidad real.';
+
+  @override
+  String securityUnlockBiometricSubtitle(Object biometricLabel) {
+    return 'Podes entrar con master password o $biometricLabel.';
+  }
+
+  @override
+  String get securityUnlockPasswordSubtitle => 'Usa tu master password para recuperar acceso.';
+
+  @override
+  String get securityProtectedAccess => 'Acceso protegido';
+
+  @override
+  String get securityUnlockVault => 'Desbloquear vault';
+
+  @override
+  String get securityBiometricButton => 'Biometria';
+
+  @override
+  String get dashboardDecryptError => 'Vaulta no pudo descifrar el vault local en este momento.';
+
+  @override
+  String get retry => 'Reintentar';
+
+  @override
+  String get newEntry => 'Nueva entrada';
+
+  @override
+  String get entryCreatedMessage => 'Entrada cifrada creada.';
+
+  @override
+  String get vaultUpdatedMessage => 'Vault actualizado de forma local.';
+
+  @override
+  String get dashboardSubtitle => 'Tu centro de control cifrado';
+
+  @override
+  String get dashboardHeroTitle => 'Protegido por hardware del sistema';
+
+  @override
+  String get dashboardHeroBody => 'El vault local ya cifra cada entrada con AES-256-GCM. El CRUD local real esta listo; busqueda, tags, generador y sync confiable siguen pendientes.';
+
+  @override
+  String dashboardPillTrustedDevices(int count) {
+    return '$count dispositivos confiables';
+  }
+
+  @override
+  String get dashboardPillSyncEnabled => 'Sync seguro activo';
+
+  @override
+  String get dashboardPillSyncDisabled => 'Vault cifrado offline';
+
+  @override
+  String dashboardPillWeakNeedRotation(int count) {
+    return '$count passwords necesitan rotacion';
+  }
+
+  @override
+  String get securityScore => 'Puntaje de seguridad';
+
+  @override
+  String get vaultEntries => 'Entradas del vault';
+
+  @override
+  String get weakPasswords => 'Passwords debiles';
+
+  @override
+  String get reusedItems => 'Items reutilizados';
+
+  @override
+  String get trustedDevices => 'Dispositivos confiables';
+
+  @override
+  String get priorityActions => 'Acciones prioritarias';
+
+  @override
+  String get dashboardQuickActionsSummary => 'Ahora el vault es real: alta, edicion, detalle y borrado con cifrado preservado end-to-end.';
+
+  @override
+  String get createEncryptedEntry => 'Crear entrada cifrada';
+
+  @override
+  String get createEncryptedEntrySubtitle => 'Agrega nuevas credenciales y guardalas cifradas en reposo.';
+
+  @override
+  String get planNextHardeningStep => 'Planificar siguiente hardening';
+
+  @override
+  String get dashboardRoadmapSyncEnabled => 'El sync esta en roadmap, pero los limites de confianza todavia necesitan diseno.';
+
+  @override
+  String get dashboardRoadmapSyncDisabled => 'Busqueda, tags, generador y adjuntos siguen intencionalmente fuera de alcance.';
+
+  @override
+  String get vaultEntriesSectionTitle => 'Entradas del vault';
+
+  @override
+  String get searchVault => 'Buscar titulo, usuario o sitio';
+
+  @override
+  String get filter => 'Filtro';
+
+  @override
+  String get filterAllEntries => 'Todas las entradas';
+
+  @override
+  String get filterWeakOnly => 'Solo passwords debiles';
+
+  @override
+  String get filterWithNotes => 'Entradas con notas';
+
+  @override
+  String get resetFilters => 'Restablecer filtros';
+
+  @override
+  String get noResultsTitle => 'Ninguna entrada coincide con los filtros';
+
+  @override
+  String get noResultsSubtitle => 'Proba otra busqueda o reinicia filtros para ver todo otra vez.';
+
+  @override
+  String get emptyVaultTitle => 'Tu vault esta vacio';
+
+  @override
+  String get emptyVaultSubtitle => 'Crea tu primera entrada y Vaulta la cifra antes de persistirla.';
+
+  @override
+  String get createFirstEntry => 'Crear primera entrada';
+
+  @override
+  String itemsTotal(int count) {
+    return '$count total';
+  }
+
+  @override
+  String itemsShownOfTotal(int shown, int total) {
+    return '$shown visibles - $total total';
+  }
+
+  @override
+  String get editorTitleEdit => 'Editar entrada';
+
+  @override
+  String get editorTitleNew => 'Nueva entrada';
+
+  @override
+  String get editorIdentityTitle => 'Identidad';
+
+  @override
+  String get editorTitleLabel => 'Titulo';
+
+  @override
+  String get editorTitleHint => 'GitHub, banco, Wi-Fi...';
+
+  @override
+  String get editorTitleValidation => 'Dale un titulo claro a esta entrada.';
+
+  @override
+  String get editorUsernameLabel => 'Usuario o email';
+
+  @override
+  String get editorUsernameValidation => 'Agrega el identificador de la cuenta.';
+
+  @override
+  String get editorCategoryLabel => 'Categoria';
+
+  @override
+  String get editorCategoryWork => 'Trabajo';
+
+  @override
+  String get editorCategoryFinance => 'Finanzas';
+
+  @override
+  String get editorCategoryPersonal => 'Personal';
+
+  @override
+  String get editorCategoryInfrastructure => 'Infraestructura';
+
+  @override
+  String get editorSecretTitle => 'Secreto';
+
+  @override
+  String get editorSecretDescription => 'Vaulta recalcula la fortaleza localmente antes de recifrar la entrada.';
+
+  @override
+  String get editorSecretLabel => 'Password o secreto';
+
+  @override
+  String get editorSecretRequiredValidation => 'Guarda un secreto real, no un campo vacio.';
+
+  @override
+  String get editorSecretMinValidation => 'Usa al menos 8 caracteres.';
+
+  @override
+  String get editorGeneratorTitle => 'Generador de passwords';
+
+  @override
+  String editorGeneratorChars(int count) {
+    return '$count caracteres';
+  }
+
+  @override
+  String get editorGenerateInsert => 'Generar e insertar';
+
+  @override
+  String get editorWebsiteLabel => 'Sitio web o app';
+
+  @override
+  String get editorWebsiteHint => 'https://ejemplo.com';
+
+  @override
+  String get editorNotesLabel => 'Notas';
+
+  @override
+  String get editorNotesHint => 'Codigos de recuperacion, contexto, recordatorios...';
+
+  @override
+  String get editorSaveChanges => 'Guardar cambios';
+
+  @override
+  String get editorCreateEntry => 'Crear entrada';
+
+  @override
+  String get editorGeneratorSetRequired => 'Elegi al menos un set de caracteres para generar.';
+
+  @override
+  String get editorGeneratedInserted => 'Password generada e insertada.';
+}

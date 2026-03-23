@@ -1,30 +1,22 @@
 import 'package:flutter/material.dart';
 
 import '../../../app/design_system/app_panel.dart';
+import '../../../app/localization/app_locale_controller.dart';
+import '../../../app/localization/l10n.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../core/security/local_encrypted_vault_repository.dart';
 import '../../../core/security/vault_security_controller.dart';
 
 class SettingsScreen extends StatelessWidget {
-  const SettingsScreen({super.key, required this.securityController});
-
-  static const List<_IdleTimeoutPreset> _idleTimeoutPresets = [
-    _IdleTimeoutPreset(seconds: 0, label: 'Never', description: 'Disabled'),
-    _IdleTimeoutPreset(seconds: 60, label: '1 minute', description: 'Strict'),
-    _IdleTimeoutPreset(
-      seconds: 300,
-      label: '5 minutes',
-      description: 'Recommended',
-    ),
-    _IdleTimeoutPreset(
-      seconds: 900,
-      label: '15 minutes',
-      description: 'Relaxed',
-    ),
-  ];
+  const SettingsScreen({
+    super.key,
+    required this.securityController,
+    required this.localeController,
+  });
 
   final VaultSecurityController securityController;
+  final AppLocaleController localeController;
 
   Future<void> _openChangeMasterPasswordDialog(BuildContext context) async {
     await showDialog<void>(
@@ -37,10 +29,33 @@ class SettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final theme = Theme.of(context);
+    final idleTimeoutPresets = <_IdleTimeoutPreset>[
+      _IdleTimeoutPreset(
+        seconds: 0,
+        label: l10n.idleNever,
+        description: l10n.idleDisabled,
+      ),
+      _IdleTimeoutPreset(
+        seconds: 60,
+        label: l10n.idleOneMinute,
+        description: l10n.idleStrict,
+      ),
+      _IdleTimeoutPreset(
+        seconds: 300,
+        label: l10n.idleFiveMinutes,
+        description: l10n.idleRecommended,
+      ),
+      _IdleTimeoutPreset(
+        seconds: 900,
+        label: l10n.idleFifteenMinutes,
+        description: l10n.idleRelaxed,
+      ),
+    ];
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
+      appBar: AppBar(title: Text(l10n.settingsTitle)),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [
@@ -52,29 +67,29 @@ class SettingsScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Local unlock posture',
+                      l10n.settingsLocalUnlockPostureTitle,
                       style: theme.textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     Text(
-                      'Vaulta ya guarda el estado sensible en Keychain / Keystore y usa biometria del sistema cuando el equipo lo permite.',
+                      l10n.settingsLocalUnlockPostureDescription,
                       style: theme.textTheme.bodyLarge?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
                     const SizedBox(height: AppSpacing.md),
                     _CapabilityRow(
-                      title: 'Master password creada',
+                      title: l10n.settingsMasterPasswordCreated,
                       enabled: true,
                     ),
                     _CapabilityRow(
-                      title: 'Biometria disponible',
+                      title: l10n.settingsBiometricsAvailable,
                       enabled: securityController.canOfferBiometricToggle,
                     ),
                     _CapabilityRow(
-                      title: 'Biometria activada',
+                      title: l10n.settingsBiometricsEnabled,
                       enabled: securityController.biometricEnabled,
                     ),
                     const SizedBox(height: AppSpacing.sm),
@@ -86,11 +101,13 @@ class SettingsScreen extends StatelessWidget {
                           : (value) {
                               securityController.setBiometricEnabled(value);
                             },
-                      title: const Text('Unlock with biometrics'),
+                      title: Text(l10n.settingsUnlockWithBiometrics),
                       subtitle: Text(
                         securityController.canOfferBiometricToggle
-                            ? 'Usa ${securityController.biometricAvailability.label} para reabrir la sesion local. Si el recovery biometrico del dispositivo sigue vigente, tambien funciona despues de reiniciar la app.'
-                            : 'No hay biometria configurada o soportada en este entorno.',
+                            ? l10n.settingsBiometricSupportedSubtitle(
+                                securityController.biometricAvailability.label,
+                              )
+                            : l10n.settingsBiometricUnavailableSubtitle,
                       ),
                     ),
                     const SizedBox(height: AppSpacing.sm),
@@ -104,21 +121,20 @@ class SettingsScreen extends StatelessWidget {
                                 value,
                               );
                             },
-                      title: const Text('Auto-lock al pasar a background'),
-                      subtitle: const Text(
-                        'Bloquea Vaulta automaticamente si la app queda inactive, paused o detached.',
-                      ),
+                      title: Text(l10n.settingsAutoLockBackgroundTitle),
+                      subtitle: Text(l10n.settingsAutoLockBackgroundSubtitle),
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     DropdownButtonFormField<_IdleTimeoutPreset>(
                       key: ValueKey<int>(securityController.idleTimeoutSeconds),
-                      initialValue: _resolveIdlePreset(
-                        securityController.idleTimeoutSeconds,
-                      ),
-                      decoration: const InputDecoration(
-                        labelText: 'Auto-lock por inactividad en foreground',
-                      ),
-                      items: _idleTimeoutPresets
+                        initialValue: _resolveIdlePreset(
+                          securityController.idleTimeoutSeconds,
+                          idleTimeoutPresets,
+                        ),
+                      decoration: InputDecoration(
+                         labelText: l10n.settingsIdleTimeoutLabel,
+                       ),
+                      items: idleTimeoutPresets
                           .map(
                             (preset) => DropdownMenuItem<_IdleTimeoutPreset>(
                               value: preset,
@@ -145,7 +161,7 @@ class SettingsScreen extends StatelessWidget {
                           ? null
                           : securityController.lock,
                       icon: const Icon(Icons.lock_rounded),
-                      label: const Text('Lock now'),
+                       label: Text(l10n.settingsLockNow),
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     OutlinedButton.icon(
@@ -155,7 +171,7 @@ class SettingsScreen extends StatelessWidget {
                               _openChangeMasterPasswordDialog(context);
                             },
                       icon: const Icon(Icons.password_rounded),
-                      label: const Text('Change master password'),
+                       label: Text(l10n.settingsChangeMasterPassword),
                     ),
                     if (securityController.message case final message?) ...[
                       const SizedBox(height: AppSpacing.sm),
@@ -184,38 +200,38 @@ class SettingsScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Platform security roadmap',
+                  l10n.settingsRoadmapTitle,
                   style: theme.textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 Text(
-                  LocalEncryptedVaultRepository.securityPlan.notes,
+                  l10n.settingsRoadmapNotes,
                   style: theme.textTheme.bodyLarge?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
                 const SizedBox(height: AppSpacing.md),
                 _CapabilityRow(
-                  title: 'Secure storage',
+                  title: l10n.settingsSecureStorage,
                   enabled:
                       LocalEncryptedVaultRepository.securityPlan.secureStorage,
                 ),
                 _CapabilityRow(
-                  title: 'Biometric unlock',
+                  title: l10n.settingsBiometricUnlock,
                   enabled: LocalEncryptedVaultRepository
                       .securityPlan
                       .biometricUnlock,
                 ),
                 _CapabilityRow(
-                  title: 'Hardware-backed keys',
+                  title: l10n.settingsHardwareBackedKeys,
                   enabled: LocalEncryptedVaultRepository
                       .securityPlan
                       .hardwareBackedKeys,
                 ),
                 _CapabilityRow(
-                  title: 'Vault item encryption wired end-to-end',
+                  title: l10n.settingsVaultEncryptionReady,
                   enabled: LocalEncryptedVaultRepository
                       .securityPlan
                       .vaultEncryptionReady,
@@ -223,19 +239,67 @@ class SettingsScreen extends StatelessWidget {
               ],
             ),
           ),
+          const SizedBox(height: AppSpacing.md),
+          AppPanel(
+            child: AnimatedBuilder(
+              animation: localeController,
+              builder: (context, _) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.languageSectionTitle,
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    DropdownButtonFormField<Locale>(
+                      key: ValueKey<String>(
+                        localeController.locale?.languageCode ?? 'es',
+                      ),
+                      initialValue: localeController.locale ?? const Locale('es'),
+                      decoration: InputDecoration(
+                        labelText: l10n.languageSelectorLabel,
+                      ),
+                      items: [
+                        DropdownMenuItem(
+                          value: const Locale('es'),
+                          child: Text(l10n.languageSpanish),
+                        ),
+                        DropdownMenuItem(
+                          value: const Locale('en'),
+                          child: Text(l10n.languageEnglish),
+                        ),
+                      ],
+                      onChanged: (value) {
+                        if (value == null) {
+                          return;
+                        }
+                        localeController.setLocale(value);
+                      },
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
         ],
       ),
     );
   }
 
-  _IdleTimeoutPreset _resolveIdlePreset(int seconds) {
-    for (final preset in _idleTimeoutPresets) {
+  _IdleTimeoutPreset _resolveIdlePreset(
+    int seconds,
+    List<_IdleTimeoutPreset> presets,
+  ) {
+    for (final preset in presets) {
       if (preset.seconds == seconds) {
         return preset;
       }
     }
 
-    return _idleTimeoutPresets[2];
+    return presets[2];
   }
 }
 
@@ -313,7 +377,7 @@ class _ChangeMasterPasswordDialogState
     final controller = widget.controller;
 
     return AlertDialog(
-      title: const Text('Change master password'),
+      title: Text(context.l10n.changeMasterPasswordTitle),
       content: AnimatedBuilder(
         animation: controller,
         builder: (context, _) {
@@ -325,7 +389,7 @@ class _ChangeMasterPasswordDialogState
                   controller: _currentController,
                   obscureText: _obscureCurrent,
                   decoration: InputDecoration(
-                    labelText: 'Current master password',
+                    labelText: context.l10n.changeMasterPasswordCurrent,
                     suffixIcon: IconButton(
                       onPressed: () {
                         setState(() {
@@ -345,7 +409,7 @@ class _ChangeMasterPasswordDialogState
                   controller: _newController,
                   obscureText: _obscureNew,
                   decoration: InputDecoration(
-                    labelText: 'New master password',
+                    labelText: context.l10n.changeMasterPasswordNew,
                     suffixIcon: IconButton(
                       onPressed: () {
                         setState(() {
@@ -365,7 +429,7 @@ class _ChangeMasterPasswordDialogState
                   controller: _confirmationController,
                   obscureText: _obscureConfirmation,
                   decoration: InputDecoration(
-                    labelText: 'Confirm new master password',
+                    labelText: context.l10n.changeMasterPasswordConfirm,
                     suffixIcon: IconButton(
                       onPressed: () {
                         setState(() {
@@ -382,7 +446,7 @@ class _ChangeMasterPasswordDialogState
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 Text(
-                  'Este cambio vuelve a cifrar todo el vault con una clave nueva.',
+                  context.l10n.changeMasterPasswordHint,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
@@ -416,7 +480,7 @@ class _ChangeMasterPasswordDialogState
               : () {
                   Navigator.of(context).pop();
                 },
-          child: const Text('Cancel'),
+          child: Text(context.l10n.cancel),
         ),
         FilledButton(
           onPressed: controller.busy ? null : _submit,
@@ -426,7 +490,7 @@ class _ChangeMasterPasswordDialogState
                   height: 16,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('Apply'),
+              : Text(context.l10n.apply),
         ),
       ],
     );
@@ -449,8 +513,8 @@ class _ChangeMasterPasswordDialogState
 
     if (changed) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Master password actualizada correctamente.'),
+        SnackBar(
+          content: Text(context.l10n.masterPasswordUpdatedSuccess),
         ),
       );
       Navigator.of(context).pop();
@@ -460,7 +524,7 @@ class _ChangeMasterPasswordDialogState
     setState(() {
       _formFeedback =
           widget.controller.message ??
-          'No pudimos cambiar la master password. Revisa los datos e intenta de nuevo.';
+          context.l10n.changeMasterPasswordErrorFallback;
     });
   }
 }
