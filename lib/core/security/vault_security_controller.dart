@@ -4,6 +4,7 @@ import 'biometric_auth_service.dart';
 import 'master_password_record.dart';
 import 'master_password_service.dart';
 import 'secure_storage_service.dart';
+import 'vault_session.dart';
 
 enum VaultSecurityStage { loading, onboarding, locked, unlocked }
 
@@ -33,6 +34,7 @@ class VaultSecurityController extends ChangeNotifier {
   bool _biometricEnabled = false;
   bool _busy = false;
   String? _message;
+  VaultSession? _vaultSession;
 
   VaultSecurityStage get stage => _stage;
 
@@ -43,6 +45,8 @@ class VaultSecurityController extends ChangeNotifier {
   bool get busy => _busy;
 
   String? get message => _message;
+
+  VaultSession? get vaultSession => _vaultSession;
 
   bool get isUnlocked => _stage == VaultSecurityStage.unlocked;
 
@@ -103,6 +107,13 @@ class VaultSecurityController extends ChangeNotifier {
 
     return _runBusy(() async {
       final record = await _masterPasswordService.createRecord(password);
+      _vaultSession = VaultSession(
+        keyId: record.keyId,
+        secretKey: await _masterPasswordService.deriveVaultKey(
+          record: record,
+          password: password,
+        ),
+      );
       await _storage.save(masterPasswordRecordKey, record.encode());
       await _persistBiometricPreference(enableBiometrics);
 
@@ -132,6 +143,14 @@ class VaultSecurityController extends ChangeNotifier {
         return false;
       }
 
+      _vaultSession = VaultSession(
+        keyId: record.keyId,
+        secretKey: await _masterPasswordService.deriveVaultKey(
+          record: record,
+          password: password,
+        ),
+      );
+
       if (_biometricEnabled && canOfferBiometricToggle) {
         await _ensureBiometricSeed();
       }
@@ -154,6 +173,12 @@ class VaultSecurityController extends ChangeNotifier {
       if (seed == null || seed.isEmpty) {
         _message =
             'Primero desbloquea con tu master password para vincular biometria.';
+        return false;
+      }
+
+      if (_vaultSession == null) {
+        _message =
+            'La biometria solo puede reabrir una sesion que ya derivo la clave del vault en memoria. Tras cerrar la app, volve a entrar con master password.';
         return false;
       }
 

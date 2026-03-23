@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../app/design_system/app_panel.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
-import '../../../core/security/demo_vault_repository.dart';
+import '../../../core/security/local_encrypted_vault_repository.dart';
 import '../../../core/security/vault_security_controller.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -65,7 +65,7 @@ class SettingsScreen extends StatelessWidget {
                       title: const Text('Unlock with biometrics'),
                       subtitle: Text(
                         securityController.canOfferBiometricToggle
-                            ? 'Usa ${securityController.biometricAvailability.label} para restaurar la sesion local del dispositivo.'
+                            ? 'Usa ${securityController.biometricAvailability.label} para reabrir la sesion local. Despues de cerrar la app por completo, la clave del vault vuelve a requerir master password.'
                             : 'No hay biometria configurada o soportada en este entorno.',
                       ),
                     ),
@@ -111,7 +111,7 @@ class SettingsScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 Text(
-                  DemoVaultRepository.securityPlan.notes,
+                  LocalEncryptedVaultRepository.securityPlan.notes,
                   style: theme.textTheme.bodyLarge?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
@@ -119,20 +119,26 @@ class SettingsScreen extends StatelessWidget {
                 const SizedBox(height: AppSpacing.md),
                 _CapabilityRow(
                   title: 'Secure storage',
-                  enabled: DemoVaultRepository.securityPlan.secureStorage,
+                  enabled:
+                      LocalEncryptedVaultRepository.securityPlan.secureStorage,
                 ),
                 _CapabilityRow(
                   title: 'Biometric unlock',
-                  enabled: DemoVaultRepository.securityPlan.biometricUnlock,
+                  enabled: LocalEncryptedVaultRepository
+                      .securityPlan
+                      .biometricUnlock,
                 ),
                 _CapabilityRow(
                   title: 'Hardware-backed keys',
-                  enabled: DemoVaultRepository.securityPlan.hardwareBackedKeys,
+                  enabled: LocalEncryptedVaultRepository
+                      .securityPlan
+                      .hardwareBackedKeys,
                 ),
                 _CapabilityRow(
                   title: 'Vault item encryption wired end-to-end',
-                  enabled:
-                      DemoVaultRepository.securityPlan.vaultEncryptionReady,
+                  enabled: LocalEncryptedVaultRepository
+                      .securityPlan
+                      .vaultEncryptionReady,
                 ),
               ],
             ),

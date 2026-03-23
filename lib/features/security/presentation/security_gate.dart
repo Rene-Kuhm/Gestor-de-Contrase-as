@@ -74,7 +74,7 @@ class _OnboardingScreenState extends State<_OnboardingScreen> {
               eyebrow: 'Onboarding seguro',
               title: 'Creamos tu llave maestra sin atajos peligrosos.',
               subtitle:
-                  'La master password valida el acceso local. El contenido del vault todavia no se cifra aca, asi que queda preparado sin inventar criptografia casera.',
+                  'La master password valida acceso local y deriva la clave que cifra los items del vault. Nada de guardar secretos en claro ni inventar criptografia casera.',
             ),
             const SizedBox(height: AppSpacing.lg),
             AppPanel(
@@ -140,8 +140,8 @@ class _OnboardingScreenState extends State<_OnboardingScreen> {
                     _SecurityChecklist(
                       items: [
                         'PBKDF2-HMAC-SHA256 para verificar la master password.',
-                        'Salt aleatoria y record guardado con Keychain / Keystore.',
-                        'Nada de derivar cifrado propio hasta integrar vault encryption auditado.',
+                        'PBKDF2-HMAC-SHA256 separado para derivar la clave del vault.',
+                        'Items locales cifrados con AES-256-GCM y record guardado con Keychain / Keystore.',
                       ],
                     ),
                     const SizedBox(height: AppSpacing.md),
@@ -232,7 +232,7 @@ class _UnlockScreenState extends State<_UnlockScreen> {
               eyebrow: 'Unlock',
               title: 'Tu vault queda cerrado hasta validar identidad real.',
               subtitle: controller.canUnlockWithBiometrics
-                  ? 'Podes entrar con master password o ${controller.biometricAvailability.label}. La biometria restaura solo la sesion local del dispositivo confiable.'
+                  ? 'Podes entrar con master password o ${controller.biometricAvailability.label}. La biometria reabre la sesion local ya derivada en este proceso; tras cerrar la app, vuelve a hacer falta la master password.'
                   : 'Usa tu master password para recuperar acceso. La biometria queda lista cuando el dispositivo la soporte y la vincules.',
             ),
             const SizedBox(height: AppSpacing.lg),
@@ -310,8 +310,8 @@ class _UnlockScreenState extends State<_UnlockScreen> {
               child: _SecurityChecklist(
                 items: [
                   'El registro de acceso vive en almacenamiento seguro del sistema.',
-                  'La biometria usa LocalAuthentication; no reemplaza cifrado fuerte del vault.',
-                  'El cifrado completo de items queda pendiente hasta integrar una libreria auditada extremo a extremo.',
+                  'La biometria usa LocalAuthentication; no reemplaza la derivacion de clave desde la master password.',
+                  'El vault local ya cifra cada item con AES-256-GCM; rekeying, recovery y sync quedan pendientes.',
                 ],
               ),
             ),

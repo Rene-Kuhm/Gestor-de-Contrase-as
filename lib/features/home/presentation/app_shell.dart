@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/security/demo_vault_repository.dart';
 import '../../../core/security/vault_security_controller.dart';
+import '../../../core/security/vault_repository.dart';
 import '../../settings/presentation/settings_screen.dart';
 import '../../vault/presentation/vault_dashboard_screen.dart';
 
@@ -12,7 +12,7 @@ class AppShell extends StatefulWidget {
     required this.securityController,
   });
 
-  final DemoVaultRepository repository;
+  final VaultRepository repository;
   final VaultSecurityController securityController;
 
   @override

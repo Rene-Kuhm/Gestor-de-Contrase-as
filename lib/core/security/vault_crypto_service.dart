@@ -1,11 +1,13 @@
 abstract interface class VaultCryptoService {
   Future<String> encrypt({
     required String plaintext,
-    required String masterKeyId,
+    required Object secretKey,
+    required String keyId,
   });
 
   Future<String> decrypt({
     required String ciphertext,
-    required String masterKeyId,
+    required Object secretKey,
+    required String expectedKeyId,
   });
 }

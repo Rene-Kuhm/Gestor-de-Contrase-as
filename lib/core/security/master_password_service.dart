@@ -10,7 +10,8 @@ class MasterPasswordService {
 
   static const minimumLength = 12;
   static const _recordVersion = 1;
-  static const _iterations = 210000;
+  static const _verifierIterations = 210000;
+  static const _encryptionIterations = 210000;
   static const _keyBits = 256;
 
   String? validate(String password) {
@@ -31,18 +32,22 @@ class MasterPasswordService {
   }
 
   Future<MasterPasswordRecord> createRecord(String password) async {
-    final salt = _randomBytes(16);
+    final verifierSalt = _randomBytes(16);
+    final encryptionSalt = _randomBytes(16);
     final verifier = await _deriveVerifier(
       password: password,
-      salt: salt,
-      iterations: _iterations,
+      salt: verifierSalt,
+      iterations: _verifierIterations,
     );
 
     return MasterPasswordRecord(
       version: _recordVersion,
-      iterations: _iterations,
-      salt: base64Encode(salt),
+      verifierIterations: _verifierIterations,
+      verifierSalt: base64Encode(verifierSalt),
       verifier: base64Encode(verifier),
+      encryptionIterations: _encryptionIterations,
+      encryptionSalt: base64Encode(encryptionSalt),
+      keyId: base64UrlEncode(_randomBytes(12)),
       createdAt: DateTime.now().toUtc(),
     );
   }
@@ -53,11 +58,27 @@ class MasterPasswordService {
   }) async {
     final verifier = await _deriveVerifier(
       password: password,
-      salt: base64Decode(record.salt),
-      iterations: record.iterations,
+      salt: base64Decode(record.verifierSalt),
+      iterations: record.verifierIterations,
     );
 
     return _constantTimeEquals(verifier, base64Decode(record.verifier));
+  }
+
+  Future<SecretKey> deriveVaultKey({
+    required MasterPasswordRecord record,
+    required String password,
+  }) {
+    final algorithm = Pbkdf2(
+      macAlgorithm: Hmac.sha256(),
+      iterations: record.encryptionIterations,
+      bits: _keyBits,
+    );
+
+    return algorithm.deriveKey(
+      secretKey: SecretKey(utf8.encode(password)),
+      nonce: base64Decode(record.encryptionSalt),
+    );
   }
 
   String generateSessionSeed() {

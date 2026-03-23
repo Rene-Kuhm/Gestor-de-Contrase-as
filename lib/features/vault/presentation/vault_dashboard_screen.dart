@@ -5,14 +5,14 @@ import '../../../app/design_system/metric_card.dart';
 import '../../../app/design_system/vault_entry_tile.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
-import '../../../core/security/demo_vault_repository.dart';
+import '../../../core/security/vault_repository.dart';
 import '../domain/vault_item.dart';
 import '../domain/vault_summary.dart';
 
 class VaultDashboardScreen extends StatelessWidget {
   const VaultDashboardScreen({super.key, required this.repository});
 
-  final DemoVaultRepository repository;
+  final VaultRepository repository;
 
   @override
   Widget build(BuildContext context) {
@@ -180,7 +180,7 @@ class _HeroSecurityCard extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
-            'Biometric unlock, encrypted vault and trusted-device sync are planned from the foundation.',
+            'El vault local ya cifra cada item con AES-256-GCM. Biometria persistente entre reinicios, rekeying y sync confiable siguen explicitamente pendientes.',
             style: theme.textTheme.bodyLarge?.copyWith(color: Colors.white70),
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -190,7 +190,9 @@ class _HeroSecurityCard extends StatelessWidget {
             children: [
               _Pill(label: '${summary.connectedDevices} devices trusted'),
               _Pill(
-                label: summary.syncEnabled ? 'Secure sync on' : 'Offline mode',
+                label: summary.syncEnabled
+                    ? 'Secure sync on'
+                    : 'Offline encrypted vault',
               ),
               _Pill(label: '${summary.weakItems} passwords need rotation'),
             ],
@@ -303,7 +305,7 @@ class _QuickActions extends StatelessWidget {
             ),
             title: const Text('Enable biometric recovery'),
             subtitle: const Text(
-              'Hook Face ID / BiometricPrompt before production.',
+              'Keep real device-backed key wrapping separate from the master password flow.',
             ),
             trailing: Icon(
               Icons.chevron_right_rounded,
@@ -321,7 +323,7 @@ class _QuickActions extends StatelessWidget {
             subtitle: Text(
               summary.syncEnabled
                   ? 'Cross-device sync currently planned.'
-                  : 'Offline-only mode selected.',
+                  : 'Encrypted local-only mode selected.',
             ),
             trailing: Icon(
               Icons.chevron_right_rounded,

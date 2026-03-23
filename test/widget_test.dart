@@ -2,8 +2,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:local_auth/local_auth.dart';
 
 import 'package:gestor_contrasenas/app/bootstrap/password_manager_app.dart';
+import 'package:gestor_contrasenas/core/security/aes_gcm_vault_crypto_service.dart';
 import 'package:gestor_contrasenas/core/security/biometric_auth_service.dart';
-import 'package:gestor_contrasenas/core/security/demo_vault_repository.dart';
+import 'package:gestor_contrasenas/core/security/local_encrypted_vault_repository.dart';
 import 'package:gestor_contrasenas/core/security/master_password_service.dart';
 import 'package:gestor_contrasenas/core/security/secure_storage_service.dart';
 import 'package:gestor_contrasenas/core/security/vault_security_controller.dart';
@@ -21,7 +22,11 @@ void main() {
 
     await tester.pumpWidget(
       PasswordManagerApp(
-        repository: DemoVaultRepository(),
+        repository: LocalEncryptedVaultRepository(
+          storage: _InMemorySecureStorageService(),
+          cryptoService: AesGcmVaultCryptoService(),
+          readSession: () => controller.vaultSession,
+        ),
         securityController: controller,
       ),
     );
