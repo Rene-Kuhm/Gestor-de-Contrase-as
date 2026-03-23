@@ -89,7 +89,7 @@ class SettingsScreen extends StatelessWidget {
                       title: const Text('Unlock with biometrics'),
                       subtitle: Text(
                         securityController.canOfferBiometricToggle
-                            ? 'Usa ${securityController.biometricAvailability.label} para reabrir la sesion local. Despues de cerrar la app por completo, la clave del vault vuelve a requerir master password.'
+                            ? 'Usa ${securityController.biometricAvailability.label} para reabrir la sesion local. Si el recovery biometrico del dispositivo sigue vigente, tambien funciona despues de reiniciar la app.'
                             : 'No hay biometria configurada o soportada en este entorno.',
                       ),
                     ),

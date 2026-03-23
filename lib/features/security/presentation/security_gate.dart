@@ -278,7 +278,7 @@ class _UnlockScreenState extends State<_UnlockScreen> {
               eyebrow: 'Unlock',
               title: 'Tu vault queda cerrado hasta validar identidad real.',
               subtitle: controller.canUnlockWithBiometrics
-                  ? 'Podes entrar con master password o ${controller.biometricAvailability.label}. La biometria reabre la sesion local ya derivada en este proceso; tras cerrar la app, vuelve a hacer falta la master password.'
+                  ? 'Podes entrar con master password o ${controller.biometricAvailability.label}. La biometria restaura la sesion local del dispositivo, incluso despues de reiniciar la app, mientras la clave biometrica siga vigente.'
                   : 'Usa tu master password para recuperar acceso. La biometria queda lista cuando el dispositivo la soporte y la vincules.',
             ),
             const SizedBox(height: AppSpacing.lg),
@@ -356,7 +356,7 @@ class _UnlockScreenState extends State<_UnlockScreen> {
               child: _SecurityChecklist(
                 items: [
                   'El registro de acceso vive en almacenamiento seguro del sistema.',
-                  'La biometria usa LocalAuthentication; no reemplaza la derivacion de clave desde la master password.',
+                  'La biometria usa LocalAuthentication y un artefacto local protegido en Keychain/Keystore para recovery post-reinicio.',
                   'El vault local cifra con AES-256-GCM y ya soporta rekeying al cambiar master password; recovery y sync quedan pendientes.',
                 ],
               ),
