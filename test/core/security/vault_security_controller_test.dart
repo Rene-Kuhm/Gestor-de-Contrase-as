@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/widgets.dart';
 import 'package:local_auth/local_auth.dart';
 
 import 'package:gestor_contrasenas/core/security/biometric_auth_service.dart';
@@ -15,6 +16,7 @@ void main() {
         masterPasswordService: MasterPasswordService(),
         biometricAuthService: const _FakeBiometricAuthService(),
       );
+      addTearDown(controller.dispose);
 
       await controller.initialize();
 
@@ -49,6 +51,7 @@ void main() {
         masterPasswordService: MasterPasswordService(),
         biometricAuthService: const _FakeBiometricAuthService(),
       );
+      addTearDown(controller.dispose);
 
       await controller.initialize();
 
@@ -62,6 +65,57 @@ void main() {
       expect(controller.stage, VaultSecurityStage.onboarding);
       expect(controller.message, contains('12'));
     });
+
+    test('locks on lifecycle background states when enabled', () async {
+      final controller = VaultSecurityController(
+        storage: _InMemorySecureStorageService(),
+        masterPasswordService: MasterPasswordService(),
+        biometricAuthService: const _FakeBiometricAuthService(),
+      );
+      addTearDown(controller.dispose);
+
+      await controller.initialize();
+      await controller.createMasterPassword(
+        password: 'StrongPass!2026',
+        confirmation: 'StrongPass!2026',
+        enableBiometrics: false,
+      );
+
+      expect(controller.isUnlocked, isTrue);
+
+      await controller.handleAppLifecycleState(AppLifecycleState.paused);
+
+      expect(controller.stage, VaultSecurityStage.locked);
+      expect(
+        controller.message,
+        contains('bloqueada automaticamente al salir de primer plano'),
+      );
+    });
+
+    test(
+      'does not lock on lifecycle when background auto-lock disabled',
+      () async {
+        final controller = VaultSecurityController(
+          storage: _InMemorySecureStorageService(),
+          masterPasswordService: MasterPasswordService(),
+          biometricAuthService: const _FakeBiometricAuthService(),
+        );
+        addTearDown(controller.dispose);
+
+        await controller.initialize();
+        await controller.createMasterPassword(
+          password: 'StrongPass!2026',
+          confirmation: 'StrongPass!2026',
+          enableBiometrics: false,
+        );
+        await controller.setAutoLockOnBackgroundEnabled(false);
+
+        await controller.handleAppLifecycleState(AppLifecycleState.paused);
+
+        expect(controller.stage, VaultSecurityStage.unlocked);
+      },
+    );
+
   });
 }
 

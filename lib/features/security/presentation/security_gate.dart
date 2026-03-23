@@ -4,9 +4,8 @@ import '../../../app/design_system/app_panel.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../core/security/vault_security_controller.dart';
-import '../../home/presentation/app_shell.dart';
 
-class SecurityGate extends StatelessWidget {
+class SecurityGate extends StatefulWidget {
   const SecurityGate({
     super.key,
     required this.controller,
@@ -14,22 +13,47 @@ class SecurityGate extends StatelessWidget {
   });
 
   final VaultSecurityController controller;
-  final AppShell child;
+  final Widget child;
+
+  @override
+  State<SecurityGate> createState() => _SecurityGateState();
+}
+
+class _SecurityGateState extends State<SecurityGate>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    widget.controller.handleAppLifecycleState(state);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: controller,
+      animation: widget.controller,
       builder: (context, _) {
-        return switch (controller.stage) {
+        return switch (widget.controller.stage) {
           VaultSecurityStage.loading => _SecurityScaffold(
             child: const Center(child: CircularProgressIndicator()),
           ),
           VaultSecurityStage.onboarding => _OnboardingScreen(
-            controller: controller,
+            controller: widget.controller,
           ),
-          VaultSecurityStage.locked => _UnlockScreen(controller: controller),
-          VaultSecurityStage.unlocked => child,
+          VaultSecurityStage.locked => _UnlockScreen(
+            controller: widget.controller,
+          ),
+          VaultSecurityStage.unlocked => widget.child,
         };
       },
     );

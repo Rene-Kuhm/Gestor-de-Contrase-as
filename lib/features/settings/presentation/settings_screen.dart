@@ -70,6 +70,22 @@ class SettingsScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: AppSpacing.sm),
+                    SwitchListTile.adaptive(
+                      contentPadding: EdgeInsets.zero,
+                      value: securityController.autoLockOnBackgroundEnabled,
+                      onChanged: securityController.busy
+                          ? null
+                          : (value) {
+                              securityController.setAutoLockOnBackgroundEnabled(
+                                value,
+                              );
+                            },
+                      title: const Text('Auto-lock al pasar a background'),
+                      subtitle: const Text(
+                        'Bloquea Vaulta automaticamente si la app queda inactive, paused o detached.',
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
                     FilledButton.icon(
                       onPressed: securityController.busy
                           ? null

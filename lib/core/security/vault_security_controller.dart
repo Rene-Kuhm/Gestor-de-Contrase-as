@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 
 import 'biometric_auth_service.dart';
 import 'master_password_record.dart';
@@ -20,6 +20,8 @@ class VaultSecurityController extends ChangeNotifier {
   static const masterPasswordRecordKey = 'vault_master_password_record';
   static const biometricEnabledKey = 'vault_biometric_enabled';
   static const biometricSeedKey = 'vault_biometric_seed';
+  static const autoLockOnBackgroundEnabledKey =
+      'vault_auto_lock_on_background_enabled';
 
   final SecureStorageService _storage;
   final MasterPasswordService _masterPasswordService;
@@ -35,6 +37,7 @@ class VaultSecurityController extends ChangeNotifier {
   bool _busy = false;
   String? _message;
   VaultSession? _vaultSession;
+  bool _autoLockOnBackgroundEnabled = true;
 
   VaultSecurityStage get stage => _stage;
 
@@ -47,6 +50,8 @@ class VaultSecurityController extends ChangeNotifier {
   String? get message => _message;
 
   VaultSession? get vaultSession => _vaultSession;
+
+  bool get autoLockOnBackgroundEnabled => _autoLockOnBackgroundEnabled;
 
   bool get isUnlocked => _stage == VaultSecurityStage.unlocked;
 
@@ -66,6 +71,12 @@ class VaultSecurityController extends ChangeNotifier {
     try {
       _biometricAvailability = await _biometricAuthService.getAvailability();
       _biometricEnabled = await _storage.read(biometricEnabledKey) == 'true';
+      _autoLockOnBackgroundEnabled =
+          await _readBool(
+            key: autoLockOnBackgroundEnabledKey,
+            fallback: true,
+          ) ??
+          true;
 
       final record = await _readRecord();
       _stage = record == null
@@ -210,10 +221,44 @@ class VaultSecurityController extends ChangeNotifier {
     });
   }
 
-  Future<void> lock() async {
+  Future<void> lock({String? reason}) async {
+    _vaultSession = null;
     _stage = VaultSecurityStage.locked;
-    _message = 'Vaulta bloqueada.';
+    _message = reason ?? 'Vaulta bloqueada.';
     notifyListeners();
+  }
+
+  Future<void> setAutoLockOnBackgroundEnabled(bool enabled) async {
+    await _runBusy(() async {
+      _autoLockOnBackgroundEnabled = enabled;
+      await _storage.save(autoLockOnBackgroundEnabledKey, enabled.toString());
+      _message = enabled
+          ? 'Auto-lock al ir a background activado.'
+          : 'Auto-lock al ir a background desactivado.';
+      return true;
+    });
+  }
+
+  Future<void> handleAppLifecycleState(AppLifecycleState state) async {
+    if (!isUnlocked) {
+      return;
+    }
+
+    switch (state) {
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.hidden:
+      case AppLifecycleState.paused:
+      case AppLifecycleState.detached:
+        if (_autoLockOnBackgroundEnabled) {
+          await lock(
+            reason:
+                'Vaulta bloqueada automaticamente al salir de primer plano.',
+          );
+        }
+        return;
+      case AppLifecycleState.resumed:
+        return;
+    }
   }
 
   Future<void> _persistBiometricPreference(bool enabled) async {
@@ -261,5 +306,22 @@ class VaultSecurityController extends ChangeNotifier {
 
   void _setBusy(bool value) {
     _busy = value;
+  }
+
+  Future<bool?> _readBool({required String key, required bool fallback}) async {
+    final rawValue = await _storage.read(key);
+    if (rawValue == null) {
+      return fallback;
+    }
+
+    if (rawValue == 'true') {
+      return true;
+    }
+
+    if (rawValue == 'false') {
+      return false;
+    }
+
+    return fallback;
   }
 }
