@@ -77,6 +77,42 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingsChangeMasterPassword => 'Cambiar master password';
 
   @override
+  String get settingsSessionsTitle => 'Dispositivos y sesiones';
+
+  @override
+  String get settingsSessionsSubtitle => 'Podes revocar un equipo puntual o cortar el resto de sesiones activas.';
+
+  @override
+  String get settingsSessionsRefresh => 'Refrescar sesiones';
+
+  @override
+  String get settingsRevokeOtherDevices => 'Revocar todas las otras sesiones';
+
+  @override
+  String get settingsRevokeDevice => 'Revocar dispositivo';
+
+  @override
+  String get settingsNoDevices => 'No hay dispositivos registrados para este usuario.';
+
+  @override
+  String get settingsCurrentDeviceLabel => 'Este dispositivo';
+
+  @override
+  String get settingsSessionStatusActive => 'Activa';
+
+  @override
+  String get settingsSessionStatusRevoked => 'Revocada';
+
+  @override
+  String get settingsDeviceNeverSeen => 'Sin actividad registrada';
+
+  @override
+  String get settingsDeviceRevokedMessage => 'Dispositivo revocado correctamente.';
+
+  @override
+  String get settingsRevokeOthersDone => 'Se revocaron las otras sesiones activas.';
+
+  @override
   String get settingsRoadmapTitle => 'Roadmap de seguridad de plataforma';
 
   @override

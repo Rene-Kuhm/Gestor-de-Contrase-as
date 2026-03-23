@@ -77,6 +77,42 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsChangeMasterPassword => 'Change master password';
 
   @override
+  String get settingsSessionsTitle => 'Devices and sessions';
+
+  @override
+  String get settingsSessionsSubtitle => 'You can revoke one device or cut every other active session.';
+
+  @override
+  String get settingsSessionsRefresh => 'Refresh sessions';
+
+  @override
+  String get settingsRevokeOtherDevices => 'Revoke all other sessions';
+
+  @override
+  String get settingsRevokeDevice => 'Revoke device';
+
+  @override
+  String get settingsNoDevices => 'No registered devices for this user.';
+
+  @override
+  String get settingsCurrentDeviceLabel => 'This device';
+
+  @override
+  String get settingsSessionStatusActive => 'Active';
+
+  @override
+  String get settingsSessionStatusRevoked => 'Revoked';
+
+  @override
+  String get settingsDeviceNeverSeen => 'No activity recorded';
+
+  @override
+  String get settingsDeviceRevokedMessage => 'Device revoked successfully.';
+
+  @override
+  String get settingsRevokeOthersDone => 'Other active sessions were revoked.';
+
+  @override
   String get settingsRoadmapTitle => 'Platform security roadmap';
 
   @override

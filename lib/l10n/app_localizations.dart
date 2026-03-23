@@ -227,6 +227,78 @@ abstract class AppLocalizations {
   /// **'Change master password'**
   String get settingsChangeMasterPassword;
 
+  /// No description provided for @settingsSessionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Devices and sessions'**
+  String get settingsSessionsTitle;
+
+  /// No description provided for @settingsSessionsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'You can revoke one device or cut every other active session.'**
+  String get settingsSessionsSubtitle;
+
+  /// No description provided for @settingsSessionsRefresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh sessions'**
+  String get settingsSessionsRefresh;
+
+  /// No description provided for @settingsRevokeOtherDevices.
+  ///
+  /// In en, this message translates to:
+  /// **'Revoke all other sessions'**
+  String get settingsRevokeOtherDevices;
+
+  /// No description provided for @settingsRevokeDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'Revoke device'**
+  String get settingsRevokeDevice;
+
+  /// No description provided for @settingsNoDevices.
+  ///
+  /// In en, this message translates to:
+  /// **'No registered devices for this user.'**
+  String get settingsNoDevices;
+
+  /// No description provided for @settingsCurrentDeviceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'This device'**
+  String get settingsCurrentDeviceLabel;
+
+  /// No description provided for @settingsSessionStatusActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get settingsSessionStatusActive;
+
+  /// No description provided for @settingsSessionStatusRevoked.
+  ///
+  /// In en, this message translates to:
+  /// **'Revoked'**
+  String get settingsSessionStatusRevoked;
+
+  /// No description provided for @settingsDeviceNeverSeen.
+  ///
+  /// In en, this message translates to:
+  /// **'No activity recorded'**
+  String get settingsDeviceNeverSeen;
+
+  /// No description provided for @settingsDeviceRevokedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Device revoked successfully.'**
+  String get settingsDeviceRevokedMessage;
+
+  /// No description provided for @settingsRevokeOthersDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Other active sessions were revoked.'**
+  String get settingsRevokeOthersDone;
+
   /// No description provided for @settingsRoadmapTitle.
   ///
   /// In en, this message translates to:

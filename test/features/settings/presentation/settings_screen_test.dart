@@ -7,6 +7,9 @@ import 'package:gestor_contrasenas/core/security/biometric_auth_service.dart';
 import 'package:gestor_contrasenas/core/security/master_password_service.dart';
 import 'package:gestor_contrasenas/core/security/secure_storage_service.dart';
 import 'package:gestor_contrasenas/core/security/vault_security_controller.dart';
+import 'package:gestor_contrasenas/core/sync/device_registration_repository.dart';
+import 'package:gestor_contrasenas/core/sync/device_registration_service.dart';
+import 'package:gestor_contrasenas/core/sync/device_session_revocation_service.dart';
 import 'package:gestor_contrasenas/features/settings/presentation/settings_screen.dart';
 import 'package:gestor_contrasenas/l10n/app_localizations.dart';
 
@@ -136,6 +139,151 @@ void main() {
       expect(controller.idleTimeoutSeconds, 0);
       expect(controller.message, contains('inactividad desactivado'));
     });
+
+    testWidgets('renders device sessions and revokes selected device', (
+      tester,
+    ) async {
+      final controller = await _buildUnlockedController();
+      final localeController = AppLocaleController(
+        storage: _InMemorySecureStorageService(),
+      );
+      await localeController.initialize();
+      final repository = _FakeDeviceRegistrationRepository(
+        devices: const [
+          VaultDeviceSession(
+            deviceId: 'test-device-id',
+            deviceName: 'Pixel 8',
+            platform: 'android',
+            appVersion: '1.0.0+1',
+            status: DeviceSessionStatus.active,
+            accessAllowed: true,
+          ),
+          VaultDeviceSession(
+            deviceId: 'old-laptop',
+            deviceName: 'Old Laptop',
+            platform: 'windows',
+            appVersion: '1.0.0+1',
+            status: DeviceSessionStatus.revokedAll,
+            accessAllowed: false,
+          ),
+        ],
+      );
+      final revocationService = DeviceSessionRevocationService(
+        repository: repository,
+        identityService: const _FakeDeviceIdentityService('current-device'),
+      );
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(
+        _testApp(
+          SettingsScreen(
+            securityController: controller,
+            localeController: localeController,
+            revocationService: revocationService,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Devices and sessions'), findsOneWidget);
+      expect(find.text('status: active'), findsOneWidget);
+      expect(find.text('status: revoked_all'), findsOneWidget);
+
+      await tester.tap(find.text('Revoke device'));
+      await tester.pumpAndSettle();
+
+      expect(repository.lastRevokedDeviceId, 'test-device-id');
+    });
+
+    testWidgets('locks current session when current device is revoked', (
+      tester,
+    ) async {
+      final controller = await _buildUnlockedController();
+      final localeController = AppLocaleController(
+        storage: _InMemorySecureStorageService(),
+      );
+      await localeController.initialize();
+      final repository = _FakeDeviceRegistrationRepository(
+        devices: const [
+          VaultDeviceSession(
+            deviceId: 'current-device',
+            deviceName: 'Pixel 8',
+            platform: 'android',
+            appVersion: '1.0.0+1',
+            status: DeviceSessionStatus.active,
+            accessAllowed: true,
+          ),
+        ],
+      );
+      final revocationService = DeviceSessionRevocationService(
+        repository: repository,
+        identityService: const _FakeDeviceIdentityService('current-device'),
+      );
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(
+        _testApp(
+          SettingsScreen(
+            securityController: controller,
+            localeController: localeController,
+            revocationService: revocationService,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Revoke device'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Revoke now'));
+      await tester.pumpAndSettle();
+
+      expect(controller.stage, VaultSecurityStage.locked);
+      expect(controller.message, contains('se revoco en este dispositivo'));
+    });
+
+    testWidgets('revokes all other devices with current device id', (
+      tester,
+    ) async {
+      final controller = await _buildUnlockedController();
+      final localeController = AppLocaleController(
+        storage: _InMemorySecureStorageService(),
+      );
+      await localeController.initialize();
+      final repository = _FakeDeviceRegistrationRepository(
+        devices: const [
+          VaultDeviceSession(
+            deviceId: 'current-device',
+            deviceName: 'Pixel 8',
+            platform: 'android',
+            appVersion: '1.0.0+1',
+            status: DeviceSessionStatus.active,
+            accessAllowed: true,
+          ),
+        ],
+      );
+      final revocationService = DeviceSessionRevocationService(
+        repository: repository,
+        identityService: const _FakeDeviceIdentityService('current-device'),
+      );
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(
+        _testApp(
+          SettingsScreen(
+            securityController: controller,
+            localeController: localeController,
+            revocationService: revocationService,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Revoke all other sessions'));
+      await tester.pumpAndSettle();
+
+      expect(repository.lastRevokeAllCurrentDeviceId, 'current-device');
+      expect(repository.revokeAllOtherCalls, 1);
+    });
   });
 }
 
@@ -163,6 +311,7 @@ Future<VaultSecurityController> _buildUnlockedController({
     confirmation: 'StrongPass!2026',
     enableBiometrics: false,
   );
+  await controller.setIdleTimeoutSeconds(0);
 
   return controller;
 }
@@ -197,5 +346,73 @@ class _FakeBiometricAuthService implements BiometricAuthService {
       canCheckBiometrics: true,
       availableBiometrics: [BiometricType.strong],
     );
+  }
+}
+
+class _FakeDeviceIdentityService implements DeviceIdentityService {
+  const _FakeDeviceIdentityService(this._deviceId);
+
+  final String _deviceId;
+
+  @override
+  Future<String> getOrCreateDeviceId() async => _deviceId;
+
+  @override
+  String readPlatform() => 'android';
+
+  @override
+  Future<String> readDeviceName() async => 'Pixel 8';
+}
+
+class _FakeDeviceRegistrationRepository
+    implements DeviceRegistrationRepository {
+  _FakeDeviceRegistrationRepository({required this.devices});
+
+  final List<VaultDeviceSession> devices;
+  String? lastRevokedDeviceId;
+  String? lastRevokeAllCurrentDeviceId;
+  int revokeAllOtherCalls = 0;
+
+  @override
+  Future<List<VaultDeviceSession>> listDevices() async => devices;
+
+  @override
+  Future<DeviceAccessStatus> readDeviceAccessStatus({
+    required String deviceId,
+  }) async {
+    return const DeviceAccessStatus(accessAllowed: true, reason: null);
+  }
+
+  @override
+  Future<DeviceAccessStatus> registerDevice({
+    required String deviceId,
+    required String deviceName,
+    required String platform,
+    required String appVersion,
+    required DateTime lastSeenAt,
+  }) async {
+    return const DeviceAccessStatus(accessAllowed: true, reason: null);
+  }
+
+  @override
+  Future<void> revokeAllOtherDevices({required String currentDeviceId}) async {
+    revokeAllOtherCalls += 1;
+    lastRevokeAllCurrentDeviceId = currentDeviceId;
+  }
+
+  @override
+  Future<void> revokeDevice({required String deviceId}) async {
+    lastRevokedDeviceId = deviceId;
+  }
+
+  @override
+  Future<DeviceAccessStatus> sendHeartbeat({
+    required String deviceId,
+    required String deviceName,
+    required String platform,
+    required String appVersion,
+    required DateTime lastSeenAt,
+  }) async {
+    return const DeviceAccessStatus(accessAllowed: true, reason: null);
   }
 }

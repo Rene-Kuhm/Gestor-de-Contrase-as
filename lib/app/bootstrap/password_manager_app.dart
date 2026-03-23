@@ -10,6 +10,7 @@ import '../../core/security/local_encrypted_vault_repository.dart';
 import '../../core/security/master_password_service.dart';
 import '../../core/security/vault_repository.dart';
 import '../../core/security/vault_security_controller.dart';
+import '../../core/sync/device_registration_repository.dart';
 import '../../core/sync/device_registration_service.dart';
 import '../../core/sync/device_sync_bootstrap.dart';
 import '../../core/sync/local_vault_mutation.dart';
@@ -43,6 +44,9 @@ Future<void> runPasswordManagerApp() async {
   final deviceSyncLifecycle = await buildDeviceSyncLifecycle(
     storage: storage,
     mutationSink: mutationSink,
+    onCurrentDeviceRevoked: (DeviceAccessStatus status) {
+      return securityController.lock(reason: status.userFacingReason());
+    },
   );
 
   runApp(
@@ -96,6 +100,7 @@ class PasswordManagerApp extends StatelessWidget {
               securityController: securityController,
               localeController: localeController,
               conflictResolver: deviceSyncLifecycle?.conflictResolver,
+              revocationService: deviceSyncLifecycle?.revocationService,
             ),
           ),
         );

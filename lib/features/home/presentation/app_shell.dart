@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../app/localization/app_locale_controller.dart';
 import '../../../app/localization/l10n.dart';
 import '../../../core/security/vault_security_controller.dart';
+import '../../../core/sync/device_session_revocation_service.dart';
 import '../../../core/security/vault_repository.dart';
 import '../../../core/sync/sync_conflict_resolver.dart';
 import '../../settings/presentation/settings_screen.dart';
@@ -15,12 +16,14 @@ class AppShell extends StatefulWidget {
     required this.securityController,
     required this.localeController,
     this.conflictResolver,
+    this.revocationService,
   });
 
   final VaultRepository repository;
   final VaultSecurityController securityController;
   final AppLocaleController localeController;
   final SyncConflictResolver? conflictResolver;
+  final DeviceSessionRevocationService? revocationService;
 
   @override
   State<AppShell> createState() => _AppShellState();
@@ -42,6 +45,7 @@ class _AppShellState extends State<AppShell> {
         securityController: widget.securityController,
         localeController: widget.localeController,
         conflictResolver: widget.conflictResolver,
+        revocationService: widget.revocationService,
       ),
     ];
 
