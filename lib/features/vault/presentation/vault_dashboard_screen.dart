@@ -22,11 +22,21 @@ class VaultDashboardScreen extends StatefulWidget {
 
 class _VaultDashboardScreenState extends State<VaultDashboardScreen> {
   late Future<({VaultSummary summary, List<VaultItem> items})> _future;
+  late final TextEditingController _searchController;
+  String _searchQuery = '';
+  _VaultFilter _activeFilter = _VaultFilter.all;
 
   @override
   void initState() {
     super.initState();
+    _searchController = TextEditingController();
     _future = _load();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   @override
@@ -70,6 +80,7 @@ class _VaultDashboardScreenState extends State<VaultDashboardScreen> {
         }
 
         final data = snapshot.data!;
+        final filteredItems = _applyFilters(data.items);
 
         return Scaffold(
           floatingActionButton: FloatingActionButton.extended(
@@ -115,7 +126,17 @@ class _VaultDashboardScreenState extends State<VaultDashboardScreen> {
                               ),
                               const SizedBox(height: AppSpacing.lg),
                               _VaultSection(
-                                items: data.items,
+                                items: filteredItems,
+                                totalItems: data.items.length,
+                                searchController: _searchController,
+                                activeFilter: _activeFilter,
+                                onSearchChanged: (value) {
+                                  setState(() => _searchQuery = value);
+                                },
+                                onFilterChanged: (value) {
+                                  setState(() => _activeFilter = value);
+                                },
+                                onClearFilters: _clearFilters,
                                 onCreateEntry: _createEntry,
                                 onOpenEntry: _openEntry,
                               ),
@@ -143,6 +164,34 @@ class _VaultDashboardScreenState extends State<VaultDashboardScreen> {
   void _refresh() {
     setState(() {
       _future = _load();
+    });
+  }
+
+  List<VaultItem> _applyFilters(List<VaultItem> items) {
+    final query = _searchQuery.trim().toLowerCase();
+
+    return items.where((item) {
+      final matchesQuery = query.isEmpty ||
+          item.title.toLowerCase().contains(query) ||
+          item.username.toLowerCase().contains(query) ||
+          (item.website?.toLowerCase().contains(query) ?? false);
+
+      final matchesFilter = switch (_activeFilter) {
+        _VaultFilter.all => true,
+        _VaultFilter.weak => item.strengthScore < 60,
+        _VaultFilter.withNotes =>
+          item.notes != null && item.notes!.trim().isNotEmpty,
+      };
+
+      return matchesQuery && matchesFilter;
+    }).toList(growable: false);
+  }
+
+  void _clearFilters() {
+    setState(() {
+      _searchController.clear();
+      _searchQuery = '';
+      _activeFilter = _VaultFilter.all;
     });
   }
 
@@ -461,11 +510,23 @@ class _QuickActions extends StatelessWidget {
 class _VaultSection extends StatelessWidget {
   const _VaultSection({
     required this.items,
+    required this.totalItems,
+    required this.searchController,
+    required this.activeFilter,
+    required this.onSearchChanged,
+    required this.onFilterChanged,
+    required this.onClearFilters,
     required this.onCreateEntry,
     required this.onOpenEntry,
   });
 
   final List<VaultItem> items;
+  final int totalItems;
+  final TextEditingController searchController;
+  final _VaultFilter activeFilter;
+  final ValueChanged<String> onSearchChanged;
+  final ValueChanged<_VaultFilter> onFilterChanged;
+  final VoidCallback onClearFilters;
   final Future<void> Function() onCreateEntry;
   final Future<void> Function(VaultItem item) onOpenEntry;
 
@@ -488,7 +549,9 @@ class _VaultSection extends StatelessWidget {
                 ),
               ),
               Text(
-                '${items.length} total',
+                totalItems == items.length
+                    ? '${items.length} total'
+                    : '${items.length} shown · $totalItems total',
                 style: theme.textTheme.labelLarge?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -496,8 +559,45 @@ class _VaultSection extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.sm),
-          if (items.isEmpty)
+          TextField(
+            controller: searchController,
+            textInputAction: TextInputAction.search,
+            onChanged: onSearchChanged,
+            decoration: InputDecoration(
+              labelText: 'Search title, username or website',
+              prefixIcon: const Icon(Icons.search_rounded),
+              suffixIcon: searchController.text.isEmpty
+                  ? null
+                  : IconButton(
+                      onPressed: onClearFilters,
+                      icon: const Icon(Icons.close_rounded),
+                    ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          DropdownButtonFormField<_VaultFilter>(
+            key: ValueKey(activeFilter),
+            initialValue: activeFilter,
+            decoration: const InputDecoration(labelText: 'Filter'),
+            items: _VaultFilter.values
+                .map(
+                  (filter) => DropdownMenuItem<_VaultFilter>(
+                    value: filter,
+                    child: Text(filter.label),
+                  ),
+                )
+                .toList(growable: false),
+            onChanged: (value) {
+              if (value != null) {
+                onFilterChanged(value);
+              }
+            },
+          ),
+          const SizedBox(height: AppSpacing.md),
+          if (items.isEmpty && totalItems == 0)
             _EmptyVaultState(onCreateEntry: onCreateEntry)
+          else if (items.isEmpty)
+            _NoResultsState(onClearFilters: onClearFilters)
           else
             for (var index = 0; index < items.length; index++) ...[
               VaultEntryTile(
@@ -506,6 +606,52 @@ class _VaultSection extends StatelessWidget {
               ),
               if (index != items.length - 1) const Divider(height: 24),
             ],
+        ],
+      ),
+    );
+  }
+}
+
+class _NoResultsState extends StatelessWidget {
+  const _NoResultsState({required this.onClearFilters});
+
+  final VoidCallback onClearFilters;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.filter_alt_off_rounded, size: 32),
+          const SizedBox(height: 8),
+          Text(
+            'No entries match your current filters',
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Try a different query or reset filters to see all items again.',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          OutlinedButton.icon(
+            onPressed: onClearFilters,
+            icon: const Icon(Icons.restart_alt_rounded),
+            label: const Text('Reset filters'),
+          ),
         ],
       ),
     );
@@ -607,4 +753,14 @@ class _Orb extends StatelessWidget {
       ),
     );
   }
+}
+
+enum _VaultFilter {
+  all('All entries'),
+  weak('Weak passwords only'),
+  withNotes('Entries with notes');
+
+  const _VaultFilter(this.label);
+
+  final String label;
 }

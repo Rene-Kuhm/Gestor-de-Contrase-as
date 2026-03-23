@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 
 import '../../../app/design_system/app_panel.dart';
@@ -17,6 +19,8 @@ class VaultEntryEditorScreen extends StatefulWidget {
 
 class _VaultEntryEditorScreenState extends State<VaultEntryEditorScreen> {
   final _formKey = GlobalKey<FormState>();
+  final Random _random = Random.secure();
+
   late final TextEditingController _titleController;
   late final TextEditingController _usernameController;
   late final TextEditingController _secretController;
@@ -25,6 +29,11 @@ class _VaultEntryEditorScreenState extends State<VaultEntryEditorScreen> {
 
   late VaultCategory _category;
   bool _obscureSecret = true;
+  double _generatedLength = 16;
+  bool _includeUppercase = true;
+  bool _includeLowercase = true;
+  bool _includeNumbers = true;
+  bool _includeSymbols = true;
 
   @override
   void initState() {
@@ -173,6 +182,88 @@ class _VaultEntryEditorScreenState extends State<VaultEntryEditorScreen> {
                         },
                       ),
                       const SizedBox(height: AppSpacing.md),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(AppSpacing.md),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surfaceContainerHighest
+                              .withValues(alpha: 0.42),
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    'Password generator',
+                                    style: theme.textTheme.titleMedium
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                  ),
+                                ),
+                                Text(
+                                  '${_generatedLength.round()} chars',
+                                  style: theme.textTheme.labelLarge,
+                                ),
+                              ],
+                            ),
+                            Slider(
+                              min: 8,
+                              max: 32,
+                              divisions: 24,
+                              label: '${_generatedLength.round()}',
+                              value: _generatedLength,
+                              onChanged: (value) {
+                                setState(() => _generatedLength = value);
+                              },
+                            ),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                FilterChip(
+                                  label: const Text('A-Z'),
+                                  selected: _includeUppercase,
+                                  onSelected: (selected) {
+                                    setState(() => _includeUppercase = selected);
+                                  },
+                                ),
+                                FilterChip(
+                                  label: const Text('a-z'),
+                                  selected: _includeLowercase,
+                                  onSelected: (selected) {
+                                    setState(() => _includeLowercase = selected);
+                                  },
+                                ),
+                                FilterChip(
+                                  label: const Text('0-9'),
+                                  selected: _includeNumbers,
+                                  onSelected: (selected) {
+                                    setState(() => _includeNumbers = selected);
+                                  },
+                                ),
+                                FilterChip(
+                                  label: const Text('#!?'),
+                                  selected: _includeSymbols,
+                                  onSelected: (selected) {
+                                    setState(() => _includeSymbols = selected);
+                                  },
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: AppSpacing.sm),
+                            FilledButton.tonalIcon(
+                              onPressed: _generateAndInsertPassword,
+                              icon: const Icon(Icons.auto_awesome_rounded),
+                              label: const Text('Generate and insert'),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
                       TextFormField(
                         controller: _websiteController,
                         textInputAction: TextInputAction.next,
@@ -235,6 +326,79 @@ class _VaultEntryEditorScreenState extends State<VaultEntryEditorScreen> {
     );
 
     Navigator.of(context).pop(item);
+  }
+
+  void _generateAndInsertPassword() {
+    final generated = _generatePassword(
+      length: _generatedLength.round(),
+      includeUppercase: _includeUppercase,
+      includeLowercase: _includeLowercase,
+      includeNumbers: _includeNumbers,
+      includeSymbols: _includeSymbols,
+    );
+
+    if (generated == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Choose at least one character set to generate.'),
+        ),
+      );
+      return;
+    }
+
+    _secretController
+      ..text = generated
+      ..selection = TextSelection.collapsed(offset: generated.length);
+
+    setState(() => _obscureSecret = true);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Generated password inserted.')),
+    );
+  }
+
+  String? _generatePassword({
+    required int length,
+    required bool includeUppercase,
+    required bool includeLowercase,
+    required bool includeNumbers,
+    required bool includeSymbols,
+  }) {
+    const uppercase = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+    const lowercase = 'abcdefghijkmnopqrstuvwxyz';
+    const numbers = '23456789';
+    const symbols = '!@#%^&*()-_=+[]{}:,.?/';
+
+    final sets = <String>[
+      if (includeUppercase) uppercase,
+      if (includeLowercase) lowercase,
+      if (includeNumbers) numbers,
+      if (includeSymbols) symbols,
+    ];
+
+    if (sets.isEmpty) {
+      return null;
+    }
+
+    final allChars = sets.join();
+    final chars = <String>[];
+
+    for (final set in sets) {
+      chars.add(set[_random.nextInt(set.length)]);
+    }
+
+    while (chars.length < length) {
+      chars.add(allChars[_random.nextInt(allChars.length)]);
+    }
+
+    for (var i = chars.length - 1; i > 0; i--) {
+      final j = _random.nextInt(i + 1);
+      final temp = chars[i];
+      chars[i] = chars[j];
+      chars[j] = temp;
+    }
+
+    return chars.join();
   }
 
   String? _normalizeOptional(String value) {
