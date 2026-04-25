@@ -43,6 +43,7 @@ Future<void> runPasswordManagerApp() async {
 
   final deviceSyncLifecycle = await buildDeviceSyncLifecycle(
     storage: storage,
+    vaultRepository: repository,
     mutationSink: mutationSink,
     onCurrentDeviceRevoked: (DeviceAccessStatus status) {
       return securityController.lock(reason: status.userFacingReason());
