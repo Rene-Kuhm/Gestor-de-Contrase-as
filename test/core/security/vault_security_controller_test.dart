@@ -68,17 +68,20 @@ void main() {
       );
       await controller.lock();
 
+      // Biometric unlock now restores the vault session from the secure slot
+      // written during createMasterPassword/unlockWithPassword when biometrics
+      // are enabled.
       final unlocked = await controller.unlockWithBiometrics();
 
-      expect(unlocked, isFalse);
-      expect(controller.stage, VaultSecurityStage.locked);
+      expect(unlocked, isTrue);
+      expect(controller.stage, VaultSecurityStage.unlocked);
+      expect(controller.vaultSession, isNotNull);
       expect(
         await storage.read(
           VaultSecurityController.biometricRecoveryArtifactKey,
         ),
         isNull,
       );
-      expect(controller.message, contains('no guarda claves recuperables'));
     });
 
     test('rejects weak master passwords', () async {

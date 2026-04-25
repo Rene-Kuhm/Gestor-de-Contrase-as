@@ -93,9 +93,10 @@ class IncrementalPullSyncService {
       );
       final applyLocalSnapshots = _applyLocalSnapshots;
       if (applyLocalSnapshots != null) {
-        final snapshots = changes
-            .map(RemoteVaultBlobSnapshot.fromChange)
-            .toList(growable: false);
+        final snapshots = await _resolveSnapshotIds(
+          userId: userId,
+          changes: changes,
+        );
         await applyLocalSnapshots(snapshots);
       }
 
@@ -109,6 +110,38 @@ class IncrementalPullSyncService {
       deviceId: deviceId,
       lastPullAt: _now().toUtc(),
     );
+  }
+
+  Future<List<RemoteVaultBlobSnapshot>> _resolveSnapshotIds({
+    required String userId,
+    required List<RemoteVaultBlobChange> changes,
+  }) async {
+    final resolved = <RemoteVaultBlobSnapshot>[];
+    for (final change in changes) {
+      final localId = await _localStore.resolveLocalRecordId(
+        userId: userId,
+        remoteRecordId: change.recordId,
+      );
+      final base = RemoteVaultBlobSnapshot.fromChange(change);
+      if (localId == base.recordId) {
+        resolved.add(base);
+      } else {
+        resolved.add(
+          RemoteVaultBlobSnapshot(
+            recordId: localId,
+            version: base.version,
+            keyVersion: base.keyVersion,
+            ciphertext: base.ciphertext,
+            nonce: base.nonce,
+            aad: base.aad,
+            deletedAt: base.deletedAt,
+            updatedAt: base.updatedAt,
+          ),
+        );
+      }
+    }
+
+    return resolved;
   }
 
   Future<List<RemoteVaultBlobChange>?> _fetchWithRetry({

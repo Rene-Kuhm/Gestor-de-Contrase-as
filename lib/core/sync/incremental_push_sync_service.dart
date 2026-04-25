@@ -48,6 +48,11 @@ class IncrementalPushSyncService implements LocalVaultMutationSink {
       userId: userId,
       localRecordId: mutation.localRecordId,
     );
+    await _localStore.saveRecordIdMapping(
+      userId: userId,
+      localRecordId: mutation.localRecordId,
+      remoteRecordId: remoteRecordId,
+    );
     await _localStore.enqueuePushMutation(
       userId: userId,
       item: PushQueueItem.fromMutation(

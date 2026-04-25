@@ -36,7 +36,10 @@ class _AppShellState extends State<AppShell> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final screens = [
-      VaultDashboardScreen(repository: widget.repository),
+      VaultDashboardScreen(
+        repository: widget.repository,
+        conflictResolver: widget.conflictResolver,
+      ),
       const _PlaceholderScreen(
         title: 'Autofill & access',
         subtitle: 'Tu flujo de desbloqueo y llenado automatico va a vivir aca.',

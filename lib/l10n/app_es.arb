@@ -201,5 +201,27 @@
   "editorSaveChanges": "Guardar cambios",
   "editorCreateEntry": "Crear entrada",
   "editorGeneratorSetRequired": "Elegi al menos un set de caracteres para generar.",
-  "editorGeneratedInserted": "Password generada e insertada."
+  "editorGeneratedInserted": "Password generada e insertada.",
+
+  "syncConflictsTitle": "Conflictos de sincronizacion",
+  "syncConflictsSubtitle": "Un cambio remoto llego mientras tu edicion local estaba pendiente. Elegi qué version conservar.",
+  "syncConflictsEmpty": "Sin conflictos pendientes. Todo sincronizado.",
+  "syncConflictsBannerLabel": "{count} {count, plural, =1{conflicto} other{conflictos}} de sync pendiente{count, plural, =1{} other{s}}",
+  "@syncConflictsBannerLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncConflictsBannerAction": "Revisar",
+  "syncConflictLocalVersion": "Tu version",
+  "syncConflictRemoteVersion": "Version remota",
+  "syncConflictKeepLocal": "Quedarme con la mia",
+  "syncConflictKeepRemote": "Usar la remota",
+  "syncConflictKindUpsert": "Conflicto de edicion",
+  "syncConflictKindDelete": "Conflicto de borrado",
+
+  "biometricSlotExpired": "El slot biometrico expiro. Ingresa la master password una vez para volver a habilitar el desbloqueo biometrico.",
+  "biometricUnlockSuccess": "Vault desbloqueada con biometria."
 }

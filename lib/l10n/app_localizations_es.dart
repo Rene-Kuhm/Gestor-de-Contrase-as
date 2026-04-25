@@ -39,8 +39,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingsLocalUnlockPostureTitle => 'Postura de desbloqueo local';
 
   @override
-  String get settingsLocalUnlockPostureDescription =>
-      'Vaulta guarda el estado sensible en Keychain / Keystore y usa biometria del sistema cuando esta disponible.';
+  String get settingsLocalUnlockPostureDescription => 'Vaulta guarda el estado sensible en Keychain / Keystore y usa biometria del sistema cuando esta disponible.';
 
   @override
   String get settingsMasterPasswordCreated => 'Master password creada';
@@ -60,20 +59,16 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get settingsBiometricUnavailableSubtitle =>
-      'No hay biometria configurada o soportada en este entorno.';
+  String get settingsBiometricUnavailableSubtitle => 'No hay biometria configurada o soportada en este entorno.';
 
   @override
-  String get settingsAutoLockBackgroundTitle =>
-      'Auto-lock al pasar a background';
+  String get settingsAutoLockBackgroundTitle => 'Auto-lock al pasar a background';
 
   @override
-  String get settingsAutoLockBackgroundSubtitle =>
-      'Bloquea Vaulta automaticamente si la app queda inactive, paused o detached.';
+  String get settingsAutoLockBackgroundSubtitle => 'Bloquea Vaulta automaticamente si la app queda inactive, paused o detached.';
 
   @override
-  String get settingsIdleTimeoutLabel =>
-      'Auto-lock por inactividad en foreground';
+  String get settingsIdleTimeoutLabel => 'Auto-lock por inactividad en foreground';
 
   @override
   String get settingsLockNow => 'Bloquear ahora';
@@ -85,8 +80,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingsSessionsTitle => 'Dispositivos y sesiones';
 
   @override
-  String get settingsSessionsSubtitle =>
-      'Podes revocar un equipo puntual o cortar el resto de sesiones activas.';
+  String get settingsSessionsSubtitle => 'Podes revocar un equipo puntual o cortar el resto de sesiones activas.';
 
   @override
   String get settingsSessionsRefresh => 'Refrescar sesiones';
@@ -98,8 +92,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingsRevokeDevice => 'Revocar dispositivo';
 
   @override
-  String get settingsNoDevices =>
-      'No hay dispositivos registrados para este usuario.';
+  String get settingsNoDevices => 'No hay dispositivos registrados para este usuario.';
 
   @override
   String get settingsCurrentDeviceLabel => 'Este dispositivo';
@@ -114,19 +107,16 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingsDeviceNeverSeen => 'Sin actividad registrada';
 
   @override
-  String get settingsDeviceRevokedMessage =>
-      'Dispositivo revocado correctamente.';
+  String get settingsDeviceRevokedMessage => 'Dispositivo revocado correctamente.';
 
   @override
-  String get settingsRevokeOthersDone =>
-      'Se revocaron las otras sesiones activas.';
+  String get settingsRevokeOthersDone => 'Se revocaron las otras sesiones activas.';
 
   @override
   String get settingsRoadmapTitle => 'Roadmap de seguridad de plataforma';
 
   @override
-  String get settingsRoadmapNotes =>
-      'Los items del vault usan ADR-001 v2: Argon2id deriva una KEK desde la master password, una DEK aleatoria cifra entradas con AES-256-GCM y biometria nunca persiste una vault key recuperable.';
+  String get settingsRoadmapNotes => 'Los items del vault usan ADR-001 v2: Argon2id deriva una KEK desde la master password, una DEK aleatoria cifra entradas con AES-256-GCM y biometria nunca persiste una vault key recuperable.';
 
   @override
   String get settingsSecureStorage => 'Almacenamiento seguro';
@@ -138,8 +128,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingsHardwareBackedKeys => 'Claves con respaldo de hardware';
 
   @override
-  String get settingsVaultEncryptionReady =>
-      'Cifrado del vault conectado end-to-end';
+  String get settingsVaultEncryptionReady => 'Cifrado del vault conectado end-to-end';
 
   @override
   String get idleNever => 'Nunca';
@@ -178,8 +167,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get changeMasterPasswordConfirm => 'Confirmar nueva master password';
 
   @override
-  String get changeMasterPasswordHint =>
-      'Este cambio vuelve a cifrar todo el vault con una clave nueva.';
+  String get changeMasterPasswordHint => 'Este cambio vuelve a cifrar todo el vault con una clave nueva.';
 
   @override
   String get cancel => 'Cancelar';
@@ -188,30 +176,25 @@ class AppLocalizationsEs extends AppLocalizations {
   String get apply => 'Aplicar';
 
   @override
-  String get masterPasswordUpdatedSuccess =>
-      'Master password actualizada correctamente.';
+  String get masterPasswordUpdatedSuccess => 'Master password actualizada correctamente.';
 
   @override
-  String get changeMasterPasswordErrorFallback =>
-      'No pudimos cambiar la master password. Revisa los datos e intenta de nuevo.';
+  String get changeMasterPasswordErrorFallback => 'No pudimos cambiar la master password. Revisa los datos e intenta de nuevo.';
 
   @override
   String get securityOnboardingEyebrow => 'Onboarding seguro';
 
   @override
-  String get securityOnboardingTitle =>
-      'Creamos tu llave maestra sin atajos peligrosos.';
+  String get securityOnboardingTitle => 'Creamos tu llave maestra sin atajos peligrosos.';
 
   @override
-  String get securityOnboardingSubtitle =>
-      'La master password valida acceso local y deriva la clave que cifra los items del vault.';
+  String get securityOnboardingSubtitle => 'La master password valida acceso local y deriva la clave que cifra los items del vault.';
 
   @override
   String get securityMasterPasswordTitle => 'Master password';
 
   @override
-  String get securityMasterPasswordDescription =>
-      'Pedimos 12+ caracteres con mezcla real. Nada de guardar la clave en texto plano.';
+  String get securityMasterPasswordDescription => 'Pedimos 12+ caracteres con mezcla real. Nada de guardar la clave en texto plano.';
 
   @override
   String get securityCreateMasterPassword => 'Crear master password';
@@ -220,16 +203,13 @@ class AppLocalizationsEs extends AppLocalizations {
   String get securityConfirmMasterPassword => 'Confirmar master password';
 
   @override
-  String get securityChecklistHash =>
-      'Argon2id para verificar la master password.';
+  String get securityChecklistHash => 'Argon2id para verificar la master password.';
 
   @override
-  String get securityChecklistDerive =>
-      'Argon2id deriva una KEK que desenvuelve una DEK aleatoria del vault.';
+  String get securityChecklistDerive => 'Argon2id deriva una KEK que desenvuelve una DEK aleatoria del vault.';
 
   @override
-  String get securityChecklistEncrypt =>
-      'Items locales cifrados con AES-256-GCM y record guardado con Keychain / Keystore.';
+  String get securityChecklistEncrypt => 'Items locales cifrados con AES-256-GCM y record guardado con Keychain / Keystore.';
 
   @override
   String get securityEnableBiometrics => 'Habilitar biometria local';
@@ -240,8 +220,7 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get securityBiometricUnavailable =>
-      'No detectamos biometria disponible. Igual vas a poder entrar con tu master password.';
+  String get securityBiometricUnavailable => 'No detectamos biometria disponible. Igual vas a poder entrar con tu master password.';
 
   @override
   String get securityCreateSecureAccess => 'Crear acceso seguro al vault';
@@ -250,8 +229,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get securityUnlockEyebrow => 'Desbloquear';
 
   @override
-  String get securityUnlockTitle =>
-      'Tu vault queda cerrado hasta validar identidad real.';
+  String get securityUnlockTitle => 'Tu vault queda cerrado hasta validar identidad real.';
 
   @override
   String securityUnlockBiometricSubtitle(Object biometricLabel) {
@@ -259,8 +237,7 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get securityUnlockPasswordSubtitle =>
-      'Usa tu master password para recuperar acceso.';
+  String get securityUnlockPasswordSubtitle => 'Usa tu master password para recuperar acceso.';
 
   @override
   String get securityProtectedAccess => 'Acceso protegido';
@@ -272,8 +249,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get securityBiometricButton => 'Biometria';
 
   @override
-  String get dashboardDecryptError =>
-      'Vaulta no pudo descifrar el vault local en este momento.';
+  String get dashboardDecryptError => 'Vaulta no pudo descifrar el vault local en este momento.';
 
   @override
   String get retry => 'Reintentar';
@@ -294,8 +270,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get dashboardHeroTitle => 'Protegido por hardware del sistema';
 
   @override
-  String get dashboardHeroBody =>
-      'El vault local ya cifra cada entrada con AES-256-GCM. El CRUD local real esta listo; busqueda, tags, generador y sync confiable siguen pendientes.';
+  String get dashboardHeroBody => 'El vault local ya cifra cada entrada con AES-256-GCM. El CRUD local real esta listo; busqueda, tags, generador y sync confiable siguen pendientes.';
 
   @override
   String dashboardPillTrustedDevices(int count) {
@@ -332,26 +307,22 @@ class AppLocalizationsEs extends AppLocalizations {
   String get priorityActions => 'Acciones prioritarias';
 
   @override
-  String get dashboardQuickActionsSummary =>
-      'Ahora el vault es real: alta, edicion, detalle y borrado con cifrado preservado end-to-end.';
+  String get dashboardQuickActionsSummary => 'Ahora el vault es real: alta, edicion, detalle y borrado con cifrado preservado end-to-end.';
 
   @override
   String get createEncryptedEntry => 'Crear entrada cifrada';
 
   @override
-  String get createEncryptedEntrySubtitle =>
-      'Agrega nuevas credenciales y guardalas cifradas en reposo.';
+  String get createEncryptedEntrySubtitle => 'Agrega nuevas credenciales y guardalas cifradas en reposo.';
 
   @override
   String get planNextHardeningStep => 'Planificar siguiente hardening';
 
   @override
-  String get dashboardRoadmapSyncEnabled =>
-      'El sync esta en roadmap, pero los limites de confianza todavia necesitan diseno.';
+  String get dashboardRoadmapSyncEnabled => 'El sync esta en roadmap, pero los limites de confianza todavia necesitan diseno.';
 
   @override
-  String get dashboardRoadmapSyncDisabled =>
-      'Busqueda, tags, generador y adjuntos siguen intencionalmente fuera de alcance.';
+  String get dashboardRoadmapSyncDisabled => 'Busqueda, tags, generador y adjuntos siguen intencionalmente fuera de alcance.';
 
   @override
   String get vaultEntriesSectionTitle => 'Entradas del vault';
@@ -378,15 +349,13 @@ class AppLocalizationsEs extends AppLocalizations {
   String get noResultsTitle => 'Ninguna entrada coincide con los filtros';
 
   @override
-  String get noResultsSubtitle =>
-      'Proba otra busqueda o reinicia filtros para ver todo otra vez.';
+  String get noResultsSubtitle => 'Proba otra busqueda o reinicia filtros para ver todo otra vez.';
 
   @override
   String get emptyVaultTitle => 'Tu vault esta vacio';
 
   @override
-  String get emptyVaultSubtitle =>
-      'Crea tu primera entrada y Vaulta la cifra antes de persistirla.';
+  String get emptyVaultSubtitle => 'Crea tu primera entrada y Vaulta la cifra antes de persistirla.';
 
   @override
   String get createFirstEntry => 'Crear primera entrada';
@@ -423,8 +392,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get editorUsernameLabel => 'Usuario o email';
 
   @override
-  String get editorUsernameValidation =>
-      'Agrega el identificador de la cuenta.';
+  String get editorUsernameValidation => 'Agrega el identificador de la cuenta.';
 
   @override
   String get editorCategoryLabel => 'Categoria';
@@ -445,15 +413,13 @@ class AppLocalizationsEs extends AppLocalizations {
   String get editorSecretTitle => 'Secreto';
 
   @override
-  String get editorSecretDescription =>
-      'Vaulta recalcula la fortaleza localmente antes de recifrar la entrada.';
+  String get editorSecretDescription => 'Vaulta recalcula la fortaleza localmente antes de recifrar la entrada.';
 
   @override
   String get editorSecretLabel => 'Password o secreto';
 
   @override
-  String get editorSecretRequiredValidation =>
-      'Guarda un secreto real, no un campo vacio.';
+  String get editorSecretRequiredValidation => 'Guarda un secreto real, no un campo vacio.';
 
   @override
   String get editorSecretMinValidation => 'Usa al menos 8 caracteres.';
@@ -479,8 +445,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get editorNotesLabel => 'Notas';
 
   @override
-  String get editorNotesHint =>
-      'Codigos de recuperacion, contexto, recordatorios...';
+  String get editorNotesHint => 'Codigos de recuperacion, contexto, recordatorios...';
 
   @override
   String get editorSaveChanges => 'Guardar cambios';
@@ -489,9 +454,61 @@ class AppLocalizationsEs extends AppLocalizations {
   String get editorCreateEntry => 'Crear entrada';
 
   @override
-  String get editorGeneratorSetRequired =>
-      'Elegi al menos un set de caracteres para generar.';
+  String get editorGeneratorSetRequired => 'Elegi al menos un set de caracteres para generar.';
 
   @override
   String get editorGeneratedInserted => 'Password generada e insertada.';
+
+  @override
+  String get syncConflictsTitle => 'Conflictos de sincronizacion';
+
+  @override
+  String get syncConflictsSubtitle => 'Un cambio remoto llego mientras tu edicion local estaba pendiente. Elegi qué version conservar.';
+
+  @override
+  String get syncConflictsEmpty => 'Sin conflictos pendientes. Todo sincronizado.';
+
+  @override
+  String syncConflictsBannerLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'conflictos',
+      one: 'conflicto',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 's',
+      one: '',
+    );
+    return '$count $_temp0 de sync pendiente$_temp1';
+  }
+
+  @override
+  String get syncConflictsBannerAction => 'Revisar';
+
+  @override
+  String get syncConflictLocalVersion => 'Tu version';
+
+  @override
+  String get syncConflictRemoteVersion => 'Version remota';
+
+  @override
+  String get syncConflictKeepLocal => 'Quedarme con la mia';
+
+  @override
+  String get syncConflictKeepRemote => 'Usar la remota';
+
+  @override
+  String get syncConflictKindUpsert => 'Conflicto de edicion';
+
+  @override
+  String get syncConflictKindDelete => 'Conflicto de borrado';
+
+  @override
+  String get biometricSlotExpired => 'El slot biometrico expiro. Ingresa la master password una vez para volver a habilitar el desbloqueo biometrico.';
+
+  @override
+  String get biometricUnlockSuccess => 'Vault desbloqueada con biometria.';
 }

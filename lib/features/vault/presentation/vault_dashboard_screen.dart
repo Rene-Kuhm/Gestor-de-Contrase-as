@@ -7,15 +7,22 @@ import '../../../app/localization/l10n.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../core/security/vault_repository.dart';
+import '../../../core/sync/sync_conflict_resolver.dart';
+import '../../sync/presentation/sync_conflicts_sheet.dart';
 import '../domain/vault_item.dart';
 import '../domain/vault_summary.dart';
 import 'vault_entry_detail_screen.dart';
 import 'vault_entry_editor_screen.dart';
 
 class VaultDashboardScreen extends StatefulWidget {
-  const VaultDashboardScreen({super.key, required this.repository});
+  const VaultDashboardScreen({
+    super.key,
+    required this.repository,
+    this.conflictResolver,
+  });
 
   final VaultRepository repository;
+  final SyncConflictResolver? conflictResolver;
 
   @override
   State<VaultDashboardScreen> createState() => _VaultDashboardScreenState();
@@ -26,12 +33,23 @@ class _VaultDashboardScreenState extends State<VaultDashboardScreen> {
   late final TextEditingController _searchController;
   String _searchQuery = '';
   _VaultFilter _activeFilter = _VaultFilter.all;
+  int _pendingConflicts = 0;
 
   @override
   void initState() {
     super.initState();
     _searchController = TextEditingController();
     _future = _load();
+    _loadConflictCount();
+  }
+
+  Future<void> _loadConflictCount() async {
+    final resolver = widget.conflictResolver;
+    if (resolver == null) return;
+    final conflicts = await resolver.readPendingConflicts();
+    if (mounted) {
+      setState(() => _pendingConflicts = conflicts.length);
+    }
   }
 
   @override
@@ -117,6 +135,21 @@ class _VaultDashboardScreenState extends State<VaultDashboardScreen> {
                               const SizedBox(height: AppSpacing.lg),
                               _HeroSecurityCard(summary: data.summary),
                               const SizedBox(height: AppSpacing.lg),
+                              if (_pendingConflicts > 0 &&
+                                  widget.conflictResolver != null)
+                                _ConflictBanner(
+                                  count: _pendingConflicts,
+                                  onTap: () async {
+                                    await showSyncConflictsSheet(
+                                      context: context,
+                                      resolver: widget.conflictResolver!,
+                                    );
+                                    _loadConflictCount();
+                                  },
+                                ),
+                              if (_pendingConflicts > 0 &&
+                                  widget.conflictResolver != null)
+                                const SizedBox(height: AppSpacing.md),
                               _MetricsGrid(summary: data.summary),
                               const SizedBox(height: AppSpacing.lg),
                               _QuickActions(
@@ -164,6 +197,7 @@ class _VaultDashboardScreenState extends State<VaultDashboardScreen> {
     setState(() {
       _future = _load();
     });
+    _loadConflictCount();
   }
 
   List<VaultItem> _applyFilters(List<VaultItem> items) {
@@ -244,6 +278,71 @@ class _VaultDashboardScreenState extends State<VaultDashboardScreen> {
       ).showSnackBar(SnackBar(content: Text(context.l10n.vaultUpdatedMessage)));
       _refresh();
     }
+  }
+}
+
+class _ConflictBanner extends StatelessWidget {
+  const _ConflictBanner({required this.count, required this.onTap});
+
+  final int count;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
+        ),
+        decoration: BoxDecoration(
+          color: AppColors.warning.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+          border: Border.all(
+            color: AppColors.warning.withValues(alpha: 0.35),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.sync_problem_rounded,
+              color: AppColors.warning,
+              size: 18,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                l10n.syncConflictsBannerLabel(count),
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: AppColors.warning,
+                ),
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.warning,
+                borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
+              ),
+              child: Text(
+                l10n.syncConflictsBannerAction,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: isDark
+                      ? AppColors.backgroundDark
+                      : Colors.white,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

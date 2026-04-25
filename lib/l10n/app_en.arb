@@ -201,5 +201,27 @@
   "editorSaveChanges": "Save changes",
   "editorCreateEntry": "Create entry",
   "editorGeneratorSetRequired": "Choose at least one character set to generate.",
-  "editorGeneratedInserted": "Generated password inserted."
+  "editorGeneratedInserted": "Generated password inserted.",
+
+  "syncConflictsTitle": "Sync conflicts",
+  "syncConflictsSubtitle": "A remote change arrived while your local edit was pending. Choose which version to keep.",
+  "syncConflictsEmpty": "No pending conflicts. Everything is in sync.",
+  "syncConflictsBannerLabel": "{count} sync {count, plural, =1{conflict} other{conflicts}} pending",
+  "@syncConflictsBannerLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncConflictsBannerAction": "Review",
+  "syncConflictLocalVersion": "Your version",
+  "syncConflictRemoteVersion": "Remote version",
+  "syncConflictKeepLocal": "Keep mine",
+  "syncConflictKeepRemote": "Use remote",
+  "syncConflictKindUpsert": "Edit conflict",
+  "syncConflictKindDelete": "Delete conflict",
+
+  "biometricSlotExpired": "Biometric slot expired. Enter your master password once to re-enable biometric unlock.",
+  "biometricUnlockSuccess": "Vault unlocked with biometrics."
 }

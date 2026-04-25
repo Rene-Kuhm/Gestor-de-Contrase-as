@@ -14,6 +14,7 @@ class LocalRemoteVaultStore {
   static const _blobPrefix = 'vault_sync_remote_blobs_v1';
   static const _pushQueuePrefix = 'vault_sync_push_queue_v1';
   static const _conflictPrefix = 'vault_sync_conflicts_v1';
+  static const _recordIdMapPrefix = 'vault_sync_record_id_map_v1';
 
   final SecureStorageService _storage;
 
@@ -213,6 +214,40 @@ class LocalRemoteVaultStore {
     await savePendingConflicts(userId: userId, conflicts: conflicts);
   }
 
+  Future<void> saveRecordIdMapping({
+    required String userId,
+    required String localRecordId,
+    required String remoteRecordId,
+  }) async {
+    if (localRecordId == remoteRecordId) {
+      return;
+    }
+
+    final raw = await _storage.read(_recordIdMapKey(userId: userId));
+    final map = raw == null || raw.isEmpty
+        ? <String, String>{}
+        : (jsonDecode(raw) as Map<String, dynamic>).cast<String, String>();
+    map[remoteRecordId] = localRecordId;
+    await _storage.save(_recordIdMapKey(userId: userId), jsonEncode(map));
+  }
+
+  Future<String> resolveLocalRecordId({
+    required String userId,
+    required String remoteRecordId,
+  }) async {
+    final raw = await _storage.read(_recordIdMapKey(userId: userId));
+    if (raw != null && raw.isNotEmpty) {
+      final map =
+          (jsonDecode(raw) as Map<String, dynamic>).cast<String, String>();
+      final localId = map[remoteRecordId];
+      if (localId != null) {
+        return localId;
+      }
+    }
+
+    return remoteRecordId;
+  }
+
   bool _shouldApply({
     required RemoteVaultBlobSnapshot? existing,
     required RemoteVaultBlobChange incoming,
@@ -250,6 +285,10 @@ class LocalRemoteVaultStore {
 
   String _conflictKey({required String userId}) {
     return '$_conflictPrefix:$userId';
+  }
+
+  String _recordIdMapKey({required String userId}) {
+    return '$_recordIdMapPrefix:$userId';
   }
 }
 
