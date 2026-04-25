@@ -13,7 +13,7 @@ void main() {
       final storage = _InMemorySecureStorageService();
       final controller = VaultSecurityController(
         storage: storage,
-        masterPasswordService: MasterPasswordService(),
+        masterPasswordService: MasterPasswordService.test(),
         biometricAuthService: const _FakeBiometricAuthService(),
       );
       addTearDown(controller.dispose);
@@ -33,8 +33,14 @@ void main() {
         isNotNull,
       );
       expect(
+        await storage.read(
+          VaultSecurityController.biometricRecoveryArtifactKey,
+        ),
+        isNull,
+      );
+      expect(
         await storage.read(VaultSecurityController.biometricSeedKey),
-        isNotNull,
+        isNull,
       );
 
       await controller.lock();
@@ -45,10 +51,40 @@ void main() {
       expect(controller.isUnlocked, isTrue);
     });
 
+    test('biometric unlock never restores a persisted vault key', () async {
+      final storage = _InMemorySecureStorageService();
+      final controller = VaultSecurityController(
+        storage: storage,
+        masterPasswordService: MasterPasswordService.test(),
+        biometricAuthService: const _FakeBiometricAuthService(),
+      );
+      addTearDown(controller.dispose);
+
+      await controller.initialize();
+      await controller.createMasterPassword(
+        password: 'StrongPass!2026',
+        confirmation: 'StrongPass!2026',
+        enableBiometrics: true,
+      );
+      await controller.lock();
+
+      final unlocked = await controller.unlockWithBiometrics();
+
+      expect(unlocked, isFalse);
+      expect(controller.stage, VaultSecurityStage.locked);
+      expect(
+        await storage.read(
+          VaultSecurityController.biometricRecoveryArtifactKey,
+        ),
+        isNull,
+      );
+      expect(controller.message, contains('no guarda claves recuperables'));
+    });
+
     test('rejects weak master passwords', () async {
       final controller = VaultSecurityController(
         storage: _InMemorySecureStorageService(),
-        masterPasswordService: MasterPasswordService(),
+        masterPasswordService: MasterPasswordService.test(),
         biometricAuthService: const _FakeBiometricAuthService(),
       );
       addTearDown(controller.dispose);
@@ -69,7 +105,7 @@ void main() {
     test('locks on lifecycle background states when enabled', () async {
       final controller = VaultSecurityController(
         storage: _InMemorySecureStorageService(),
-        masterPasswordService: MasterPasswordService(),
+        masterPasswordService: MasterPasswordService.test(),
         biometricAuthService: const _FakeBiometricAuthService(),
       );
       addTearDown(controller.dispose);
@@ -97,7 +133,7 @@ void main() {
       () async {
         final controller = VaultSecurityController(
           storage: _InMemorySecureStorageService(),
-          masterPasswordService: MasterPasswordService(),
+          masterPasswordService: MasterPasswordService.test(),
           biometricAuthService: const _FakeBiometricAuthService(),
         );
         addTearDown(controller.dispose);
@@ -119,7 +155,7 @@ void main() {
     test('locks after idle timeout and resets countdown on activity', () async {
       final controller = VaultSecurityController(
         storage: _InMemorySecureStorageService(),
-        masterPasswordService: MasterPasswordService(),
+        masterPasswordService: MasterPasswordService.test(),
         biometricAuthService: const _FakeBiometricAuthService(),
       );
       addTearDown(controller.dispose);
@@ -132,7 +168,7 @@ void main() {
       );
       await controller.setIdleTimeoutSeconds(1);
 
-      await Future<void>.delayed(const Duration(milliseconds: 600));
+      await Future<void>.delayed(const Duration(milliseconds: 800));
       controller.registerUserInteraction();
       await Future<void>.delayed(const Duration(milliseconds: 600));
 
@@ -147,7 +183,7 @@ void main() {
     test('does not lock on idle when idle auto-lock is disabled', () async {
       final controller = VaultSecurityController(
         storage: _InMemorySecureStorageService(),
-        masterPasswordService: MasterPasswordService(),
+        masterPasswordService: MasterPasswordService.test(),
         biometricAuthService: const _FakeBiometricAuthService(),
       );
       addTearDown(controller.dispose);
@@ -173,7 +209,7 @@ void main() {
       final storage = _InMemorySecureStorageService();
       final controller = VaultSecurityController(
         storage: storage,
-        masterPasswordService: MasterPasswordService(),
+        masterPasswordService: MasterPasswordService.test(),
         biometricAuthService: const _FakeBiometricAuthService(),
         rekeyEntries: ({required sourceSession, required targetSession}) async {
           rekeyCalls += 1;
@@ -217,7 +253,7 @@ void main() {
       var rekeyCalls = 0;
       final controller = VaultSecurityController(
         storage: _InMemorySecureStorageService(),
-        masterPasswordService: MasterPasswordService(),
+        masterPasswordService: MasterPasswordService.test(),
         biometricAuthService: const _FakeBiometricAuthService(),
         rekeyEntries: ({required sourceSession, required targetSession}) async {
           rekeyCalls += 1;

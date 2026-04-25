@@ -16,7 +16,7 @@ void main() {
   testWidgets('locks gate when app moves to background state', (tester) async {
     final controller = VaultSecurityController(
       storage: _InMemorySecureStorageService(),
-      masterPasswordService: MasterPasswordService(),
+      masterPasswordService: MasterPasswordService.test(),
       biometricAuthService: const _FakeBiometricAuthService(),
     );
     addTearDown(() async {
@@ -56,7 +56,7 @@ void main() {
   testWidgets('locks gate after foreground idle timeout', (tester) async {
     final controller = VaultSecurityController(
       storage: _InMemorySecureStorageService(),
-      masterPasswordService: MasterPasswordService(),
+      masterPasswordService: MasterPasswordService.test(),
       biometricAuthService: const _FakeBiometricAuthService(),
     );
     addTearDown(() async {
@@ -99,7 +99,7 @@ void main() {
   ) async {
     final controller = VaultSecurityController(
       storage: _InMemorySecureStorageService(),
-      masterPasswordService: MasterPasswordService(),
+      masterPasswordService: MasterPasswordService.test(),
       biometricAuthService: const _FakeBiometricAuthService(),
     );
     addTearDown(() async {
@@ -145,10 +145,10 @@ void main() {
         ),
       ),
     );
-    await tester.pumpAndSettle();
+    await _pumpUi(tester);
 
     await controller.unlockWithPassword('StrongPass!2026');
-    await tester.pumpAndSettle();
+    await _pumpUi(tester);
 
     expect(find.text('Unlock vault'), findsOneWidget);
     expect(find.text('Unlocked vault'), findsNothing);
@@ -170,6 +170,12 @@ class _InMemorySecureStorageService implements SecureStorageService {
   Future<void> save(String key, String value) async {
     _values[key] = value;
   }
+}
+
+Future<void> _pumpUi(WidgetTester tester) async {
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 100));
+  await tester.pump();
 }
 
 class _FakeBiometricAuthService implements BiometricAuthService {

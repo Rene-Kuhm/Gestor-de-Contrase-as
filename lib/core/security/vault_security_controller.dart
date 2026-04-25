@@ -1,7 +1,5 @@
 import 'dart:async';
-import 'dart:convert';
 
-import 'package:cryptography/cryptography.dart';
 import 'package:flutter/widgets.dart';
 
 import 'biometric_auth_service.dart';
@@ -33,7 +31,6 @@ class VaultSecurityController extends ChangeNotifier {
   static const biometricEnabledKey = 'vault_biometric_enabled';
   static const biometricRecoveryArtifactKey =
       'vault_biometric_recovery_artifact';
-  static const _biometricRecoveryArtifactVersion = 1;
   static const biometricSeedKey = 'vault_biometric_seed';
   static const autoLockOnBackgroundEnabledKey =
       'vault_auto_lock_on_background_enabled';
@@ -112,10 +109,8 @@ class VaultSecurityController extends ChangeNotifier {
           ) ??
           defaultIdleTimeoutSeconds;
 
-      if (!_biometricEnabled) {
-        await _storage.delete(biometricRecoveryArtifactKey);
-        await _storage.delete(biometricSeedKey);
-      }
+      await _storage.delete(biometricRecoveryArtifactKey);
+      await _storage.delete(biometricSeedKey);
 
       final record = await _readRecord();
       _stage = record == null
@@ -163,6 +158,8 @@ class VaultSecurityController extends ChangeNotifier {
           record: record,
           password: password,
         ),
+        kdf: record.kdf,
+        dekWrap: record.dekWrap,
       );
       await _storage.save(masterPasswordRecordKey, record.encode());
       await _persistBiometricPreference(enableBiometrics);
@@ -194,19 +191,47 @@ class VaultSecurityController extends ChangeNotifier {
         return false;
       }
 
-      _vaultSession = VaultSession(
+      final sourceSession = VaultSession(
         keyId: record.keyId,
         secretKey: await _masterPasswordService.deriveVaultKey(
           record: record,
           password: password,
         ),
+        kdf: record.kdf,
+        dekWrap: record.dekWrap,
       );
 
-      if (_biometricEnabled && canOfferBiometricToggle) {
-        await _syncBiometricRecoveryArtifact();
+      var activeRecord = record;
+      var activeSession = sourceSession;
+      if (record.version < 2 || record.kdf == null || record.dekWrap == null) {
+        final migratedRecord = await _masterPasswordService.createRecord(
+          password,
+        );
+        final migratedSession = VaultSession(
+          keyId: migratedRecord.keyId,
+          secretKey: await _masterPasswordService.deriveVaultKey(
+            record: migratedRecord,
+            password: password,
+          ),
+          kdf: migratedRecord.kdf,
+          dekWrap: migratedRecord.dekWrap,
+        );
+        await _rekeyEntries(
+          sourceSession: sourceSession,
+          targetSession: migratedSession,
+        );
+        await _storage.save(masterPasswordRecordKey, migratedRecord.encode());
+        activeRecord = migratedRecord;
+        activeSession = migratedSession;
       }
 
-      _message = 'Vaulta desbloqueada.';
+      _vaultSession = activeSession;
+      await _storage.delete(biometricRecoveryArtifactKey);
+      await _storage.delete(biometricSeedKey);
+
+      _message = activeRecord == record
+          ? 'Vaulta desbloqueada.'
+          : 'Vaulta desbloqueada y migrada a cifrado v2.';
       _stage = VaultSecurityStage.unlocked;
       _restartIdleTimer();
       return true;
@@ -234,44 +259,11 @@ class VaultSecurityController extends ChangeNotifier {
         return false;
       }
 
-      final rawArtifact = await _storage.read(biometricRecoveryArtifactKey);
-      if (rawArtifact == null || rawArtifact.isEmpty) {
-        _message =
-            'Primero desbloquea con tu master password para preparar recovery biometrico.';
-        return false;
-      }
-
-      final artifact = _BiometricRecoveryArtifact.tryDecode(rawArtifact);
-      if (artifact == null) {
-        await _storage.delete(biometricRecoveryArtifactKey);
-        _message =
-            'El recovery biometrico local quedo invalido. Reingresa con master password para regenerarlo.';
-        return false;
-      }
-
-      if (artifact.version != _biometricRecoveryArtifactVersion) {
-        await _storage.delete(biometricRecoveryArtifactKey);
-        _message =
-            'La version de recovery biometrico no coincide. Reingresa con master password.';
-        return false;
-      }
-
-      if (artifact.keyId != record.keyId) {
-        await _storage.delete(biometricRecoveryArtifactKey);
-        _message =
-            'La clave biometrica local se invalido tras cambios de master password. Reingresa con master password.';
-        return false;
-      }
-
-      _vaultSession = VaultSession(
-        keyId: artifact.keyId,
-        secretKey: SecretKey(artifact.secretKeyBytes),
-      );
-
-      _message = 'Sesion restaurada con biometria del sistema.';
-      _stage = VaultSecurityStage.unlocked;
-      _restartIdleTimer();
-      return true;
+      await _storage.delete(biometricRecoveryArtifactKey);
+      await _storage.delete(biometricSeedKey);
+      _message =
+          'Biometria verificada, pero esta version portable no guarda claves recuperables. Ingresa la master password.';
+      return false;
     });
   }
 
@@ -285,7 +277,7 @@ class VaultSecurityController extends ChangeNotifier {
     await _runBusy(() async {
       await _persistBiometricPreference(enabled);
       _message = enabled
-          ? 'Biometria activada para sesiones locales.'
+          ? 'Biometria activada como verificacion local. No guarda la clave del vault.'
           : 'Biometria desactivada. Solo queda la master password.';
       return true;
     });
@@ -418,6 +410,8 @@ class VaultSecurityController extends ChangeNotifier {
           record: newRecord,
           password: newPassword,
         ),
+        kdf: newRecord.kdf,
+        dekWrap: newRecord.dekWrap,
       );
 
       try {
@@ -459,9 +453,8 @@ class VaultSecurityController extends ChangeNotifier {
       }
 
       _vaultSession = targetSession;
-      if (_biometricEnabled && canOfferBiometricToggle) {
-        await _syncBiometricRecoveryArtifact();
-      }
+      await _storage.delete(biometricRecoveryArtifactKey);
+      await _storage.delete(biometricSeedKey);
       _message =
           'Master password actualizada y vault re-cifrado con una nueva clave.';
       return true;
@@ -503,31 +496,12 @@ class VaultSecurityController extends ChangeNotifier {
     await _storage.save(biometricEnabledKey, enabled.toString());
 
     if (enabled) {
-      await _syncBiometricRecoveryArtifact();
+      await _storage.delete(biometricRecoveryArtifactKey);
+      await _storage.delete(biometricSeedKey);
       return;
     }
 
     await _storage.delete(biometricRecoveryArtifactKey);
-    await _storage.delete(biometricSeedKey);
-  }
-
-  Future<void> _syncBiometricRecoveryArtifact() async {
-    final session = _vaultSession;
-    if (session == null) {
-      return;
-    }
-
-    final artifact = _BiometricRecoveryArtifact(
-      version: _biometricRecoveryArtifactVersion,
-      keyId: session.keyId,
-      secretKeyBytes: await session.secretKey.extractBytes(),
-      createdAt: DateTime.now().toUtc(),
-    );
-
-    await _storage.save(
-      biometricRecoveryArtifactKey,
-      artifact.encode(),
-    );
     await _storage.delete(biometricSeedKey);
   }
 
@@ -633,61 +607,5 @@ class VaultSecurityController extends ChangeNotifier {
     required VaultSession targetSession,
   }) async {
     throw UnsupportedError('Vault rekeying operation is not configured.');
-  }
-}
-
-class _BiometricRecoveryArtifact {
-  const _BiometricRecoveryArtifact({
-    required this.version,
-    required this.keyId,
-    required this.secretKeyBytes,
-    required this.createdAt,
-  });
-
-  final int version;
-  final String keyId;
-  final List<int> secretKeyBytes;
-  final DateTime createdAt;
-
-  String encode() {
-    return jsonEncode({
-      'version': version,
-      'keyId': keyId,
-      'secretKey': base64Encode(secretKeyBytes),
-      'createdAt': createdAt.toIso8601String(),
-    });
-  }
-
-  static _BiometricRecoveryArtifact? tryDecode(String source) {
-    try {
-      final json = jsonDecode(source);
-      if (json is! Map<String, dynamic>) {
-        return null;
-      }
-
-      final version = json['version'];
-      final keyId = json['keyId'];
-      final secretKey = json['secretKey'];
-      final createdAt = json['createdAt'];
-
-      if (version is! int ||
-          keyId is! String ||
-          secretKey is! String ||
-          createdAt is! String ||
-          keyId.isEmpty ||
-          secretKey.isEmpty ||
-          createdAt.isEmpty) {
-        return null;
-      }
-
-      return _BiometricRecoveryArtifact(
-        version: version,
-        keyId: keyId,
-        secretKeyBytes: base64Decode(secretKey),
-        createdAt: DateTime.parse(createdAt),
-      );
-    } on FormatException {
-      return null;
-    }
   }
 }

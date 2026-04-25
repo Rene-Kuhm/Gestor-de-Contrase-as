@@ -17,7 +17,7 @@ void main() {
       final storage = _InMemorySecureStorageService();
       final controller = VaultSecurityController(
         storage: storage,
-        masterPasswordService: MasterPasswordService(),
+        masterPasswordService: MasterPasswordService.test(),
         biometricAuthService: const _FakeBiometricAuthService(),
       );
       await controller.initialize();
@@ -59,9 +59,12 @@ void main() {
           .cast<String>();
       final firstPayload =
           jsonDecode(encodedItems.first) as Map<String, dynamic>;
-      expect(firstPayload['algorithm'], 'aes-256-gcm');
-      expect(firstPayload['nonce'], isNotEmpty);
-      expect(firstPayload['mac'], isNotEmpty);
+      expect(firstPayload['v'], 2);
+      expect(firstPayload['kdf']['name'], 'argon2id');
+      expect(firstPayload['dek_wrap']['alg'], 'AES-256-GCM');
+      expect(firstPayload['payload']['alg'], 'AES-256-GCM');
+      expect(firstPayload['payload']['nonce_b64'], isNotEmpty);
+      expect(firstPayload['payload']['tag_b64'], isNotEmpty);
     });
 
     test('fails when no vault session is available', () async {
@@ -78,7 +81,7 @@ void main() {
       final storage = _InMemorySecureStorageService();
       final controller = VaultSecurityController(
         storage: storage,
-        masterPasswordService: MasterPasswordService(),
+        masterPasswordService: MasterPasswordService.test(),
         biometricAuthService: const _FakeBiometricAuthService(),
       );
       await controller.initialize();
@@ -122,7 +125,10 @@ void main() {
       expect(updated, isNotNull);
       expect(updated!.title, 'Primary Bank');
       expect(updated.notes, 'Updated after quarterly rotation.');
-      expect(updated.strengthScore, greaterThanOrEqualTo(created.strengthScore));
+      expect(
+        updated.strengthScore,
+        greaterThanOrEqualTo(created.strengthScore),
+      );
 
       await repository.deleteItem('bank');
 
@@ -132,7 +138,7 @@ void main() {
 
     test('rekeys all entries with a new master-derived key', () async {
       final storage = _InMemorySecureStorageService();
-      final masterPasswordService = MasterPasswordService();
+      final masterPasswordService = MasterPasswordService.test();
       final controller = VaultSecurityController(
         storage: storage,
         masterPasswordService: masterPasswordService,
@@ -174,6 +180,8 @@ void main() {
           record: newRecord,
           password: 'AnotherStrong!2027',
         ),
+        kdf: newRecord.kdf,
+        dekWrap: newRecord.dekWrap,
       );
 
       await repository.rekeyEntries(

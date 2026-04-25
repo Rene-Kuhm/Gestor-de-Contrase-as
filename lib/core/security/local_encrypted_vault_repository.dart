@@ -4,6 +4,7 @@ import 'dart:async';
 import '../../features/vault/domain/vault_item.dart';
 import '../../features/vault/domain/vault_summary.dart';
 import '../sync/local_vault_mutation.dart';
+import '../sync/remote_vault_blob_change.dart';
 import 'platform_security_plan.dart';
 import 'secure_storage_service.dart';
 import 'vault_crypto_service.dart';
@@ -19,9 +20,9 @@ class LocalEncryptedVaultRepository implements VaultRepository {
     required VaultSessionReader readSession,
     LocalVaultMutationSink? mutationSink,
   }) : _storage = storage,
-        _cryptoService = cryptoService,
-        _readSession = readSession,
-        _mutationSink = mutationSink;
+       _cryptoService = cryptoService,
+       _readSession = readSession,
+       _mutationSink = mutationSink;
 
   static const encryptedVaultItemsKey = 'vault_encrypted_items_v1';
   static const encryptedVaultItemsStagingKey =
@@ -30,11 +31,11 @@ class LocalEncryptedVaultRepository implements VaultRepository {
 
   static const securityPlan = PlatformSecurityPlan(
     secureStorage: true,
-    biometricUnlock: true,
-    hardwareBackedKeys: true,
+    biometricUnlock: false,
+    hardwareBackedKeys: false,
     vaultEncryptionReady: true,
     notes:
-        'Los items del vault se guardan cifrados con AES-256-GCM usando una clave derivada por PBKDF2-HMAC-SHA256 desde la master password. La clave vive solo en memoria de la sesion actual; sync confiable y recovery biometrico entre reinicios siguen pendientes.',
+        'Los items del vault se guardan con formato v2: KEK Argon2id desde master password, DEK aleatoria por vault, DEK envuelta con AES-256-GCM y payloads AES-256-GCM. La DEK vive solo en memoria de sesion. Biometria queda como verificacion de UX y no desbloqueo criptografico porque local_auth no ata claves a hardware por si solo.',
   );
 
   final SecureStorageService _storage;
@@ -57,7 +58,7 @@ class LocalEncryptedVaultRepository implements VaultRepository {
     for (final encrypted in encryptedItems) {
       final plaintext = await _cryptoService.decrypt(
         ciphertext: encrypted,
-        secretKey: session.secretKey,
+        secretKey: session,
         expectedKeyId: session.keyId,
       );
       items.add(
@@ -187,12 +188,12 @@ class LocalEncryptedVaultRepository implements VaultRepository {
     for (final encrypted in encryptedItems) {
       final plaintext = await _cryptoService.decrypt(
         ciphertext: encrypted,
-        secretKey: sourceSession.secretKey,
+        secretKey: sourceSession,
         expectedKeyId: sourceSession.keyId,
       );
       final reencrypted = await _cryptoService.encrypt(
         plaintext: plaintext,
-        secretKey: targetSession.secretKey,
+        secretKey: targetSession,
         keyId: targetSession.keyId,
       );
       reencryptedItems.add(reencrypted);
@@ -224,7 +225,7 @@ class LocalEncryptedVaultRepository implements VaultRepository {
     for (final item in items) {
       final encrypted = await _cryptoService.encrypt(
         plaintext: jsonEncode(item.toJson()),
-        secretKey: session.secretKey,
+        secretKey: session,
         keyId: session.keyId,
       );
       encryptedItems.add(encrypted);
@@ -245,11 +246,20 @@ class LocalEncryptedVaultRepository implements VaultRepository {
       return null;
     }
 
-    final ciphertext = payload['ciphertext'] as String?;
-    final nonce = payload['nonce'] as String?;
-    final aad = payload['mac'] as String?;
+    final nestedPayload = payload['payload'] is Map<String, dynamic>
+        ? payload['payload'] as Map<String, dynamic>
+        : payload;
+    final ciphertext =
+        (nestedPayload['ciphertext_b64'] ?? nestedPayload['ciphertext'])
+            as String?;
+    final nonce =
+        (nestedPayload['nonce_b64'] ?? nestedPayload['nonce']) as String?;
+    final aad = (nestedPayload['tag_b64'] ?? nestedPayload['mac']) as String?;
 
-    if (ciphertext == null || ciphertext.isEmpty || nonce == null || nonce.isEmpty) {
+    if (ciphertext == null ||
+        ciphertext.isEmpty ||
+        nonce == null ||
+        nonce.isEmpty) {
       return null;
     }
 
@@ -257,8 +267,75 @@ class LocalEncryptedVaultRepository implements VaultRepository {
       ciphertext: ciphertext,
       nonce: nonce,
       aad: aad,
-      keyVersion: 1,
+      keyVersion: (payload['v'] ?? payload['version'] ?? 1) as int,
     );
+  }
+
+  Future<void> applyRemoteSnapshots({
+    required Iterable<RemoteVaultBlobSnapshot> snapshots,
+  }) async {
+    await _recoverFromInterruptedRekey();
+    final session = _requireSession();
+    final currentItems = <String, VaultItem>{
+      for (final item in await fetchItems()) item.id: item,
+    };
+
+    for (final snapshot in snapshots) {
+      final localId = snapshot.recordId;
+      if (snapshot.isTombstone) {
+        currentItems.remove(localId);
+        continue;
+      }
+      final encrypted = _encryptedPayloadFromSnapshot(snapshot);
+      if (encrypted == null) {
+        continue;
+      }
+      final plaintext = await _cryptoService.decrypt(
+        ciphertext: encrypted,
+        secretKey: session,
+        expectedKeyId: session.keyId,
+      );
+      final item = VaultItem.fromJson(
+        jsonDecode(plaintext) as Map<String, dynamic>,
+      );
+      currentItems[item.id] = item;
+    }
+
+    await _saveEncryptedItems(currentItems.values.toList(growable: false));
+  }
+
+  String? _encryptedPayloadFromSnapshot(RemoteVaultBlobSnapshot snapshot) {
+    final ciphertext = snapshot.ciphertext;
+    final nonce = snapshot.nonce;
+    if (ciphertext == null ||
+        ciphertext.isEmpty ||
+        nonce == null ||
+        nonce.isEmpty) {
+      return null;
+    }
+    final session = _requireSession();
+    if (snapshot.keyVersion == 2 && session.isV2) {
+      return jsonEncode({
+        'v': 2,
+        'keyId': session.keyId,
+        'kdf': session.kdf,
+        'dek_wrap': session.dekWrap,
+        'payload': {
+          'alg': 'AES-256-GCM',
+          'nonce_b64': nonce,
+          'ciphertext_b64': ciphertext,
+          'tag_b64': snapshot.aad ?? '',
+        },
+      });
+    }
+    return jsonEncode({
+      'version': 1,
+      'algorithm': 'aes-256-gcm',
+      'keyId': session.keyId,
+      'nonce': nonce,
+      'ciphertext': ciphertext,
+      'mac': snapshot.aad ?? '',
+    });
   }
 
   Future<void> _recoverFromInterruptedRekey() async {
