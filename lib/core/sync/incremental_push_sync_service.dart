@@ -219,7 +219,10 @@ class IncrementalPushSyncService implements LocalVaultMutationSink {
     } catch (error) {
       final disposition = classifySyncError(error);
       final code = syncErrorCode(error);
-      final message = syncMessageForCode(code, fallback: 'Push failed before receiving RPC result.');
+      final message = syncMessageForCode(
+        code,
+        fallback: 'Push failed before receiving RPC result.',
+      );
       if (disposition == SyncErrorDisposition.definitive) {
         emitSyncDiagnostic(
           scope: 'push',

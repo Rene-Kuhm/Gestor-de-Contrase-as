@@ -16,7 +16,7 @@
   "settingsBiometricsAvailable": "Biometria disponible",
   "settingsBiometricsEnabled": "Biometria activada",
   "settingsUnlockWithBiometrics": "Desbloquear con biometria",
-  "settingsBiometricSupportedSubtitle": "Usa {biometricLabel} para reabrir la sesion local. Si el recovery biometrico del dispositivo sigue vigente, tambien funciona despues de reiniciar la app.",
+  "settingsBiometricSupportedSubtitle": "Usa {biometricLabel} como verificacion local de UX. Las claves del vault nunca se guardan para recovery biometrico.",
   "@settingsBiometricSupportedSubtitle": {
     "placeholders": {
       "biometricLabel": {}
@@ -41,7 +41,7 @@
   "settingsDeviceRevokedMessage": "Dispositivo revocado correctamente.",
   "settingsRevokeOthersDone": "Se revocaron las otras sesiones activas.",
   "settingsRoadmapTitle": "Roadmap de seguridad de plataforma",
-  "settingsRoadmapNotes": "Los items del vault se guardan cifrados con AES-256-GCM usando una clave derivada por PBKDF2-HMAC-SHA256 desde la master password. La clave vive solo en memoria de la sesion actual; sync confiable y recovery biometrico entre reinicios siguen pendientes.",
+  "settingsRoadmapNotes": "Los items del vault usan ADR-001 v2: Argon2id deriva una KEK desde la master password, una DEK aleatoria cifra entradas con AES-256-GCM y biometria nunca persiste una vault key recuperable.",
   "settingsSecureStorage": "Almacenamiento seguro",
   "settingsBiometricUnlock": "Desbloqueo biometrico",
   "settingsHardwareBackedKeys": "Claves con respaldo de hardware",
@@ -71,11 +71,11 @@
   "securityMasterPasswordDescription": "Pedimos 12+ caracteres con mezcla real. Nada de guardar la clave en texto plano.",
   "securityCreateMasterPassword": "Crear master password",
   "securityConfirmMasterPassword": "Confirmar master password",
-  "securityChecklistHash": "PBKDF2-HMAC-SHA256 para verificar la master password.",
-  "securityChecklistDerive": "PBKDF2-HMAC-SHA256 separado para derivar la clave del vault.",
+  "securityChecklistHash": "Argon2id para verificar la master password.",
+  "securityChecklistDerive": "Argon2id deriva una KEK que desenvuelve una DEK aleatoria del vault.",
   "securityChecklistEncrypt": "Items locales cifrados con AES-256-GCM y record guardado con Keychain / Keystore.",
   "securityEnableBiometrics": "Habilitar biometria local",
-  "securityBiometricAvailable": "Vincula {biometricLabel} para desbloqueo rapido del dispositivo actual.",
+  "securityBiometricAvailable": "Usa {biometricLabel} como verificacion local de UX; la master password sigue siendo el fallback criptografico.",
   "@securityBiometricAvailable": {
     "placeholders": {
       "biometricLabel": {}

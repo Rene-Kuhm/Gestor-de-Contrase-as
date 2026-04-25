@@ -139,7 +139,8 @@ bool _looksTransient(Object error) {
 bool _looksDefinitive(Object error) {
   final text = _errorText(error);
   final statusCode = _statusCodeFrom(error);
-  if (statusCode != null && (statusCode == 401 || statusCode == 403 || statusCode == 409)) {
+  if (statusCode != null &&
+      (statusCode == 401 || statusCode == 403 || statusCode == 409)) {
     return true;
   }
 

@@ -21,7 +21,9 @@ class LocalRemoteVaultStore {
     required String userId,
     required String deviceId,
   }) async {
-    final raw = await _storage.read(_cursorKey(userId: userId, deviceId: deviceId));
+    final raw = await _storage.read(
+      _cursorKey(userId: userId, deviceId: deviceId),
+    );
     if (raw == null || raw.isEmpty) {
       return 0;
     }

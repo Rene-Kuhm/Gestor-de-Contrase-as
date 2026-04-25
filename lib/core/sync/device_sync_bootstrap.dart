@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../security/secure_storage_service.dart';
+import '../security/local_encrypted_vault_repository.dart';
 import 'device_registration_repository.dart';
 import 'device_registration_service.dart';
 import 'device_session_revocation_service.dart';
@@ -14,6 +15,7 @@ import 'sync_conflict_resolver.dart';
 
 Future<DeviceSyncLifecycle?> buildDeviceSyncLifecycle({
   required SecureStorageService storage,
+  LocalEncryptedVaultRepository? vaultRepository,
   RelayLocalVaultMutationSink? mutationSink,
   Future<void> Function(DeviceAccessStatus status)? onCurrentDeviceRevoked,
 }) async {
@@ -47,6 +49,10 @@ Future<DeviceSyncLifecycle?> buildDeviceSyncLifecycle({
     repository: pullRepository,
     localStore: localStore,
     readDeviceId: identityService.getOrCreateDeviceId,
+    applyLocalSnapshots: vaultRepository == null
+        ? null
+        : (snapshots) =>
+              vaultRepository.applyRemoteSnapshots(snapshots: snapshots),
   );
   final pushSyncService = IncrementalPushSyncService(
     repository: pullRepository,

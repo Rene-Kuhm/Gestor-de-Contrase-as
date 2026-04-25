@@ -1,10 +1,18 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:gestor_contrasenas/core/security/aes_gcm_vault_crypto_service.dart';
+import 'package:gestor_contrasenas/core/security/biometric_auth_service.dart';
+import 'package:gestor_contrasenas/core/security/local_encrypted_vault_repository.dart';
+import 'package:gestor_contrasenas/core/security/master_password_service.dart';
 import 'package:gestor_contrasenas/core/security/secure_storage_service.dart';
+import 'package:gestor_contrasenas/core/security/vault_security_controller.dart';
 import 'package:gestor_contrasenas/core/sync/incremental_pull_sync_service.dart';
 import 'package:gestor_contrasenas/core/sync/local_remote_vault_store.dart';
 import 'package:gestor_contrasenas/core/sync/remote_vault_blob_change.dart';
 import 'package:gestor_contrasenas/core/sync/remote_vault_sync_repository.dart';
+import 'package:gestor_contrasenas/features/vault/domain/vault_item.dart';
 
 void main() {
   group('RemoteVaultBlobChange', () {
@@ -200,6 +208,79 @@ void main() {
       expect(snapshots['record-retry']?.version, 1);
       expect(repository.afterOpIds, [0, 0]);
     });
+
+    test(
+      'applies pulled encrypted blobs into local vault repository',
+      () async {
+        final storage = _InMemorySecureStorageService();
+        final controller = VaultSecurityController(
+          storage: storage,
+          masterPasswordService: MasterPasswordService.test(),
+          biometricAuthService: const _FakeBiometricAuthService(),
+        );
+        await controller.initialize();
+        await controller.createMasterPassword(
+          password: 'StrongPass!2026',
+          confirmation: 'StrongPass!2026',
+          enableBiometrics: false,
+        );
+
+        final localVault = LocalEncryptedVaultRepository(
+          storage: storage,
+          cryptoService: AesGcmVaultCryptoService(),
+          readSession: () => controller.vaultSession,
+        );
+        final remoteItem = VaultItem(
+          id: 'remote-mail',
+          title: 'Remote Mail',
+          username: 'remote@vaulta.app',
+          secret: 'RemoteStrong!2026',
+          category: VaultCategory.personal,
+          strengthScore: 95,
+          lastUpdatedLabel: 'now',
+          updatedAt: DateTime.utc(2026, 3, 23, 12, 0),
+        );
+        final encrypted = await AesGcmVaultCryptoService().encrypt(
+          plaintext: jsonEncode(remoteItem.toJson()),
+          secretKey: controller.vaultSession!,
+          keyId: controller.vaultSession!.keyId,
+        );
+        final payload = jsonDecode(encrypted) as Map<String, dynamic>;
+        final encryptedPayload = payload['payload'] as Map<String, dynamic>;
+        final remoteRepository = _FakeRemoteVaultSyncRepository(
+          batches: {
+            0: [
+              RemoteVaultBlobChange(
+                opCursor: 1,
+                recordId: 'remote-mail',
+                version: 1,
+                keyVersion: 2,
+                ciphertext: encryptedPayload['ciphertext_b64'] as String,
+                nonce: encryptedPayload['nonce_b64'] as String,
+                aad: encryptedPayload['tag_b64'] as String,
+                updatedAt: DateTime.utc(2026, 3, 23, 12, 0),
+              ),
+            ],
+            1: const [],
+          },
+        );
+        final service = IncrementalPullSyncService(
+          repository: remoteRepository,
+          localStore: LocalRemoteVaultStore(storage: storage),
+          readDeviceId: () async => 'device-1',
+          throttleInterval: const Duration(seconds: 1),
+          applyLocalSnapshots: (snapshots) =>
+              localVault.applyRemoteSnapshots(snapshots: snapshots),
+          now: () => DateTime.utc(2026, 3, 23, 12, 30),
+        );
+
+        await service.onSessionStarted();
+
+        final pulled = await localVault.fetchItemById('remote-mail');
+        expect(pulled, isNotNull);
+        expect(pulled!.secret, 'RemoteStrong!2026');
+      },
+    );
   });
 }
 
@@ -217,6 +298,22 @@ class _InMemorySecureStorageService implements SecureStorageService {
   @override
   Future<void> save(String key, String value) async {
     _values[key] = value;
+  }
+}
+
+class _FakeBiometricAuthService implements BiometricAuthService {
+  const _FakeBiometricAuthService();
+
+  @override
+  Future<bool> authenticateForUnlock() async => false;
+
+  @override
+  Future<BiometricAvailability> getAvailability() async {
+    return const BiometricAvailability(
+      deviceSupported: false,
+      canCheckBiometrics: false,
+      availableBiometrics: [],
+    );
   }
 }
 

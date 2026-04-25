@@ -70,10 +70,7 @@ class _VaultDashboardScreenState extends State<VaultDashboardScreen> {
                     const SizedBox(height: 8),
                     Text('${snapshot.error}', textAlign: TextAlign.center),
                     const SizedBox(height: 16),
-                    FilledButton(
-                      onPressed: _refresh,
-                      child: Text(l10n.retry),
-                    ),
+                    FilledButton(onPressed: _refresh, child: Text(l10n.retry)),
                   ],
                 ),
               ),
@@ -172,21 +169,24 @@ class _VaultDashboardScreenState extends State<VaultDashboardScreen> {
   List<VaultItem> _applyFilters(List<VaultItem> items) {
     final query = _searchQuery.trim().toLowerCase();
 
-    return items.where((item) {
-      final matchesQuery = query.isEmpty ||
-          item.title.toLowerCase().contains(query) ||
-          item.username.toLowerCase().contains(query) ||
-          (item.website?.toLowerCase().contains(query) ?? false);
+    return items
+        .where((item) {
+          final matchesQuery =
+              query.isEmpty ||
+              item.title.toLowerCase().contains(query) ||
+              item.username.toLowerCase().contains(query) ||
+              (item.website?.toLowerCase().contains(query) ?? false);
 
-      final matchesFilter = switch (_activeFilter) {
-        _VaultFilter.all => true,
-        _VaultFilter.weak => item.strengthScore < 60,
-        _VaultFilter.withNotes =>
-          item.notes != null && item.notes!.trim().isNotEmpty,
-      };
+          final matchesFilter = switch (_activeFilter) {
+            _VaultFilter.all => true,
+            _VaultFilter.weak => item.strengthScore < 60,
+            _VaultFilter.withNotes =>
+              item.notes != null && item.notes!.trim().isNotEmpty,
+          };
 
-      return matchesQuery && matchesFilter;
-    }).toList(growable: false);
+          return matchesQuery && matchesFilter;
+        })
+        .toList(growable: false);
   }
 
   void _clearFilters() {
@@ -639,7 +639,7 @@ class _NoResultsState extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-           const Icon(Icons.filter_alt_off_rounded, size: 32),
+          const Icon(Icons.filter_alt_off_rounded, size: 32),
           const SizedBox(height: 8),
           Text(
             context.l10n.noResultsTitle,

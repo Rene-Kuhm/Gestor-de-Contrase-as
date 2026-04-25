@@ -33,12 +33,7 @@ enum DeviceAccessRevocationReason {
   unknown,
 }
 
-enum DeviceSessionStatus {
-  active,
-  revokedDevice,
-  revokedAll,
-  unknown,
-}
+enum DeviceSessionStatus { active, revokedDevice, revokedAll, unknown }
 
 class DeviceAccessStatus {
   const DeviceAccessStatus({

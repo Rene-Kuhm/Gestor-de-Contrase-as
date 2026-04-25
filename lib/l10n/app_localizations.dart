@@ -62,7 +62,8 @@ import 'app_localizations_es.dart';
 /// be consistent with the languages listed in the AppLocalizations.supportedLocales
 /// property.
 abstract class AppLocalizations {
-  AppLocalizations(String locale) : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+  AppLocalizations(String locale)
+    : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
   final String localeName;
 
@@ -70,7 +71,8 @@ abstract class AppLocalizations {
     return Localizations.of<AppLocalizations>(context, AppLocalizations);
   }
 
-  static const LocalizationsDelegate<AppLocalizations> delegate = _AppLocalizationsDelegate();
+  static const LocalizationsDelegate<AppLocalizations> delegate =
+      _AppLocalizationsDelegate();
 
   /// A list of this localizations delegate along with the default localizations
   /// delegates.
@@ -82,17 +84,18 @@ abstract class AppLocalizations {
   /// Additional delegates can be added by appending to this list in
   /// MaterialApp. This list does not have to be used at all if a custom list
   /// of delegates is preferred or required.
-  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates = <LocalizationsDelegate<dynamic>>[
-    delegate,
-    GlobalMaterialLocalizations.delegate,
-    GlobalCupertinoLocalizations.delegate,
-    GlobalWidgetsLocalizations.delegate,
-  ];
+  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
+      <LocalizationsDelegate<dynamic>>[
+        delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+      ];
 
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
     Locale('en'),
-    Locale('es')
+    Locale('es'),
   ];
 
   /// No description provided for @appTitle.
@@ -188,7 +191,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsBiometricSupportedSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Use {biometricLabel} to reopen the local session. If device biometric recovery remains valid, it also works after app restart.'**
+  /// **'Use {biometricLabel} as a local UX check. Vault keys are never stored for biometric recovery.'**
   String settingsBiometricSupportedSubtitle(Object biometricLabel);
 
   /// No description provided for @settingsBiometricUnavailableSubtitle.
@@ -308,7 +311,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsRoadmapNotes.
   ///
   /// In en, this message translates to:
-  /// **'Vault items are encrypted with AES-256-GCM using a PBKDF2-HMAC-SHA256-derived key from the master password. The key stays only in memory for the current session; reliable sync and biometric recovery across restarts are still pending.'**
+  /// **'Vault items use ADR-001 v2: Argon2id derives a KEK from the master password, a random DEK encrypts entries with AES-256-GCM, and biometrics never persist a recoverable vault key.'**
   String get settingsRoadmapNotes;
 
   /// No description provided for @settingsSecureStorage.
@@ -482,13 +485,13 @@ abstract class AppLocalizations {
   /// No description provided for @securityChecklistHash.
   ///
   /// In en, this message translates to:
-  /// **'PBKDF2-HMAC-SHA256 verifies the master password.'**
+  /// **'Argon2id verifies the master password.'**
   String get securityChecklistHash;
 
   /// No description provided for @securityChecklistDerive.
   ///
   /// In en, this message translates to:
-  /// **'A separate PBKDF2-HMAC-SHA256 derives the vault key.'**
+  /// **'Argon2id derives a KEK that unwraps a random vault DEK.'**
   String get securityChecklistDerive;
 
   /// No description provided for @securityChecklistEncrypt.
@@ -506,7 +509,7 @@ abstract class AppLocalizations {
   /// No description provided for @securityBiometricAvailable.
   ///
   /// In en, this message translates to:
-  /// **'Link {biometricLabel} for quick unlock on this device.'**
+  /// **'Use {biometricLabel} as a local UX check; master password remains the cryptographic fallback.'**
   String securityBiometricAvailable(Object biometricLabel);
 
   /// No description provided for @securityBiometricUnavailable.
@@ -966,7 +969,8 @@ abstract class AppLocalizations {
   String get editorGeneratedInserted;
 }
 
-class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
+class _AppLocalizationsDelegate
+    extends LocalizationsDelegate<AppLocalizations> {
   const _AppLocalizationsDelegate();
 
   @override
@@ -975,25 +979,26 @@ class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> 
   }
 
   @override
-  bool isSupported(Locale locale) => <String>['en', 'es'].contains(locale.languageCode);
+  bool isSupported(Locale locale) =>
+      <String>['en', 'es'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
 }
 
 AppLocalizations lookupAppLocalizations(Locale locale) {
-
-
   // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
-    case 'en': return AppLocalizationsEn();
-    case 'es': return AppLocalizationsEs();
+    case 'en':
+      return AppLocalizationsEn();
+    case 'es':
+      return AppLocalizationsEs();
   }
 
   throw FlutterError(
     'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
     'an issue with the localizations generation tool. Please file an issue '
     'on GitHub with a reproducible sample app and the gen-l10n configuration '
-    'that was used.'
+    'that was used.',
   );
 }

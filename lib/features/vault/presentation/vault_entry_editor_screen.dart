@@ -65,7 +65,9 @@ class _VaultEntryEditorScreenState extends State<VaultEntryEditorScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.isEditing ? l10n.editorTitleEdit : l10n.editorTitleNew),
+        title: Text(
+          widget.isEditing ? l10n.editorTitleEdit : l10n.editorTitleNew,
+        ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -201,9 +203,7 @@ class _VaultEntryEditorScreenState extends State<VaultEntryEditorScreen> {
                                   child: Text(
                                     l10n.editorGeneratorTitle,
                                     style: theme.textTheme.titleMedium
-                                        ?.copyWith(
-                                          fontWeight: FontWeight.w700,
-                                        ),
+                                        ?.copyWith(fontWeight: FontWeight.w700),
                                   ),
                                 ),
                                 Text(
@@ -232,14 +232,18 @@ class _VaultEntryEditorScreenState extends State<VaultEntryEditorScreen> {
                                   label: const Text('A-Z'),
                                   selected: _includeUppercase,
                                   onSelected: (selected) {
-                                    setState(() => _includeUppercase = selected);
+                                    setState(
+                                      () => _includeUppercase = selected,
+                                    );
                                   },
                                 ),
                                 FilterChip(
                                   label: const Text('a-z'),
                                   selected: _includeLowercase,
                                   onSelected: (selected) {
-                                    setState(() => _includeLowercase = selected);
+                                    setState(
+                                      () => _includeLowercase = selected,
+                                    );
                                   },
                                 ),
                                 FilterChip(
@@ -262,8 +266,8 @@ class _VaultEntryEditorScreenState extends State<VaultEntryEditorScreen> {
                             FilledButton.tonalIcon(
                               onPressed: _generateAndInsertPassword,
                               icon: const Icon(Icons.auto_awesome_rounded),
-                               label: Text(l10n.editorGenerateInsert),
-                             ),
+                              label: Text(l10n.editorGenerateInsert),
+                            ),
                           ],
                         ),
                       ),
@@ -295,11 +299,11 @@ class _VaultEntryEditorScreenState extends State<VaultEntryEditorScreen> {
                   child: FilledButton.icon(
                     onPressed: _submit,
                     icon: const Icon(Icons.lock_rounded),
-                      label: Text(
-                        widget.isEditing
-                            ? l10n.editorSaveChanges
-                            : l10n.editorCreateEntry,
-                      ),
+                    label: Text(
+                      widget.isEditing
+                          ? l10n.editorSaveChanges
+                          : l10n.editorCreateEntry,
+                    ),
                   ),
                 ),
               ],
@@ -345,9 +349,7 @@ class _VaultEntryEditorScreenState extends State<VaultEntryEditorScreen> {
 
     if (generated == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(context.l10n.editorGeneratorSetRequired),
-        ),
+        SnackBar(content: Text(context.l10n.editorGeneratorSetRequired)),
       );
       return;
     }

@@ -21,7 +21,7 @@ void main() {
   ) async {
     final controller = VaultSecurityController(
       storage: _InMemorySecureStorageService(),
-      masterPasswordService: MasterPasswordService(),
+      masterPasswordService: MasterPasswordService.test(),
       biometricAuthService: const _FakeBiometricAuthService(),
     );
     final localeController = AppLocaleController(

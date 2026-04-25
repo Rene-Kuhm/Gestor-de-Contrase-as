@@ -26,8 +26,7 @@ class SupabaseRemoteVaultSyncRepository implements RemoteVaultSyncRepository {
         .order('id')
         .limit(limit);
 
-    final opRows = (opsResponse as List<dynamic>)
-        .cast<Map<String, dynamic>>();
+    final opRows = (opsResponse as List<dynamic>).cast<Map<String, dynamic>>();
     if (opRows.isEmpty) {
       return const [];
     }
@@ -48,7 +47,9 @@ class SupabaseRemoteVaultSyncRepository implements RemoteVaultSyncRepository {
     final recordIds = latestOpByRecord.keys.toList(growable: false);
     final blobsResponse = await _client
         .from('vault_blobs')
-        .select('record_id,version,ciphertext,nonce,aad,key_version,deleted_at,updated_at')
+        .select(
+          'record_id,version,ciphertext,nonce,aad,key_version,deleted_at,updated_at',
+        )
         .inFilter('record_id', recordIds);
     final blobRows = (blobsResponse as List<dynamic>)
         .cast<Map<String, dynamic>>();

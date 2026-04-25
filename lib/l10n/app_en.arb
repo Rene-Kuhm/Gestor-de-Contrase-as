@@ -16,7 +16,7 @@
   "settingsBiometricsAvailable": "Biometrics available",
   "settingsBiometricsEnabled": "Biometrics enabled",
   "settingsUnlockWithBiometrics": "Unlock with biometrics",
-  "settingsBiometricSupportedSubtitle": "Use {biometricLabel} to reopen the local session. If device biometric recovery remains valid, it also works after app restart.",
+  "settingsBiometricSupportedSubtitle": "Use {biometricLabel} as a local UX check. Vault keys are never stored for biometric recovery.",
   "@settingsBiometricSupportedSubtitle": {
     "placeholders": {
       "biometricLabel": {}
@@ -41,7 +41,7 @@
   "settingsDeviceRevokedMessage": "Device revoked successfully.",
   "settingsRevokeOthersDone": "Other active sessions were revoked.",
   "settingsRoadmapTitle": "Platform security roadmap",
-  "settingsRoadmapNotes": "Vault items are encrypted with AES-256-GCM using a PBKDF2-HMAC-SHA256-derived key from the master password. The key stays only in memory for the current session; reliable sync and biometric recovery across restarts are still pending.",
+  "settingsRoadmapNotes": "Vault items use ADR-001 v2: Argon2id derives a KEK from the master password, a random DEK encrypts entries with AES-256-GCM, and biometrics never persist a recoverable vault key.",
   "settingsSecureStorage": "Secure storage",
   "settingsBiometricUnlock": "Biometric unlock",
   "settingsHardwareBackedKeys": "Hardware-backed keys",
@@ -71,11 +71,11 @@
   "securityMasterPasswordDescription": "Use 12+ characters with real variety. Never store this key in plaintext.",
   "securityCreateMasterPassword": "Create master password",
   "securityConfirmMasterPassword": "Confirm master password",
-  "securityChecklistHash": "PBKDF2-HMAC-SHA256 verifies the master password.",
-  "securityChecklistDerive": "A separate PBKDF2-HMAC-SHA256 derives the vault key.",
+  "securityChecklistHash": "Argon2id verifies the master password.",
+  "securityChecklistDerive": "Argon2id derives a KEK that unwraps a random vault DEK.",
   "securityChecklistEncrypt": "Local items are encrypted with AES-256-GCM and records are stored with Keychain / Keystore.",
   "securityEnableBiometrics": "Enable local biometrics",
-  "securityBiometricAvailable": "Link {biometricLabel} for quick unlock on this device.",
+  "securityBiometricAvailable": "Use {biometricLabel} as a local UX check; master password remains the cryptographic fallback.",
   "@securityBiometricAvailable": {
     "placeholders": {
       "biometricLabel": {}

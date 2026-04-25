@@ -72,7 +72,9 @@ class SupabaseDeviceRegistrationRepository
     }
 
     final rows = response.cast<Map<String, dynamic>>();
-    return rows.map(VaultDeviceSessionParser.fromRpcRow).toList(growable: false);
+    return rows
+        .map(VaultDeviceSessionParser.fromRpcRow)
+        .toList(growable: false);
   }
 
   @override
@@ -117,8 +119,9 @@ class SupabaseDeviceRegistrationRepository
 
   DeviceAccessRevocationReason _parseReason(String? code) {
     return switch (code) {
-      'registered' || 'heartbeat_ok' || 'allowed' =>
-        DeviceAccessRevocationReason.unknown,
+      'registered' ||
+      'heartbeat_ok' ||
+      'allowed' => DeviceAccessRevocationReason.unknown,
       'revoked_device' => DeviceAccessRevocationReason.deviceRevoked,
       'revoked_all' => DeviceAccessRevocationReason.allSessionsRevoked,
       'unauthenticated' => DeviceAccessRevocationReason.unauthenticated,

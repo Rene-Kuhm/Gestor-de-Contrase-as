@@ -15,11 +15,14 @@ class IncrementalPullSyncService {
     this.baseRetryDelay = const Duration(seconds: 1),
     this.throttleInterval = const Duration(minutes: 2),
     this.diagnosticsHook,
+    Future<void> Function(Iterable<RemoteVaultBlobSnapshot> snapshots)?
+    applyLocalSnapshots,
     Future<void> Function(Duration delay)? delay,
     DateTime Function()? now,
   }) : _repository = repository,
        _localStore = localStore,
        _readDeviceId = readDeviceId,
+       _applyLocalSnapshots = applyLocalSnapshots,
        _delay = delay ?? Future<void>.delayed,
        _now = now ?? DateTime.now;
 
@@ -31,6 +34,8 @@ class IncrementalPullSyncService {
   final Duration baseRetryDelay;
   final Duration throttleInterval;
   final SyncDiagnosticsHook? diagnosticsHook;
+  final Future<void> Function(Iterable<RemoteVaultBlobSnapshot> snapshots)?
+  _applyLocalSnapshots;
   final Future<void> Function(Duration delay) _delay;
   final DateTime Function() _now;
 
@@ -58,12 +63,16 @@ class IncrementalPullSyncService {
         userId: userId,
         deviceId: deviceId,
       );
-      if (lastPullAt != null && _now().difference(lastPullAt) < throttleInterval) {
+      if (lastPullAt != null &&
+          _now().difference(lastPullAt) < throttleInterval) {
         return;
       }
     }
 
-    var cursor = await _localStore.readCursor(userId: userId, deviceId: deviceId);
+    var cursor = await _localStore.readCursor(
+      userId: userId,
+      deviceId: deviceId,
+    );
 
     while (true) {
       final changes = await _fetchWithRetry(afterOpId: cursor);
@@ -82,6 +91,13 @@ class IncrementalPullSyncService {
         changes: changes,
         newCursor: cursor,
       );
+      final applyLocalSnapshots = _applyLocalSnapshots;
+      if (applyLocalSnapshots != null) {
+        final snapshots = changes
+            .map(RemoteVaultBlobSnapshot.fromChange)
+            .toList(growable: false);
+        await applyLocalSnapshots(snapshots);
+      }
 
       if (changes.length < batchSize) {
         break;

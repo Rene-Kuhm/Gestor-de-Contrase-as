@@ -175,7 +175,8 @@ class DeviceSyncLifecycle {
   final IncrementalPushSyncService? _pushSyncService;
   final SyncConflictResolver? conflictResolver;
   final RelayLocalVaultMutationSink? _mutationSink;
-  final Future<void> Function(DeviceAccessStatus status)? onCurrentDeviceRevoked;
+  final Future<void> Function(DeviceAccessStatus status)?
+  onCurrentDeviceRevoked;
   final int maxRetryAttempts;
   final Duration baseRetryDelay;
   final Duration heartbeatInterval;

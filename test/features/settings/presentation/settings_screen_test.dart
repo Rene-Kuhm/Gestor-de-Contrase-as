@@ -29,6 +29,7 @@ void main() {
       );
       await localeController.initialize();
       addTearDown(controller.dispose);
+      _setLargeViewport(tester);
 
       await tester.pumpWidget(
         _testApp(
@@ -38,27 +39,33 @@ void main() {
           ),
         ),
       );
-      await tester.pumpAndSettle();
+      await _pumpUi(tester);
 
       await tester.tap(find.text('Change master password'));
-      await tester.pumpAndSettle();
+      await _pumpUi(tester);
 
-      await tester.enterText(find.byType(TextField).at(0), 'StrongPass!2026');
-      await tester.enterText(
-        find.byType(TextField).at(1),
-        'AnotherStrong!2027',
+      final dialogFields = find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.byType(TextField),
       );
-      await tester.enterText(
-        find.byType(TextField).at(2),
-        'AnotherStrong!2027',
+      await tester.enterText(dialogFields.at(0), 'StrongPass!2026');
+      await tester.enterText(dialogFields.at(1), 'AnotherStrong!2027');
+      await tester.enterText(dialogFields.at(2), 'AnotherStrong!2027');
+
+      await tester.tap(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.widgetWithText(FilledButton, 'Apply'),
+        ),
       );
+      await _pumpUi(tester, settleFor: const Duration(seconds: 1));
 
-      await tester.tap(find.widgetWithText(FilledButton, 'Apply'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Change master password'), findsNothing);
       expect(
-        find.text('Master password actualizada correctamente.'),
+        find.widgetWithText(AlertDialog, 'Change master password'),
+        findsNothing,
+      );
+      expect(
+        find.text('Master password updated successfully.'),
         findsOneWidget,
       );
       expect(rekeyCalls, 1);
@@ -77,6 +84,7 @@ void main() {
       );
       await localeController.initialize();
       addTearDown(controller.dispose);
+      _setLargeViewport(tester);
 
       await tester.pumpWidget(
         _testApp(
@@ -86,29 +94,32 @@ void main() {
           ),
         ),
       );
-      await tester.pumpAndSettle();
+      await _pumpUi(tester);
 
       await tester.tap(find.text('Change master password'));
-      await tester.pumpAndSettle();
+      await _pumpUi(tester);
 
-      await tester.enterText(find.byType(TextField).at(0), 'WrongPass!2026');
-      await tester.enterText(
-        find.byType(TextField).at(1),
-        'AnotherStrong!2027',
+      final dialogFields = find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.byType(TextField),
       );
-      await tester.enterText(
-        find.byType(TextField).at(2),
-        'AnotherStrong!2027',
+      await tester.enterText(dialogFields.at(0), 'WrongPass!2026');
+      await tester.enterText(dialogFields.at(1), 'AnotherStrong!2027');
+      await tester.enterText(dialogFields.at(2), 'AnotherStrong!2027');
+
+      await tester.tap(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.widgetWithText(FilledButton, 'Apply'),
+        ),
       );
+      await _pumpUi(tester);
 
-      await tester.tap(find.widgetWithText(FilledButton, 'Apply'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Change master password'), findsOneWidget);
       expect(
-        find.text('La master password actual no coincide.'),
+        find.widgetWithText(AlertDialog, 'Change master password'),
         findsOneWidget,
       );
+      expect(find.text('La master password actual no coincide.'), findsWidgets);
     });
 
     testWidgets('updates idle timeout preset from settings', (tester) async {
@@ -117,7 +128,9 @@ void main() {
         storage: _InMemorySecureStorageService(),
       );
       await localeController.initialize();
+      await controller.setIdleTimeoutSeconds(300);
       addTearDown(controller.dispose);
+      _setLargeViewport(tester);
 
       await tester.pumpWidget(
         _testApp(
@@ -127,14 +140,14 @@ void main() {
           ),
         ),
       );
-      await tester.pumpAndSettle();
+      await _pumpUi(tester);
 
       expect(controller.idleTimeoutSeconds, 300);
 
-      await tester.tap(find.byType(DropdownButtonFormField).first);
-      await tester.pumpAndSettle();
+      await tester.tap(find.text('5 minutes - Recommended'));
+      await _pumpUi(tester);
       await tester.tap(find.text('Never - Disabled').last);
-      await tester.pumpAndSettle();
+      await _pumpUi(tester);
 
       expect(controller.idleTimeoutSeconds, 0);
       expect(controller.message, contains('inactividad desactivado'));
@@ -173,6 +186,7 @@ void main() {
         identityService: const _FakeDeviceIdentityService('current-device'),
       );
       addTearDown(controller.dispose);
+      _setLargeViewport(tester);
 
       await tester.pumpWidget(
         _testApp(
@@ -183,14 +197,14 @@ void main() {
           ),
         ),
       );
-      await tester.pumpAndSettle();
+      await _pumpUi(tester);
 
       expect(find.text('Devices and sessions'), findsOneWidget);
       expect(find.text('status: active'), findsOneWidget);
       expect(find.text('status: revoked_all'), findsOneWidget);
 
       await tester.tap(find.text('Revoke device'));
-      await tester.pumpAndSettle();
+      await _pumpUi(tester);
 
       expect(repository.lastRevokedDeviceId, 'test-device-id');
     });
@@ -220,6 +234,7 @@ void main() {
         identityService: const _FakeDeviceIdentityService('current-device'),
       );
       addTearDown(controller.dispose);
+      _setLargeViewport(tester);
 
       await tester.pumpWidget(
         _testApp(
@@ -230,12 +245,14 @@ void main() {
           ),
         ),
       );
-      await tester.pumpAndSettle();
+      await _pumpUi(tester);
 
       await tester.tap(find.text('Revoke device'));
-      await tester.pumpAndSettle();
+      await _pumpUi(tester);
       await tester.tap(find.text('Revoke now'));
-      await tester.pumpAndSettle();
+      await _pumpUi(tester);
+      await tester.tap(find.text('Lock now').last);
+      await _pumpUi(tester);
 
       expect(controller.stage, VaultSecurityStage.locked);
       expect(controller.message, contains('se revoco en este dispositivo'));
@@ -266,6 +283,7 @@ void main() {
         identityService: const _FakeDeviceIdentityService('current-device'),
       );
       addTearDown(controller.dispose);
+      _setLargeViewport(tester);
 
       await tester.pumpWidget(
         _testApp(
@@ -276,10 +294,10 @@ void main() {
           ),
         ),
       );
-      await tester.pumpAndSettle();
+      await _pumpUi(tester);
 
       await tester.tap(find.text('Revoke all other sessions'));
-      await tester.pumpAndSettle();
+      await _pumpUi(tester);
 
       expect(repository.lastRevokeAllCurrentDeviceId, 'current-device');
       expect(repository.revokeAllOtherCalls, 1);
@@ -295,12 +313,28 @@ Widget _testApp(Widget home) {
   );
 }
 
+Future<void> _pumpUi(
+  WidgetTester tester, {
+  Duration settleFor = const Duration(milliseconds: 100),
+}) async {
+  await tester.pump();
+  await tester.pump(settleFor);
+  await tester.pump();
+}
+
+void _setLargeViewport(WidgetTester tester) {
+  tester.view.devicePixelRatio = 1;
+  tester.view.physicalSize = const Size(1200, 2400);
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+}
+
 Future<VaultSecurityController> _buildUnlockedController({
   VaultRekeyEntries? rekeyEntries,
 }) async {
   final controller = VaultSecurityController(
     storage: _InMemorySecureStorageService(),
-    masterPasswordService: MasterPasswordService(),
+    masterPasswordService: MasterPasswordService.test(),
     biometricAuthService: const _FakeBiometricAuthService(),
     rekeyEntries: rekeyEntries,
   );

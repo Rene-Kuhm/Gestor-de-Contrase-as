@@ -5,10 +5,7 @@ import 'remote_vault_sync_repository.dart';
 import 'sync_conflict.dart';
 
 class SyncConflictResolveResult {
-  const SyncConflictResolveResult({
-    required this.ok,
-    required this.message,
-  });
+  const SyncConflictResolveResult({required this.ok, required this.message});
 
   final bool ok;
   final String message;
@@ -50,14 +47,17 @@ class SyncConflictResolver {
       debugPrint('[sync][conflict] resolve failed: unauthenticated user.');
       return const SyncConflictResolveResult(
         ok: false,
-        message: 'Sync conflict could not be resolved because the user is not authenticated.',
+        message:
+            'Sync conflict could not be resolved because the user is not authenticated.',
       );
     }
 
     final conflicts = await _localStore.readPendingConflicts(userId: userId);
     final conflictIndex = conflicts.indexWhere((item) => item.id == conflictId);
     if (conflictIndex == -1) {
-      debugPrint('[sync][conflict] conflict=$conflictId missing before resolve.');
+      debugPrint(
+        '[sync][conflict] conflict=$conflictId missing before resolve.',
+      );
       return const SyncConflictResolveResult(
         ok: false,
         message: 'Sync conflict is already resolved or missing.',
@@ -82,7 +82,8 @@ class SyncConflictResolver {
       );
       return const SyncConflictResolveResult(
         ok: true,
-        message: 'Remote version accepted. Local mutation was discarded safely.',
+        message:
+            'Remote version accepted. Local mutation was discarded safely.',
       );
     }
 
@@ -92,13 +93,16 @@ class SyncConflictResolver {
       );
       return const SyncConflictResolveResult(
         ok: false,
-        message: 'Sync conflict could not be retried because the local mutation is missing.',
+        message:
+            'Sync conflict could not be retried because the local mutation is missing.',
       );
     }
 
     final queueItem = queue[queueIndex];
-    final remoteVersion = conflict.currentVersion ?? conflict.remoteSnapshot?.version;
-    if (queueItem.kind == PushQueueOperationKind.delete && remoteVersion == null) {
+    final remoteVersion =
+        conflict.currentVersion ?? conflict.remoteSnapshot?.version;
+    if (queueItem.kind == PushQueueOperationKind.delete &&
+        remoteVersion == null) {
       debugPrint(
         '[sync][conflict] conflict=${conflict.id} delete retry missing remote version.',
       );
@@ -135,11 +139,14 @@ class SyncConflictResolver {
       conflictId: conflict.id,
     );
     await _triggerPushSync?.call();
-    debugPrint('[sync][conflict] conflict=${conflict.id} resolved as keep_local.');
+    debugPrint(
+      '[sync][conflict] conflict=${conflict.id} resolved as keep_local.',
+    );
 
     return const SyncConflictResolveResult(
       ok: true,
-      message: 'Local version kept. Mutation re-queued with remote base version.',
+      message:
+          'Local version kept. Mutation re-queued with remote base version.',
     );
   }
 

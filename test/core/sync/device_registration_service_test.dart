@@ -55,29 +55,32 @@ void main() {
       expect(repository.readStatusCalls, 3);
     });
 
-    test('retries transient access check and continues session start', () async {
-      final repository = _FakeDeviceRegistrationRepository(
-        failReadStatusTimes: 1,
-      );
-      final service = DeviceRegistrationService(
-        repository: repository,
-        identityService: _FakeDeviceIdentityService(),
-        appVersionProvider: const _FakeAppVersionProvider('1.0.0+1'),
-      );
-      final lifecycle = DeviceSyncLifecycle(
-        service: service,
-        revocationService: DeviceSessionRevocationService(
+    test(
+      'retries transient access check and continues session start',
+      () async {
+        final repository = _FakeDeviceRegistrationRepository(
+          failReadStatusTimes: 1,
+        );
+        final service = DeviceRegistrationService(
           repository: repository,
           identityService: _FakeDeviceIdentityService(),
-        ),
-        delay: (_) async {},
-      );
+          appVersionProvider: const _FakeAppVersionProvider('1.0.0+1'),
+        );
+        final lifecycle = DeviceSyncLifecycle(
+          service: service,
+          revocationService: DeviceSessionRevocationService(
+            repository: repository,
+            identityService: _FakeDeviceIdentityService(),
+          ),
+          delay: (_) async {},
+        );
 
-      await lifecycle.onSessionStarted();
+        await lifecycle.onSessionStarted();
 
-      expect(repository.readStatusCalls, 2);
-      expect(repository.registerCalls, 1);
-    });
+        expect(repository.readStatusCalls, 2);
+        expect(repository.registerCalls, 1);
+      },
+    );
 
     test('does not crash when access check keeps failing offline', () async {
       final repository = _FakeDeviceRegistrationRepository(
@@ -186,10 +189,7 @@ class _FakeDeviceRegistrationRepository
     required DateTime lastSeenAt,
   }) async {
     registerCalls += 1;
-    return const DeviceAccessStatus(
-      accessAllowed: true,
-      reason: null,
-    );
+    return const DeviceAccessStatus(accessAllowed: true, reason: null);
   }
 
   @override
@@ -205,10 +205,7 @@ class _FakeDeviceRegistrationRepository
       return statuses.removeAt(0);
     }
 
-    return const DeviceAccessStatus(
-      accessAllowed: true,
-      reason: null,
-    );
+    return const DeviceAccessStatus(accessAllowed: true, reason: null);
   }
 
   @override
@@ -221,10 +218,7 @@ class _FakeDeviceRegistrationRepository
       throw Exception('offline');
     }
 
-    return const DeviceAccessStatus(
-      accessAllowed: true,
-      reason: null,
-    );
+    return const DeviceAccessStatus(accessAllowed: true, reason: null);
   }
 
   @override

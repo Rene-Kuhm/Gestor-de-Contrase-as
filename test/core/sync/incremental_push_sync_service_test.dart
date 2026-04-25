@@ -54,58 +54,63 @@ void main() {
       expect(snapshots.values.first.version, 1);
     });
 
-    test('captures conflict details and marks queue item as conflict', () async {
-      final storage = _InMemorySecureStorageService();
-      final localStore = LocalRemoteVaultStore(storage: storage);
-      final repository = _FakeRemoteVaultSyncRepository(
-        pushResponses: [
-          const RemoteVaultPushResult(
-            code: RemoteVaultPushResultCode.casConflict,
-            applied: false,
-            idempotentReplay: false,
-            conflict: true,
-            currentVersion: 7,
-            message: 'expected_version mismatch',
+    test(
+      'captures conflict details and marks queue item as conflict',
+      () async {
+        final storage = _InMemorySecureStorageService();
+        final localStore = LocalRemoteVaultStore(storage: storage);
+        final repository = _FakeRemoteVaultSyncRepository(
+          pushResponses: [
+            const RemoteVaultPushResult(
+              code: RemoteVaultPushResultCode.casConflict,
+              applied: false,
+              idempotentReplay: false,
+              conflict: true,
+              currentVersion: 7,
+              message: 'expected_version mismatch',
+            ),
+          ],
+        );
+
+        final service = IncrementalPushSyncService(
+          repository: repository,
+          localStore: localStore,
+          readDeviceId: () async => 'device-1',
+          now: () => DateTime.utc(2026, 3, 23, 14, 0),
+        );
+
+        await localStore.saveSnapshot(
+          userId: 'user-1',
+          snapshot: RemoteVaultBlobSnapshot(
+            recordId: '5dc5d9a4-6f07-46d8-b897-e67f73dc5b9c',
+            version: 3,
+            keyVersion: 1,
+            ciphertext: 'seed',
+            nonce: 'seed',
+            aad: 'seed',
+            updatedAt: DateTime.utc(2026, 3, 23, 13, 0),
           ),
-        ],
-      );
+        );
 
-      final service = IncrementalPushSyncService(
-        repository: repository,
-        localStore: localStore,
-        readDeviceId: () async => 'device-1',
-        now: () => DateTime.utc(2026, 3, 23, 14, 0),
-      );
+        await service.onLocalMutation(
+          LocalVaultMutation.delete(
+            localRecordId: '5dc5d9a4-6f07-46d8-b897-e67f73dc5b9c',
+            occurredAt: DateTime.utc(2026, 3, 23, 14, 0),
+          ),
+        );
 
-      await localStore.saveSnapshot(
-        userId: 'user-1',
-        snapshot: RemoteVaultBlobSnapshot(
-          recordId: '5dc5d9a4-6f07-46d8-b897-e67f73dc5b9c',
-          version: 3,
-          keyVersion: 1,
-          ciphertext: 'seed',
-          nonce: 'seed',
-          aad: 'seed',
-          updatedAt: DateTime.utc(2026, 3, 23, 13, 0),
-        ),
-      );
-
-      await service.onLocalMutation(
-        LocalVaultMutation.delete(
-          localRecordId: '5dc5d9a4-6f07-46d8-b897-e67f73dc5b9c',
-          occurredAt: DateTime.utc(2026, 3, 23, 14, 0),
-        ),
-      );
-
-      final queue = await localStore.readPushQueue(userId: 'user-1');
-      final conflicts = await localStore.readPendingConflicts(userId: 'user-1');
-      expect(queue, hasLength(1));
-      expect(queue.first.status, PushQueueStatus.conflict);
-      expect(queue.first.lastResultCode, 'cas_conflict');
-      expect(conflicts, hasLength(1));
-      expect(conflicts.first.currentVersion, 7);
-      expect(conflicts.first.kind, SyncConflictOperationKind.delete);
-    });
+        final queue = await localStore.readPushQueue(userId: 'user-1');
+        final conflicts = await localStore.readPendingConflicts(
+          userId: 'user-1',
+        );
+        expect(queue, hasLength(1));
+        expect(queue.first.status, PushQueueStatus.conflict);
+        expect(queue.first.lastResultCode, 'cas_conflict');
+        expect(conflicts, hasLength(1));
+        expect(conflicts.first.currentVersion, 7);
+        expect(conflicts.first.kind, SyncConflictOperationKind.delete);
+      },
+    );
 
     test('keeps retry state and idempotency key on transient error', () async {
       final storage = _InMemorySecureStorageService();
@@ -169,8 +174,9 @@ class _InMemorySecureStorageService implements SecureStorageService {
 }
 
 class _FakeRemoteVaultSyncRepository implements RemoteVaultSyncRepository {
-  _FakeRemoteVaultSyncRepository({required List<RemoteVaultPushResult> pushResponses})
-    : _pushResponses = pushResponses;
+  _FakeRemoteVaultSyncRepository({
+    required List<RemoteVaultPushResult> pushResponses,
+  }) : _pushResponses = pushResponses;
 
   final List<RemoteVaultPushResult> _pushResponses;
   final List<Map<String, dynamic>> upsertCalls = [];
