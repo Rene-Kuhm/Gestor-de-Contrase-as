@@ -39,7 +39,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsLocalUnlockPostureTitle => 'Local unlock posture';
 
   @override
-  String get settingsLocalUnlockPostureDescription => 'Vaulta keeps sensitive state in Keychain / Keystore and uses device biometrics when available.';
+  String get settingsLocalUnlockPostureDescription => 'Vaulta keeps sensitive state in Keychain / Keystore. Biometrics only verify local presence; the locked vault still requires the master password.';
 
   @override
   String get settingsMasterPasswordCreated => 'Master password created';
@@ -51,11 +51,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsBiometricsEnabled => 'Biometrics enabled';
 
   @override
-  String get settingsUnlockWithBiometrics => 'Unlock with biometrics';
+  String get settingsUnlockWithBiometrics => 'Use biometrics as a local check';
 
   @override
   String settingsBiometricSupportedSubtitle(Object biometricLabel) {
-    return 'Use $biometricLabel as a local UX check. Vault keys are never stored for biometric recovery.';
+    return 'Use $biometricLabel as a local presence check while the vault is open. Vaulta does not persist a recoverable vault key for biometric unlock.';
   }
 
   @override
@@ -92,6 +92,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsRevokeDevice => 'Revoke device';
 
   @override
+  String get settingsRevokeCurrentDeviceTitle => 'Revoke this device?';
+
+  @override
+  String get settingsRevokeCurrentDeviceBody => 'Revoking the current device will immediately lock this session. You will need to unlock again to continue.';
+
+  @override
+  String get settingsRevokeNow => 'Revoke now';
+
+  @override
+  String get settingsRevokeDeviceError => 'We could not revoke this device. Please retry in a few seconds.';
+
+  @override
+  String get settingsRevokedAllTitle => 'Session revoked on all devices';
+
+  @override
+  String get settingsRevokedAllBody => 'Your account access was revoked for all sessions. This device will lock now for safety.';
+
+  @override
+  String get settingsCurrentDeviceRevokedTitle => 'Current device revoked';
+
+  @override
+  String get settingsCurrentDeviceRevokedBody => 'This device no longer has an active session. Vaulta will lock now for safety.';
+
+  @override
   String get settingsNoDevices => 'No registered devices for this user.';
 
   @override
@@ -116,13 +140,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsRoadmapTitle => 'Platform security roadmap';
 
   @override
-  String get settingsRoadmapNotes => 'Vault items use ADR-001 v2: Argon2id derives a KEK from the master password, a random DEK encrypts entries with AES-256-GCM, and biometrics never persist a recoverable vault key.';
+  String get settingsRoadmapNotes => 'Vault items use ADR-001 v2: Argon2id derives a KEK from the master password, a random DEK encrypts entries with AES-256-GCM. Biometric unlock without the master password requires a future hardware-bound implementation.';
 
   @override
   String get settingsSecureStorage => 'Secure storage';
 
   @override
-  String get settingsBiometricUnlock => 'Biometric unlock';
+  String get settingsBiometricUnlock => 'Biometric key recovery';
 
   @override
   String get settingsHardwareBackedKeys => 'Hardware-backed keys';
@@ -216,7 +240,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String securityBiometricAvailable(Object biometricLabel) {
-    return 'Use $biometricLabel as a local UX check; master password remains the cryptographic fallback.';
+    return 'Enable $biometricLabel as a local presence check. Vaulta does not store a recoverable vault key, so a locked vault still needs the master password.';
   }
 
   @override
@@ -233,7 +257,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String securityUnlockBiometricSubtitle(Object biometricLabel) {
-    return 'Unlock with master password or $biometricLabel.';
+    return 'Unlock with your master password. Biometrics do not replace it in this release.';
   }
 
   @override
@@ -250,6 +274,60 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dashboardDecryptError => 'Vaulta could not decrypt the local vault right now.';
+
+  @override
+  String get dashboardDecryptErrorAdvice => 'Lock and unlock again with your master password, then retry. Details are hidden to avoid leaking sensitive state.';
+
+  @override
+  String get entryDetailTitle => 'Entry detail';
+
+  @override
+  String get entryEditTooltip => 'Edit entry';
+
+  @override
+  String get entryDeleteTooltip => 'Delete entry';
+
+  @override
+  String get entryUsernameLabel => 'Username';
+
+  @override
+  String get entryWebsiteLabel => 'Website';
+
+  @override
+  String get entryStrengthLabel => 'Strength';
+
+  @override
+  String get entryUpdatedLabel => 'Updated';
+
+  @override
+  String get entrySecretTitle => 'Secret';
+
+  @override
+  String get entryShowSecret => 'Show';
+
+  @override
+  String get entryHideSecret => 'Hide';
+
+  @override
+  String get copySecret => 'Copy secret';
+
+  @override
+  String get secretCopiedLocally => 'Secret copied locally. Clipboard clears shortly if unchanged.';
+
+  @override
+  String get clipboardCleared => 'Clipboard cleared.';
+
+  @override
+  String get entryNotesTitle => 'Notes';
+
+  @override
+  String get entryDeleteDialogTitle => 'Delete entry?';
+
+  @override
+  String get entryDeleteDialogBody => 'This removes the encrypted record from the local vault. Remote recovery is not available in offline mode.';
+
+  @override
+  String get entryDeleteConfirm => 'Delete';
 
   @override
   String get retry => 'Retry';
@@ -270,7 +348,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dashboardHeroTitle => 'Protected by system hardware';
 
   @override
-  String get dashboardHeroBody => 'The local vault already encrypts every entry with AES-256-GCM. Real local CRUD is ready; search, tags, generator, and reliable sync are still pending.';
+  String get dashboardHeroBody => 'The local vault encrypts every entry with AES-256-GCM. Local CRUD, search, filters, and password generation are ready; remote sync remains optional and experimental.';
 
   @override
   String dashboardPillTrustedDevices(int count) {
@@ -319,10 +397,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get planNextHardeningStep => 'Plan next hardening step';
 
   @override
-  String get dashboardRoadmapSyncEnabled => 'Sync is on the roadmap, but trust boundaries still need design.';
+  String get dashboardRoadmapSyncEnabled => 'Remote sync is experimental and requires a configured Supabase session.';
 
   @override
-  String get dashboardRoadmapSyncDisabled => 'Search, tags, generator, and attachments remain intentionally out of scope.';
+  String get dashboardRoadmapSyncDisabled => 'Offline-first release: local vault, search, filters, and generator are available without cloud sync.';
 
   @override
   String get vaultEntriesSectionTitle => 'Vault entries';
@@ -501,8 +579,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get syncConflictKindDelete => 'Delete conflict';
 
   @override
-  String get biometricSlotExpired => 'Biometric slot expired. Enter your master password once to re-enable biometric unlock.';
+  String get biometricSlotExpired => 'Biometric vault-key unlock is not enabled in this release. Enter your master password.';
 
   @override
-  String get biometricUnlockSuccess => 'Vault unlocked with biometrics.';
+  String get biometricUnlockSuccess => 'Biometric verification accepted.';
 }

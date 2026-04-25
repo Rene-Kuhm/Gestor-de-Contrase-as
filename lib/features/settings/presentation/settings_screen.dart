@@ -104,11 +104,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         context: context,
         builder: (dialogContext) {
           return AlertDialog(
-            title: const Text('Revoke this device?'),
-            content: const Text(
-              'Revoking the current device will immediately lock this session. '
-              'You will need to unlock again to continue.',
-            ),
+            title: Text(context.l10n.settingsRevokeCurrentDeviceTitle),
+            content: Text(context.l10n.settingsRevokeCurrentDeviceBody),
             actions: [
               TextButton(
                 onPressed: () {
@@ -120,7 +117,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 onPressed: () {
                   Navigator.of(dialogContext).pop(true);
                 },
-                child: const Text('Revoke now'),
+                child: Text(context.l10n.settingsRevokeNow),
               ),
             ],
           );
@@ -167,11 +164,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'We could not revoke this device. Please retry in a few seconds.',
-          ),
-        ),
+        SnackBar(content: Text(context.l10n.settingsRevokeDeviceError)),
       );
     } finally {
       if (mounted) {
@@ -198,14 +191,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
 
     final title = switch (status) {
-      DeviceSessionStatus.revokedAll => 'Session revoked on all devices',
-      _ => 'Current device revoked',
+      DeviceSessionStatus.revokedAll => context.l10n.settingsRevokedAllTitle,
+      _ => context.l10n.settingsCurrentDeviceRevokedTitle,
     };
     final message = switch (status) {
       DeviceSessionStatus.revokedAll =>
-        'Your account access was revoked for all sessions. This device will lock now for safety.',
-      _ =>
-        'This device no longer has an active session. Vaulta will lock now for safety.',
+        context.l10n.settingsRevokedAllBody,
+      _ => context.l10n.settingsCurrentDeviceRevokedBody,
     };
 
     await showDialog<void>(
@@ -220,7 +212,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onPressed: () {
                 Navigator.of(dialogContext).pop();
               },
-              child: const Text('Lock now'),
+              child: Text(context.l10n.settingsLockNow),
             ),
           ],
         );
@@ -880,7 +872,7 @@ class _SyncConflictCard extends StatelessWidget {
                 child: OutlinedButton.icon(
                   onPressed: onKeepRemote,
                   icon: const Icon(Icons.cloud_done_rounded),
-                  label: const Text('Keep remote'),
+                  label: Text(context.l10n.syncConflictKeepRemote),
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
@@ -888,7 +880,7 @@ class _SyncConflictCard extends StatelessWidget {
                 child: FilledButton.icon(
                   onPressed: onKeepLocal,
                   icon: const Icon(Icons.upload_rounded),
-                  label: const Text('Keep local'),
+                  label: Text(context.l10n.syncConflictKeepLocal),
                 ),
               ),
             ],

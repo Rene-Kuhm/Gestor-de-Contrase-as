@@ -1,0 +1,95 @@
+name: Private beta bug report
+description: Report a Vaulta beta problem without touching code
+title: "[Beta bug]: "
+labels: [bug, beta]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for testing Vaulta. Do not include real passwords, recovery codes, secrets, or private vault data.
+
+  - type: input
+    id: version
+    attributes:
+      label: App version/build
+      description: Example: 1.0.0+1, web preview date, APK filename.
+      placeholder: "1.0.0+1"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - Android
+        - iOS
+        - Web / Chrome
+        - Web / Safari
+        - Web / Firefox
+        - macOS
+        - Windows
+        - Linux
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: device
+    attributes:
+      label: Device/browser details
+      placeholder: "Pixel 8 / Android 15, Chrome 124, MacBook M1..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the problem. Do not paste secrets.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open app
+        2. Unlock vault
+        3. Tap ...
+        4. See ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: media
+    attributes:
+      label: Screenshots or video
+      description: Attach if useful. Blur any sensitive data.
+
+  - type: dropdown
+    id: repeatable
+    attributes:
+      label: Does it happen again after restarting the app?
+      options:
+        - Yes
+        - No
+        - Not sure
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety check
+      options:
+        - label: I did not include real passwords, recovery codes, or secrets in this report.
+          required: true

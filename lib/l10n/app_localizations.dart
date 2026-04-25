@@ -158,7 +158,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsLocalUnlockPostureDescription.
   ///
   /// In en, this message translates to:
-  /// **'Vaulta keeps sensitive state in Keychain / Keystore and uses device biometrics when available.'**
+  /// **'Vaulta keeps sensitive state in Keychain / Keystore. Biometrics only verify local presence; the locked vault still requires the master password.'**
   String get settingsLocalUnlockPostureDescription;
 
   /// No description provided for @settingsMasterPasswordCreated.
@@ -182,13 +182,13 @@ abstract class AppLocalizations {
   /// No description provided for @settingsUnlockWithBiometrics.
   ///
   /// In en, this message translates to:
-  /// **'Unlock with biometrics'**
+  /// **'Use biometrics as a local check'**
   String get settingsUnlockWithBiometrics;
 
   /// No description provided for @settingsBiometricSupportedSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Use {biometricLabel} as a local UX check. Vault keys are never stored for biometric recovery.'**
+  /// **'Use {biometricLabel} as a local presence check while the vault is open. Vaulta does not persist a recoverable vault key for biometric unlock.'**
   String settingsBiometricSupportedSubtitle(Object biometricLabel);
 
   /// No description provided for @settingsBiometricUnavailableSubtitle.
@@ -257,6 +257,54 @@ abstract class AppLocalizations {
   /// **'Revoke device'**
   String get settingsRevokeDevice;
 
+  /// No description provided for @settingsRevokeCurrentDeviceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Revoke this device?'**
+  String get settingsRevokeCurrentDeviceTitle;
+
+  /// No description provided for @settingsRevokeCurrentDeviceBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Revoking the current device will immediately lock this session. You will need to unlock again to continue.'**
+  String get settingsRevokeCurrentDeviceBody;
+
+  /// No description provided for @settingsRevokeNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Revoke now'**
+  String get settingsRevokeNow;
+
+  /// No description provided for @settingsRevokeDeviceError.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not revoke this device. Please retry in a few seconds.'**
+  String get settingsRevokeDeviceError;
+
+  /// No description provided for @settingsRevokedAllTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Session revoked on all devices'**
+  String get settingsRevokedAllTitle;
+
+  /// No description provided for @settingsRevokedAllBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account access was revoked for all sessions. This device will lock now for safety.'**
+  String get settingsRevokedAllBody;
+
+  /// No description provided for @settingsCurrentDeviceRevokedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Current device revoked'**
+  String get settingsCurrentDeviceRevokedTitle;
+
+  /// No description provided for @settingsCurrentDeviceRevokedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This device no longer has an active session. Vaulta will lock now for safety.'**
+  String get settingsCurrentDeviceRevokedBody;
+
   /// No description provided for @settingsNoDevices.
   ///
   /// In en, this message translates to:
@@ -308,7 +356,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsRoadmapNotes.
   ///
   /// In en, this message translates to:
-  /// **'Vault items use ADR-001 v2: Argon2id derives a KEK from the master password, a random DEK encrypts entries with AES-256-GCM, and biometrics never persist a recoverable vault key.'**
+  /// **'Vault items use ADR-001 v2: Argon2id derives a KEK from the master password, a random DEK encrypts entries with AES-256-GCM. Biometric unlock without the master password requires a future hardware-bound implementation.'**
   String get settingsRoadmapNotes;
 
   /// No description provided for @settingsSecureStorage.
@@ -320,7 +368,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsBiometricUnlock.
   ///
   /// In en, this message translates to:
-  /// **'Biometric unlock'**
+  /// **'Biometric key recovery'**
   String get settingsBiometricUnlock;
 
   /// No description provided for @settingsHardwareBackedKeys.
@@ -506,7 +554,7 @@ abstract class AppLocalizations {
   /// No description provided for @securityBiometricAvailable.
   ///
   /// In en, this message translates to:
-  /// **'Use {biometricLabel} as a local UX check; master password remains the cryptographic fallback.'**
+  /// **'Enable {biometricLabel} as a local presence check. Vaulta does not store a recoverable vault key, so a locked vault still needs the master password.'**
   String securityBiometricAvailable(Object biometricLabel);
 
   /// No description provided for @securityBiometricUnavailable.
@@ -536,7 +584,7 @@ abstract class AppLocalizations {
   /// No description provided for @securityUnlockBiometricSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Unlock with master password or {biometricLabel}.'**
+  /// **'Unlock with your master password. Biometrics do not replace it in this release.'**
   String securityUnlockBiometricSubtitle(Object biometricLabel);
 
   /// No description provided for @securityUnlockPasswordSubtitle.
@@ -568,6 +616,114 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Vaulta could not decrypt the local vault right now.'**
   String get dashboardDecryptError;
+
+  /// No description provided for @dashboardDecryptErrorAdvice.
+  ///
+  /// In en, this message translates to:
+  /// **'Lock and unlock again with your master password, then retry. Details are hidden to avoid leaking sensitive state.'**
+  String get dashboardDecryptErrorAdvice;
+
+  /// No description provided for @entryDetailTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Entry detail'**
+  String get entryDetailTitle;
+
+  /// No description provided for @entryEditTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit entry'**
+  String get entryEditTooltip;
+
+  /// No description provided for @entryDeleteTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete entry'**
+  String get entryDeleteTooltip;
+
+  /// No description provided for @entryUsernameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Username'**
+  String get entryUsernameLabel;
+
+  /// No description provided for @entryWebsiteLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Website'**
+  String get entryWebsiteLabel;
+
+  /// No description provided for @entryStrengthLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Strength'**
+  String get entryStrengthLabel;
+
+  /// No description provided for @entryUpdatedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Updated'**
+  String get entryUpdatedLabel;
+
+  /// No description provided for @entrySecretTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Secret'**
+  String get entrySecretTitle;
+
+  /// No description provided for @entryShowSecret.
+  ///
+  /// In en, this message translates to:
+  /// **'Show'**
+  String get entryShowSecret;
+
+  /// No description provided for @entryHideSecret.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide'**
+  String get entryHideSecret;
+
+  /// No description provided for @copySecret.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy secret'**
+  String get copySecret;
+
+  /// No description provided for @secretCopiedLocally.
+  ///
+  /// In en, this message translates to:
+  /// **'Secret copied locally. Clipboard clears shortly if unchanged.'**
+  String get secretCopiedLocally;
+
+  /// No description provided for @clipboardCleared.
+  ///
+  /// In en, this message translates to:
+  /// **'Clipboard cleared.'**
+  String get clipboardCleared;
+
+  /// No description provided for @entryNotesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Notes'**
+  String get entryNotesTitle;
+
+  /// No description provided for @entryDeleteDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete entry?'**
+  String get entryDeleteDialogTitle;
+
+  /// No description provided for @entryDeleteDialogBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This removes the encrypted record from the local vault. Remote recovery is not available in offline mode.'**
+  String get entryDeleteDialogBody;
+
+  /// No description provided for @entryDeleteConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get entryDeleteConfirm;
 
   /// No description provided for @retry.
   ///
@@ -608,7 +764,7 @@ abstract class AppLocalizations {
   /// No description provided for @dashboardHeroBody.
   ///
   /// In en, this message translates to:
-  /// **'The local vault already encrypts every entry with AES-256-GCM. Real local CRUD is ready; search, tags, generator, and reliable sync are still pending.'**
+  /// **'The local vault encrypts every entry with AES-256-GCM. Local CRUD, search, filters, and password generation are ready; remote sync remains optional and experimental.'**
   String get dashboardHeroBody;
 
   /// No description provided for @dashboardPillTrustedDevices.
@@ -698,13 +854,13 @@ abstract class AppLocalizations {
   /// No description provided for @dashboardRoadmapSyncEnabled.
   ///
   /// In en, this message translates to:
-  /// **'Sync is on the roadmap, but trust boundaries still need design.'**
+  /// **'Remote sync is experimental and requires a configured Supabase session.'**
   String get dashboardRoadmapSyncEnabled;
 
   /// No description provided for @dashboardRoadmapSyncDisabled.
   ///
   /// In en, this message translates to:
-  /// **'Search, tags, generator, and attachments remain intentionally out of scope.'**
+  /// **'Offline-first release: local vault, search, filters, and generator are available without cloud sync.'**
   String get dashboardRoadmapSyncDisabled;
 
   /// No description provided for @vaultEntriesSectionTitle.
@@ -1034,13 +1190,13 @@ abstract class AppLocalizations {
   /// No description provided for @biometricSlotExpired.
   ///
   /// In en, this message translates to:
-  /// **'Biometric slot expired. Enter your master password once to re-enable biometric unlock.'**
+  /// **'Biometric vault-key unlock is not enabled in this release. Enter your master password.'**
   String get biometricSlotExpired;
 
   /// No description provided for @biometricUnlockSuccess.
   ///
   /// In en, this message translates to:
-  /// **'Vault unlocked with biometrics.'**
+  /// **'Biometric verification accepted.'**
   String get biometricUnlockSuccess;
 }
 

@@ -1,11 +1,11 @@
 {
-    "name": "gestor_contrasenas",
-    "short_name": "gestor_contrasenas",
+    "name": "Vaulta",
+    "short_name": "Vaulta",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#0F172A",
+    "theme_color": "#0F766E",
+    "description": "Offline-first encrypted password manager MVP.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

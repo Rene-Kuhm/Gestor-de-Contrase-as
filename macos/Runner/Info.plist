@@ -25,7 +25,7 @@
 	<key>NSHumanReadableCopyright</key>
 	<string>$(PRODUCT_COPYRIGHT)</string>
 	<key>NSFaceIDUsageDescription</key>
-	<string>Vaulta usa biometria para desbloquear tu sesion protegida en este dispositivo.</string>
+	<string>Vaulta usa biometria como verificacion local, pero el vault bloqueado requiere la master password.</string>
 	<key>NSMainNibFile</key>
 	<string>MainMenu</string>
 	<key>NSPrincipalClass</key>

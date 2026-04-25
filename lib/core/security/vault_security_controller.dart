@@ -1,7 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
-
-import 'package:cryptography/cryptography.dart';
 import 'package:flutter/widgets.dart';
 
 import 'biometric_auth_service.dart';
@@ -86,10 +83,7 @@ class VaultSecurityController extends ChangeNotifier {
       _biometricAvailability.canAuthenticate &&
       _biometricAvailability.hasEnrolledBiometrics;
 
-  bool get canUnlockWithBiometrics =>
-      _stage == VaultSecurityStage.locked &&
-      _biometricEnabled &&
-      canOfferBiometricToggle;
+  bool get canUnlockWithBiometrics => false;
 
   Future<void> initialize() async {
     _setBusy(true);
@@ -114,7 +108,7 @@ class VaultSecurityController extends ChangeNotifier {
 
       await _storage.delete(biometricRecoveryArtifactKey);
       await _storage.delete(biometricSeedKey);
-      await _validateBiometricSlot();
+      await _storage.delete(biometricSlotKey);
 
       final record = await _readRecord();
       _stage = record == null
@@ -167,10 +161,6 @@ class VaultSecurityController extends ChangeNotifier {
       );
       await _storage.save(masterPasswordRecordKey, record.encode());
       await _persistBiometricPreference(enableBiometrics);
-
-      if (enableBiometrics && canOfferBiometricToggle) {
-        await _saveBiometricSlot(_vaultSession!, keyId: record.keyId);
-      }
 
       _message =
           'Master password creada. Tu sesion local queda protegida por el sistema.';
@@ -236,10 +226,7 @@ class VaultSecurityController extends ChangeNotifier {
       _vaultSession = activeSession;
       await _storage.delete(biometricRecoveryArtifactKey);
       await _storage.delete(biometricSeedKey);
-
-      if (_biometricEnabled && canOfferBiometricToggle) {
-        await _saveBiometricSlot(activeSession, keyId: activeRecord.keyId);
-      }
+      await _storage.delete(biometricSlotKey);
 
       _message = activeRecord == record
           ? 'Vaulta desbloqueada.'
@@ -251,41 +238,13 @@ class VaultSecurityController extends ChangeNotifier {
   }
 
   Future<bool> unlockWithBiometrics() async {
-    if (!canUnlockWithBiometrics) {
-      _message = 'La biometria no esta lista para este equipo.';
-      notifyListeners();
-      return false;
-    }
-
-    return _runBusy(() async {
-      final record = await _readRecord();
-      if (record == null) {
-        _stage = VaultSecurityStage.onboarding;
-        _message = 'Todavia no configuraste una master password.';
-        return false;
-      }
-
-      final slot = await _readBiometricSlot(expectedKeyId: record.keyId);
-      if (slot == null) {
-        _message =
-            'No hay clave biometrica activa. Ingresa la master password una vez para habilitarla.';
-        return false;
-      }
-
-      final authenticated = await _biometricAuthService.authenticateForUnlock();
-      if (!authenticated) {
-        _message = 'Autenticacion cancelada o no disponible.';
-        return false;
-      }
-
-      await _storage.delete(biometricRecoveryArtifactKey);
-      await _storage.delete(biometricSeedKey);
-      _vaultSession = slot;
-      _stage = VaultSecurityStage.unlocked;
-      _restartIdleTimer();
-      _message = 'Vaulta desbloqueada con biometria.';
-      return true;
-    });
+    await _storage.delete(biometricRecoveryArtifactKey);
+    await _storage.delete(biometricSeedKey);
+    await _storage.delete(biometricSlotKey);
+    _message =
+        'Por seguridad, Vaulta no guarda una clave recuperable para desbloqueo biometrico. Ingresa la master password.';
+    notifyListeners();
+    return false;
   }
 
   Future<void> setBiometricEnabled(bool enabled) async {
@@ -298,7 +257,7 @@ class VaultSecurityController extends ChangeNotifier {
     await _runBusy(() async {
       await _persistBiometricPreference(enabled);
       _message = enabled
-          ? 'Biometria activada como verificacion local. No guarda la clave del vault.'
+          ? 'Biometria activada como verificacion local. El vault bloqueado sigue requiriendo master password.'
           : 'Biometria desactivada. Solo queda la master password.';
       return true;
     });
@@ -478,7 +437,7 @@ class VaultSecurityController extends ChangeNotifier {
       await _storage.delete(biometricSeedKey);
       await _storage.delete(biometricSlotKey);
       _message =
-          'Master password actualizada y vault re-cifrado con una nueva clave. Desbloquea una vez con la nueva password para reactivar la biometria.';
+          'Master password actualizada y vault re-cifrado con una nueva clave.';
       return true;
     });
   }
@@ -513,81 +472,9 @@ class VaultSecurityController extends ChangeNotifier {
     super.dispose();
   }
 
-  Future<void> _saveBiometricSlot(
-    VaultSession session, {
-    required String keyId,
-  }) async {
-    try {
-      final keyBytes = await session.secretKey.extractBytes();
-      final slotJson = jsonEncode({
-        'keyId': keyId,
-        'secretKeyBytes': base64Encode(keyBytes),
-        if (session.kdf != null) 'kdf': session.kdf,
-        if (session.dekWrap != null) 'dekWrap': session.dekWrap,
-      });
-      await _storage.save(biometricSlotKey, slotJson);
-    } catch (_) {
-      await _storage.delete(biometricSlotKey);
-    }
-  }
-
-  Future<VaultSession?> _readBiometricSlot({
-    required String expectedKeyId,
-  }) async {
-    try {
-      final raw = await _storage.read(biometricSlotKey);
-      if (raw == null || raw.isEmpty) return null;
-
-      final json = jsonDecode(raw) as Map<String, dynamic>;
-      final storedKeyId = json['keyId'] as String?;
-      if (storedKeyId != expectedKeyId) {
-        await _storage.delete(biometricSlotKey);
-        return null;
-      }
-
-      final keyBytes = base64Decode(json['secretKeyBytes'] as String);
-      return VaultSession(
-        keyId: storedKeyId!,
-        secretKey: SecretKeyData(keyBytes),
-        kdf: (json['kdf'] as Map?)?.cast<String, dynamic>(),
-        dekWrap: (json['dekWrap'] as Map?)?.cast<String, dynamic>(),
-      );
-    } catch (_) {
-      await _storage.delete(biometricSlotKey);
-      return null;
-    }
-  }
-
-  Future<void> _validateBiometricSlot() async {
-    final record = await _readRecord();
-    if (record == null) {
-      await _storage.delete(biometricSlotKey);
-      return;
-    }
-
-    try {
-      final raw = await _storage.read(biometricSlotKey);
-      if (raw == null || raw.isEmpty) return;
-
-      final json = jsonDecode(raw) as Map<String, dynamic>;
-      final storedKeyId = json['keyId'] as String?;
-      if (storedKeyId != record.keyId) {
-        await _storage.delete(biometricSlotKey);
-      }
-    } catch (_) {
-      await _storage.delete(biometricSlotKey);
-    }
-  }
-
   Future<void> _persistBiometricPreference(bool enabled) async {
     _biometricEnabled = enabled;
     await _storage.save(biometricEnabledKey, enabled.toString());
-
-    if (enabled) {
-      await _storage.delete(biometricRecoveryArtifactKey);
-      await _storage.delete(biometricSeedKey);
-      return;
-    }
 
     await _storage.delete(biometricRecoveryArtifactKey);
     await _storage.delete(biometricSeedKey);

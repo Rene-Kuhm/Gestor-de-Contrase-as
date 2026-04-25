@@ -86,7 +86,10 @@ class _VaultDashboardScreenState extends State<VaultDashboardScreen> {
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 8),
-                    Text('${snapshot.error}', textAlign: TextAlign.center),
+                    Text(
+                      l10n.dashboardDecryptErrorAdvice,
+                      textAlign: TextAlign.center,
+                    ),
                     const SizedBox(height: 16),
                     FilledButton(onPressed: _refresh, child: Text(l10n.retry)),
                   ],
@@ -318,9 +321,9 @@ class _ConflictBanner extends StatelessWidget {
             Expanded(
               child: Text(
                 l10n.syncConflictsBannerLabel(count),
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: AppColors.warning,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.labelMedium?.copyWith(color: AppColors.warning),
               ),
             ),
             Container(
@@ -332,9 +335,7 @@ class _ConflictBanner extends StatelessWidget {
               child: Text(
                 l10n.syncConflictsBannerAction,
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: isDark
-                      ? AppColors.backgroundDark
-                      : Colors.white,
+                  color: isDark ? AppColors.backgroundDark : Colors.white,
                   fontWeight: FontWeight.w700,
                 ),
               ),

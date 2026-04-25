@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../app/design_system/app_panel.dart';
+import '../../../app/localization/l10n.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../domain/vault_item.dart';
 
@@ -22,26 +25,29 @@ class VaultEntryDetailScreen extends StatefulWidget {
 }
 
 class _VaultEntryDetailScreenState extends State<VaultEntryDetailScreen> {
+  static const _clipboardClearDelay = Duration(seconds: 30);
+
   bool _obscureSecret = true;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
     final item = widget.item;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Entry detail'),
+        title: Text(l10n.entryDetailTitle),
         actions: [
           IconButton(
             onPressed: widget.onEdit == null ? null : _runEdit,
             icon: const Icon(Icons.edit_rounded),
-            tooltip: 'Edit entry',
+            tooltip: l10n.entryEditTooltip,
           ),
           IconButton(
             onPressed: widget.onDelete == null ? null : _confirmDelete,
             icon: const Icon(Icons.delete_outline_rounded),
-            tooltip: 'Delete entry',
+            tooltip: l10n.entryDeleteTooltip,
           ),
         ],
       ),
@@ -86,15 +92,27 @@ class _VaultEntryDetailScreenState extends State<VaultEntryDetailScreen> {
                     ],
                   ),
                   const SizedBox(height: AppSpacing.lg),
-                  _MetaRow(label: 'Username', value: item.username),
+                  _MetaRow(
+                    label: l10n.entryUsernameLabel,
+                    value: item.username,
+                  ),
                   if (item.website != null) ...[
                     const SizedBox(height: AppSpacing.md),
-                    _MetaRow(label: 'Website', value: item.website!),
+                    _MetaRow(
+                      label: l10n.entryWebsiteLabel,
+                      value: item.website!,
+                    ),
                   ],
                   const SizedBox(height: AppSpacing.md),
-                  _MetaRow(label: 'Strength', value: '${item.strengthScore}%'),
+                  _MetaRow(
+                    label: l10n.entryStrengthLabel,
+                    value: '${item.strengthScore}%',
+                  ),
                   const SizedBox(height: AppSpacing.md),
-                  _MetaRow(label: 'Updated', value: item.lastUpdatedLabel),
+                  _MetaRow(
+                    label: l10n.entryUpdatedLabel,
+                    value: item.lastUpdatedLabel,
+                  ),
                 ],
               ),
             ),
@@ -107,7 +125,7 @@ class _VaultEntryDetailScreenState extends State<VaultEntryDetailScreen> {
                     children: [
                       Expanded(
                         child: Text(
-                          'Secret',
+                          l10n.entrySecretTitle,
                           style: theme.textTheme.titleLarge?.copyWith(
                             fontWeight: FontWeight.w700,
                           ),
@@ -122,7 +140,11 @@ class _VaultEntryDetailScreenState extends State<VaultEntryDetailScreen> {
                               ? Icons.visibility_rounded
                               : Icons.visibility_off_rounded,
                         ),
-                        label: Text(_obscureSecret ? 'Show' : 'Hide'),
+                        label: Text(
+                          _obscureSecret
+                              ? l10n.entryShowSecret
+                              : l10n.entryHideSecret,
+                        ),
                       ),
                     ],
                   ),
@@ -145,17 +167,9 @@ class _VaultEntryDetailScreenState extends State<VaultEntryDetailScreen> {
                   ),
                   const SizedBox(height: AppSpacing.md),
                   OutlinedButton.icon(
-                    onPressed: () async {
-                      await Clipboard.setData(ClipboardData(text: item.secret));
-                      if (!context.mounted) {
-                        return;
-                      }
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Secret copied locally.')),
-                      );
-                    },
+                    onPressed: () => _copySecret(item.secret),
                     icon: const Icon(Icons.copy_rounded),
-                    label: const Text('Copy secret'),
+                    label: Text(context.l10n.copySecret),
                   ),
                 ],
               ),
@@ -167,7 +181,7 @@ class _VaultEntryDetailScreenState extends State<VaultEntryDetailScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Notes',
+                      l10n.entryNotesTitle,
                       style: theme.textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
@@ -199,23 +213,52 @@ class _VaultEntryDetailScreenState extends State<VaultEntryDetailScreen> {
     }
   }
 
+  Future<void> _copySecret(String secret) async {
+    await Clipboard.setData(ClipboardData(text: secret));
+    unawaited(_clearClipboardIfUnchanged(secret));
+
+    if (!mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(context.l10n.secretCopiedLocally)));
+  }
+
+  Future<void> _clearClipboardIfUnchanged(String secret) async {
+    await Future<void>.delayed(_clipboardClearDelay);
+    final data = await Clipboard.getData(Clipboard.kTextPlain);
+    if (data?.text != secret) {
+      return;
+    }
+
+    await Clipboard.setData(const ClipboardData(text: ''));
+
+    if (!mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(context.l10n.clipboardCleared)));
+  }
+
   Future<void> _confirmDelete() async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Delete entry?'),
-          content: const Text(
-            'This removes the encrypted record from the local vault. There is no cloud recovery yet.',
-          ),
+          title: Text(context.l10n.entryDeleteDialogTitle),
+          content: Text(context.l10n.entryDeleteDialogBody),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
+              child: Text(context.l10n.cancel),
             ),
             FilledButton(
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Delete'),
+              child: Text(context.l10n.entryDeleteConfirm),
             ),
           ],
         );

@@ -11,12 +11,12 @@
 
   "settingsTitle": "Ajustes",
   "settingsLocalUnlockPostureTitle": "Postura de desbloqueo local",
-  "settingsLocalUnlockPostureDescription": "Vaulta guarda el estado sensible en Keychain / Keystore y usa biometria del sistema cuando esta disponible.",
+  "settingsLocalUnlockPostureDescription": "Vaulta guarda el estado sensible en Keychain / Keystore. La biometria solo valida presencia local; el vault bloqueado sigue requiriendo master password.",
   "settingsMasterPasswordCreated": "Master password creada",
   "settingsBiometricsAvailable": "Biometria disponible",
   "settingsBiometricsEnabled": "Biometria activada",
-  "settingsUnlockWithBiometrics": "Desbloquear con biometria",
-  "settingsBiometricSupportedSubtitle": "Usa {biometricLabel} como verificacion local de UX. Las claves del vault nunca se guardan para recovery biometrico.",
+  "settingsUnlockWithBiometrics": "Usar biometria como verificacion local",
+  "settingsBiometricSupportedSubtitle": "Usa {biometricLabel} como verificacion local mientras el vault esta abierto. Vaulta no persiste una clave recuperable para desbloqueo biometrico.",
   "@settingsBiometricSupportedSubtitle": {
     "placeholders": {
       "biometricLabel": {}
@@ -33,6 +33,14 @@
   "settingsSessionsRefresh": "Refrescar sesiones",
   "settingsRevokeOtherDevices": "Revocar todas las otras sesiones",
   "settingsRevokeDevice": "Revocar dispositivo",
+  "settingsRevokeCurrentDeviceTitle": "Revocar este dispositivo?",
+  "settingsRevokeCurrentDeviceBody": "Revocar el dispositivo actual va a bloquear esta sesion inmediatamente. Vas a tener que desbloquear de nuevo para continuar.",
+  "settingsRevokeNow": "Revocar ahora",
+  "settingsRevokeDeviceError": "No pudimos revocar este dispositivo. Reintenta en unos segundos.",
+  "settingsRevokedAllTitle": "Sesion revocada en todos los dispositivos",
+  "settingsRevokedAllBody": "El acceso de tu cuenta fue revocado para todas las sesiones. Este dispositivo se va a bloquear por seguridad.",
+  "settingsCurrentDeviceRevokedTitle": "Dispositivo actual revocado",
+  "settingsCurrentDeviceRevokedBody": "Este dispositivo ya no tiene una sesion activa. Vaulta se va a bloquear por seguridad.",
   "settingsNoDevices": "No hay dispositivos registrados para este usuario.",
   "settingsCurrentDeviceLabel": "Este dispositivo",
   "settingsSessionStatusActive": "Activa",
@@ -41,9 +49,9 @@
   "settingsDeviceRevokedMessage": "Dispositivo revocado correctamente.",
   "settingsRevokeOthersDone": "Se revocaron las otras sesiones activas.",
   "settingsRoadmapTitle": "Roadmap de seguridad de plataforma",
-  "settingsRoadmapNotes": "Los items del vault usan ADR-001 v2: Argon2id deriva una KEK desde la master password, una DEK aleatoria cifra entradas con AES-256-GCM y biometria nunca persiste una vault key recuperable.",
+  "settingsRoadmapNotes": "Los items del vault usan ADR-001 v2: Argon2id deriva una KEK desde la master password y una DEK aleatoria cifra entradas con AES-256-GCM. El desbloqueo biometrico sin master password requiere una implementacion futura con claves vinculadas al hardware.",
   "settingsSecureStorage": "Almacenamiento seguro",
-  "settingsBiometricUnlock": "Desbloqueo biometrico",
+  "settingsBiometricUnlock": "Recovery biometrico de clave",
   "settingsHardwareBackedKeys": "Claves con respaldo de hardware",
   "settingsVaultEncryptionReady": "Cifrado del vault conectado end-to-end",
   "idleNever": "Nunca",
@@ -75,7 +83,7 @@
   "securityChecklistDerive": "Argon2id deriva una KEK que desenvuelve una DEK aleatoria del vault.",
   "securityChecklistEncrypt": "Items locales cifrados con AES-256-GCM y record guardado con Keychain / Keystore.",
   "securityEnableBiometrics": "Habilitar biometria local",
-  "securityBiometricAvailable": "Usa {biometricLabel} como verificacion local de UX; la master password sigue siendo el fallback criptografico.",
+  "securityBiometricAvailable": "Habilita {biometricLabel} como verificacion local. Vaulta no guarda una clave recuperable del vault, asi que un vault bloqueado sigue necesitando la master password.",
   "@securityBiometricAvailable": {
     "placeholders": {
       "biometricLabel": {}
@@ -85,7 +93,7 @@
   "securityCreateSecureAccess": "Crear acceso seguro al vault",
   "securityUnlockEyebrow": "Desbloquear",
   "securityUnlockTitle": "Tu vault queda cerrado hasta validar identidad real.",
-  "securityUnlockBiometricSubtitle": "Podes entrar con master password o {biometricLabel}.",
+  "securityUnlockBiometricSubtitle": "Desbloquea con tu master password. La biometria no la reemplaza en esta release.",
   "@securityUnlockBiometricSubtitle": {
     "placeholders": {
       "biometricLabel": {}
@@ -97,13 +105,31 @@
   "securityBiometricButton": "Biometria",
 
   "dashboardDecryptError": "Vaulta no pudo descifrar el vault local en este momento.",
+  "dashboardDecryptErrorAdvice": "Bloquea y desbloquea de nuevo con tu master password, despues reintenta. Ocultamos el detalle para no filtrar estado sensible.",
+  "entryDetailTitle": "Detalle de entrada",
+  "entryEditTooltip": "Editar entrada",
+  "entryDeleteTooltip": "Eliminar entrada",
+  "entryUsernameLabel": "Usuario",
+  "entryWebsiteLabel": "Sitio web",
+  "entryStrengthLabel": "Fortaleza",
+  "entryUpdatedLabel": "Actualizado",
+  "entrySecretTitle": "Secreto",
+  "entryShowSecret": "Mostrar",
+  "entryHideSecret": "Ocultar",
+  "copySecret": "Copiar secreto",
+  "secretCopiedLocally": "Secreto copiado localmente. El portapapeles se limpia pronto si no cambia.",
+  "clipboardCleared": "Portapapeles limpiado.",
+  "entryNotesTitle": "Notas",
+  "entryDeleteDialogTitle": "Eliminar entrada?",
+  "entryDeleteDialogBody": "Esto elimina el registro cifrado del vault local. El recovery remoto no esta disponible en modo offline.",
+  "entryDeleteConfirm": "Eliminar",
   "retry": "Reintentar",
   "newEntry": "Nueva entrada",
   "entryCreatedMessage": "Entrada cifrada creada.",
   "vaultUpdatedMessage": "Vault actualizado de forma local.",
   "dashboardSubtitle": "Tu centro de control cifrado",
   "dashboardHeroTitle": "Protegido por hardware del sistema",
-  "dashboardHeroBody": "El vault local ya cifra cada entrada con AES-256-GCM. El CRUD local real esta listo; busqueda, tags, generador y sync confiable siguen pendientes.",
+  "dashboardHeroBody": "El vault local cifra cada entrada con AES-256-GCM. CRUD local, busqueda, filtros y generador de passwords estan listos; el sync remoto queda opcional y experimental.",
   "dashboardPillTrustedDevices": "{count} dispositivos confiables",
   "@dashboardPillTrustedDevices": {
     "placeholders": {
@@ -132,8 +158,8 @@
   "createEncryptedEntry": "Crear entrada cifrada",
   "createEncryptedEntrySubtitle": "Agrega nuevas credenciales y guardalas cifradas en reposo.",
   "planNextHardeningStep": "Planificar siguiente hardening",
-  "dashboardRoadmapSyncEnabled": "El sync esta en roadmap, pero los limites de confianza todavia necesitan diseno.",
-  "dashboardRoadmapSyncDisabled": "Busqueda, tags, generador y adjuntos siguen intencionalmente fuera de alcance.",
+  "dashboardRoadmapSyncEnabled": "El sync remoto es experimental y requiere una sesion Supabase configurada.",
+  "dashboardRoadmapSyncDisabled": "Release offline-first: vault local, busqueda, filtros y generador funcionan sin sync cloud.",
   "vaultEntriesSectionTitle": "Entradas del vault",
   "searchVault": "Buscar titulo, usuario o sitio",
   "filter": "Filtro",
@@ -222,6 +248,6 @@
   "syncConflictKindUpsert": "Conflicto de edicion",
   "syncConflictKindDelete": "Conflicto de borrado",
 
-  "biometricSlotExpired": "El slot biometrico expiro. Ingresa la master password una vez para volver a habilitar el desbloqueo biometrico.",
-  "biometricUnlockSuccess": "Vault desbloqueada con biometria."
+  "biometricSlotExpired": "El desbloqueo biometrico con clave del vault no esta habilitado en esta release. Ingresa tu master password.",
+  "biometricUnlockSuccess": "Verificacion biometrica aceptada."
 }
