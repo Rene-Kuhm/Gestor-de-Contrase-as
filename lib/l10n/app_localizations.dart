@@ -1222,6 +1222,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Biometrics are not available on this device. Use the master password to unlock.'**
   String get biometricEnrollUnavailable;
+
+  /// No description provided for @securitySetupBiometricCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable biometric unlock'**
+  String get securitySetupBiometricCta;
+
+  /// No description provided for @securitySetupBiometricDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable biometric unlock'**
+  String get securitySetupBiometricDialogTitle;
+
+  /// No description provided for @securitySetupBiometricDialogBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your master password once so Vaulta can wrap the key that protects your fingerprint.'**
+  String get securitySetupBiometricDialogBody;
+
+  /// No description provided for @securitySetupBiometricDialogAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable'**
+  String get securitySetupBiometricDialogAction;
+
+  /// No description provided for @securitySetupBiometricDialogCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get securitySetupBiometricDialogCancel;
+
+  /// No description provided for @securitySetupBiometricSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Done. Next time you can unlock Vaulta with your fingerprint.'**
+  String get securitySetupBiometricSuccess;
+
+  /// No description provided for @securitySetupBiometricError.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not enable the fingerprint. Verify your master password and try again.'**
+  String get securitySetupBiometricError;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

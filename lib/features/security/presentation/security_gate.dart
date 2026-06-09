@@ -348,6 +348,7 @@ class _UnlockScreenState extends State<_UnlockScreen> {
   NativeBiometricCapability _biometricCapability =
       NativeBiometricCapability.empty;
   bool _enrollingBiometric = false;
+  bool _settingUpBiometric = false;
 
   @override
   void initState() {
@@ -406,6 +407,42 @@ class _UnlockScreenState extends State<_UnlockScreen> {
     } finally {
       if (mounted) {
         setState(() => _enrollingBiometric = false);
+      }
+    }
+  }
+
+  /// One-shot biometric-enrollment flow. Opens a small dialog that
+  /// asks the user to confirm the master password (without unlocking
+  /// the vault) and writes the wrapped-DEK envelope so the next
+  /// unlock can use the fingerprint button.
+  Future<void> _openBiometricSetupDialog() async {
+    if (_settingUpBiometric) return;
+    final password = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => const _SetupBiometricDialog(),
+    );
+    if (password == null || password.isEmpty || !mounted) {
+      return;
+    }
+    setState(() => _settingUpBiometric = true);
+    try {
+      final ok = await widget.controller.setupBiometricFromPassword(password);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            ok
+                ? widget.controller.message ??
+                    context.l10n.securitySetupBiometricSuccess
+                : widget.controller.message ??
+                    context.l10n.securitySetupBiometricError,
+          ),
+        ),
+      );
+      await _refreshBiometricUnlockAvailability();
+    } finally {
+      if (mounted) {
+        setState(() => _settingUpBiometric = false);
       }
     }
   }
@@ -500,6 +537,20 @@ class _UnlockScreenState extends State<_UnlockScreen> {
                   if (controller.message case final message?) ...[
                     const SizedBox(height: AppSpacing.md),
                     _StatusBanner(message: message),
+                  ],
+                  // The device has biometrics enrolled and the user
+                  // has not turned biometric unlock on yet. Surface a
+                  // one-tap setup CTA that opens a password dialog,
+                  // verifies the master password, and writes the
+                  // wrapped-DEK envelope without unlocking the vault.
+                  if (!widget.controller.biometricEnabled &&
+                      controller.canOfferBiometricToggle) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    _SetupBiometricButton(
+                      label: l10n.securitySetupBiometricCta,
+                      busy: _settingUpBiometric,
+                      onPressed: _openBiometricSetupDialog,
+                    ),
                   ],
                   // The user enabled biometrics at some point but the
                   // platform now reports NONE_ENROLLED — most likely
@@ -810,6 +861,116 @@ class _BiometricEnrollInline extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Filled-tonal CTA rendered on the unlock screen when the device
+/// has biometrics enrolled but the user has not turned biometric
+/// unlock on yet. Tapping it opens [_SetupBiometricDialog].
+class _SetupBiometricButton extends StatelessWidget {
+  const _SetupBiometricButton({
+    required this.label,
+    required this.busy,
+    required this.onPressed,
+  });
+
+  final String label;
+  final bool busy;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: FilledButton.tonalIcon(
+        onPressed: busy ? null : onPressed,
+        icon: busy
+            ? const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const Icon(Icons.fingerprint_rounded),
+        label: Text(label),
+      ),
+    );
+  }
+}
+
+/// Modal dialog that asks for the master password so the controller
+/// can derive a one-shot DEK and write the wrapped-DEK envelope
+/// without unlocking the vault. Returns the entered password, or
+/// null if the user cancels.
+class _SetupBiometricDialog extends StatefulWidget {
+  const _SetupBiometricDialog();
+
+  @override
+  State<_SetupBiometricDialog> createState() => _SetupBiometricDialogState();
+}
+
+class _SetupBiometricDialogState extends State<_SetupBiometricDialog> {
+  final _passwordController = TextEditingController();
+  bool _obscure = true;
+
+  @override
+  void dispose() {
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final value = _passwordController.text;
+    Navigator.of(context).pop(value);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return AlertDialog(
+      title: Text(l10n.securitySetupBiometricDialogTitle),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l10n.securitySetupBiometricDialogBody,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _passwordController,
+              obscureText: _obscure,
+              autofocus: true,
+              onSubmitted: (_) => _submit(),
+              decoration: InputDecoration(
+                labelText: l10n.securityMasterPasswordTitle,
+                suffixIcon: IconButton(
+                  onPressed: () {
+                    setState(() => _obscure = !_obscure);
+                  },
+                  icon: Icon(
+                    _obscure
+                        ? Icons.visibility_off_rounded
+                        : Icons.visibility_rounded,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l10n.securitySetupBiometricDialogCancel),
+        ),
+        FilledButton(
+          onPressed: _submit,
+          child: Text(l10n.securitySetupBiometricDialogAction),
+        ),
+      ],
     );
   }
 }

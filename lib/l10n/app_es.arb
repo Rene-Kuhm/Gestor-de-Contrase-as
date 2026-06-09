@@ -253,5 +253,12 @@
   "biometricEnrollCta": "Configurar biometria en el dispositivo",
   "biometricEnrollSubtitle": "Tu dispositivo no tiene biometria registrada (huella o reconocimiento facial). Abri los ajustes del sistema para activarla.",
   "biometricEnrollAction": "Abrir ajustes",
-  "biometricEnrollUnavailable": "La biometria no esta disponible en este dispositivo. Usa la master password para desbloquear."
+  "biometricEnrollUnavailable": "La biometria no esta disponible en este dispositivo. Usa la master password para desbloquear.",
+  "securitySetupBiometricCta": "Activar desbloqueo biometrico",
+  "securitySetupBiometricDialogTitle": "Activar desbloqueo biometrico",
+  "securitySetupBiometricDialogBody": "Ingresa tu master password una sola vez para que Vaulta pueda cifrar la clave que protege tu huella.",
+  "securitySetupBiometricDialogAction": "Activar",
+  "securitySetupBiometricDialogCancel": "Cancelar",
+  "securitySetupBiometricSuccess": "Listo. La proxima vez podras desbloquear Vaulta con tu huella.",
+  "securitySetupBiometricError": "No pudimos activar la huella. Verifica tu master password e intenta de nuevo."
 }

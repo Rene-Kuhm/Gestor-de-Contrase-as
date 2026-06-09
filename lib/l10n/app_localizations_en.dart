@@ -595,4 +595,25 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get biometricEnrollUnavailable => 'Biometrics are not available on this device. Use the master password to unlock.';
+
+  @override
+  String get securitySetupBiometricCta => 'Enable biometric unlock';
+
+  @override
+  String get securitySetupBiometricDialogTitle => 'Enable biometric unlock';
+
+  @override
+  String get securitySetupBiometricDialogBody => 'Enter your master password once so Vaulta can wrap the key that protects your fingerprint.';
+
+  @override
+  String get securitySetupBiometricDialogAction => 'Enable';
+
+  @override
+  String get securitySetupBiometricDialogCancel => 'Cancel';
+
+  @override
+  String get securitySetupBiometricSuccess => 'Done. Next time you can unlock Vaulta with your fingerprint.';
+
+  @override
+  String get securitySetupBiometricError => 'We could not enable the fingerprint. Verify your master password and try again.';
 }

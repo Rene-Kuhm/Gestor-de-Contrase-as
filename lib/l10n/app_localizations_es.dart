@@ -601,4 +601,25 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get biometricEnrollUnavailable => 'La biometria no esta disponible en este dispositivo. Usa la master password para desbloquear.';
+
+  @override
+  String get securitySetupBiometricCta => 'Activar desbloqueo biometrico';
+
+  @override
+  String get securitySetupBiometricDialogTitle => 'Activar desbloqueo biometrico';
+
+  @override
+  String get securitySetupBiometricDialogBody => 'Ingresa tu master password una sola vez para que Vaulta pueda cifrar la clave que protege tu huella.';
+
+  @override
+  String get securitySetupBiometricDialogAction => 'Activar';
+
+  @override
+  String get securitySetupBiometricDialogCancel => 'Cancelar';
+
+  @override
+  String get securitySetupBiometricSuccess => 'Listo. La proxima vez podras desbloquear Vaulta con tu huella.';
+
+  @override
+  String get securitySetupBiometricError => 'No pudimos activar la huella. Verifica tu master password e intenta de nuevo.';
 }

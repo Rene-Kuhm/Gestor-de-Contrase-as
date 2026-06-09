@@ -253,5 +253,12 @@
   "biometricEnrollCta": "Set up biometrics on this device",
   "biometricEnrollSubtitle": "Your device has no biometric enrolled (fingerprint or face unlock). Open the system settings to enable it.",
   "biometricEnrollAction": "Open settings",
-  "biometricEnrollUnavailable": "Biometrics are not available on this device. Use the master password to unlock."
+  "biometricEnrollUnavailable": "Biometrics are not available on this device. Use the master password to unlock.",
+  "securitySetupBiometricCta": "Enable biometric unlock",
+  "securitySetupBiometricDialogTitle": "Enable biometric unlock",
+  "securitySetupBiometricDialogBody": "Enter your master password once so Vaulta can wrap the key that protects your fingerprint.",
+  "securitySetupBiometricDialogAction": "Enable",
+  "securitySetupBiometricDialogCancel": "Cancel",
+  "securitySetupBiometricSuccess": "Done. Next time you can unlock Vaulta with your fingerprint.",
+  "securitySetupBiometricError": "We could not enable the fingerprint. Verify your master password and try again."
 }

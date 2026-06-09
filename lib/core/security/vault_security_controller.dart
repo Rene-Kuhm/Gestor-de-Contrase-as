@@ -136,8 +136,9 @@ class VaultSecurityController extends ChangeNotifier {
   /// both reference this constant so the user only sees the line
   /// once, no matter which path surfaced it.
   static const biometricNeedsPasswordFirstMessage =
-      'Para activar la huella por primera vez, desbloquea una vez con la '
-      'master password. Las proximas veces podras usar la huella directamente.';
+      'Toca el boton "Activar desbloqueo biometrico" abajo para '
+      'preparar tu huella. La master password no se guarda ni se envia '
+      'a ningun servidor.';
 
   /// Latest human-readable status of the biometric unlock path, for
   /// the unlock screen to surface when the button is offered but the
@@ -672,6 +673,28 @@ class VaultSecurityController extends ChangeNotifier {
       debugPrint('[Vaulta] enroll skipped: no unlock service');
       return;
     }
+
+    final dekBytes = await _unwrapCurrentDek(record);
+    if (dekBytes == null) {
+      debugPrint('[Vaulta] enroll: no DEK in current session');
+      return;
+    }
+
+    await _enrollEnvelopeWithDek(
+      unlocker: unlocker,
+      dekBytes: dekBytes,
+    );
+  }
+
+  /// Shared enrollment implementation that takes the DEK as a
+  /// parameter. Used by [_enrollBiometricEnvelopeIfNeeded] (which
+  /// reads the DEK out of the active session) and by
+  /// [setupBiometricFromPassword] (which derives a one-shot DEK
+  /// without unlocking the vault).
+  Future<bool> _enrollEnvelopeWithDek({
+    required BiometricUnlockService unlocker,
+    required Uint8List dekBytes,
+  }) async {
     SecretKey? envelopeKey;
     try {
       envelopeKey = await unlocker.envelopeKeyProvider.acquireEnvelopeKey();
@@ -682,13 +705,7 @@ class VaultSecurityController extends ChangeNotifier {
     if (envelopeKey == null) {
       debugPrint('[Vaulta] enroll: provider returned null key '
           '(platform cannot back the envelope on this device)');
-      return;
-    }
-
-    final dekBytes = await _unwrapCurrentDek(record);
-    if (dekBytes == null) {
-      debugPrint('[Vaulta] enroll: no DEK in current session');
-      return;
+      return false;
     }
     try {
       await _biometricEnvelopeService.enroll(
@@ -696,11 +713,87 @@ class VaultSecurityController extends ChangeNotifier {
         envelopeKey: envelopeKey,
       );
       debugPrint('[Vaulta] enroll: envelope persisted');
+      return true;
     } catch (error, stack) {
       debugPrint('[Vaulta] enroll: enroll() failed $error\n$stack');
-      // Enrollment failures should not block a successful password
-      // unlock; the user can re-enroll from settings.
+      return false;
     }
+  }
+
+  /// One-shot setup flow used by the unlock screen when the user
+  /// wants to enable biometric unlock for the first time but the
+  /// vault is still locked. We verify the master password (without
+  /// unlocking), derive a throwaway DEK, enroll the wrapped-DEK
+  /// envelope, and flip the biometric preference on. The vault
+  /// stays locked — the user is still on the unlock screen and can
+  /// choose to enter with their password or wait for the next
+  /// unlock where the fingerprint will already work.
+  ///
+  /// Returns `true` on success and writes a friendly `_message`.
+  /// Returns `false` on any failure (no record, no biometric, wrong
+  /// password, missing v2 metadata, enrollment failure) and writes
+  /// a specific `_message` for the UI.
+  Future<bool> setupBiometricFromPassword(String password) async {
+    return _runBusy(() async {
+      final record = await _readRecord();
+      if (record == null) {
+        _message = 'Todavia no configuraste una master password.';
+        return false;
+      }
+
+      if (!canOfferBiometricToggle) {
+        _message = 'No hay biometria configurada en este dispositivo.';
+        return false;
+      }
+
+      final matches = await _masterPasswordService.verify(
+        record: record,
+        password: password,
+      );
+      if (!matches) {
+        _message = 'La master password no coincide.';
+        return false;
+      }
+
+      if (record.version < 2 || record.kdf == null || record.dekWrap == null) {
+        _message = 'Tu master password es de una version anterior. '
+            'Desbloquea una vez para migrar y vuelve a intentar.';
+        return false;
+      }
+
+      final unlocker = _biometricUnlockService;
+      if (unlocker == null) {
+        _message = 'El desbloqueo biometrico no esta conectado '
+            'en este dispositivo.';
+        return false;
+      }
+
+      final session = VaultSession.v2(
+        keyId: record.keyId,
+        secretKey: await _masterPasswordService.deriveVaultKey(
+          record: record,
+          password: password,
+        ),
+        kdf: record.kdf!,
+        dekWrap: record.dekWrap!,
+      );
+      final dekBytes = Uint8List.fromList(await session.secretKey.extractBytes());
+
+      final enrolled = await _enrollEnvelopeWithDek(
+        unlocker: unlocker,
+        dekBytes: dekBytes,
+      );
+      if (!enrolled) {
+        _message = 'No pudimos preparar la huella en este dispositivo. '
+            'Reintenta o usa la master password.';
+        return false;
+      }
+
+      await _persistBiometricPreference(true);
+      _message = 'Listo. La proxima vez podras desbloquear Vaulta con tu huella.';
+      // Drop the throwaway session — we are NOT unlocking the vault.
+      return true;
+    });
   }
 
   Future<Uint8List?> _unwrapCurrentDek(MasterPasswordRecord record) async {
