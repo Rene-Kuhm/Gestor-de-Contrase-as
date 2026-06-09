@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../app/localization/app_locale_controller.dart';
 import '../../../app/localization/l10n.dart';
+import '../../../core/security/secure_storage_service.dart';
 import '../../../core/security/vault_security_controller.dart';
 import '../../../core/sync/device_session_revocation_service.dart';
 import '../../../core/security/vault_repository.dart';
@@ -20,6 +21,7 @@ class AppShell extends StatefulWidget {
     required this.localeController,
     this.conflictResolver,
     this.revocationService,
+    this.secureStorage,
   });
 
   final VaultRepository repository;
@@ -27,6 +29,7 @@ class AppShell extends StatefulWidget {
   final AppLocaleController localeController;
   final SyncConflictResolver? conflictResolver;
   final DeviceSessionRevocationService? revocationService;
+  final SecureStorageService? secureStorage;
 
   @override
   State<AppShell> createState() => _AppShellState();
@@ -38,6 +41,7 @@ class _AppShellState extends State<AppShell> {
   late final UpdateService _updateService = UpdateService(
     owner: 'Rene-Kuhm',
     repo: 'Gestor-de-Contrase-as',
+    storage: widget.secureStorage,
   );
 
   @override
@@ -84,6 +88,14 @@ class _AppShellState extends State<AppShell> {
     try {
       final path = await _updateService.downloadApk(info);
       if (!mounted) return;
+      // Mark the build as "shown" *before* the user taps install so
+      // the next silent check does not nag them about a build they
+      // are literally in the middle of installing. If they bail out
+      // of the installer the SnackBar will simply come back next
+      // time.
+      if (info.releaseId != 0) {
+        await _updateService.markInstalled(info.releaseId);
+      }
       final ok = await _updateService.openInstallPrompt(path);
       if (!mounted) return;
       messenger?.showSnackBar(
@@ -121,6 +133,7 @@ class _AppShellState extends State<AppShell> {
         localeController: widget.localeController,
         conflictResolver: widget.conflictResolver,
         revocationService: widget.revocationService,
+        secureStorage: widget.secureStorage,
       ),
     ];
 

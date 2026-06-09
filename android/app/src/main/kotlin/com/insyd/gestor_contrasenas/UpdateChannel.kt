@@ -136,6 +136,7 @@ class UpdateChannel(
         val root = JSONObject(json)
         val tagName = root.optString("tag_name", "")
         val publishedAt = root.optString("published_at", "")
+        val releaseId = root.optLong("id", 0L)
         val body = root.optString("body", "")
 
         // GitHub returns assets as a JSONArray. The APK is the only
@@ -158,19 +159,25 @@ class UpdateChannel(
                 "available" to false,
                 "reason" to "no_apk_asset",
                 "tagName" to tagName,
+                "publishedAt" to publishedAt,
+                "releaseId" to releaseId,
                 "currentVersion" to currentVersion,
             )
         }
 
-        // The Dart side keeps the last-seen tag in storage. We return
-        // every field the UI needs to render an "Update available"
-        // banner without making a second call.
+        // The Dart side persists the last-seen release id in
+        // SharedPreferences. We always return the release metadata;
+        // the Dart wrapper compares `releaseId` against the stored
+        // one and flips `available` to false when they match. Doing
+        // the comparison in Dart keeps the native side dumb and
+        // makes the gate easy to unit-test.
         return mapOf(
             "available" to true,
             "tagName" to tagName,
             "apkUrl" to apkUrl,
             "changelog" to body,
             "publishedAt" to publishedAt,
+            "releaseId" to releaseId,
             "currentVersion" to currentVersion,
         )
     }

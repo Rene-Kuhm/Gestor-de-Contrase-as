@@ -92,6 +92,13 @@ class _UpdateSectionState extends State<UpdateSection> {
     try {
       final path = await widget.service.downloadApk(info);
       if (!mounted) return;
+      // Mark this build as "shown" before we hand control to the
+      // system installer. If the user bails out of the install
+      // dialog the silent check will re-fire next time and the
+      // SnackBar comes back; if they confirm, this widget is gone.
+      if (info.releaseId != 0) {
+        await widget.service.markInstalled(info.releaseId);
+      }
       setState(() => _state = _UpdateState.installing);
       final ok = await widget.service.openInstallPrompt(path);
       if (!mounted) return;
@@ -130,12 +137,19 @@ class _UpdateSectionState extends State<UpdateSection> {
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
-          Text(
-            'Version instalada: $_currentVersion',
-            style: theme.textTheme.bodyLarge?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
+          _VersionRow(
+            label: 'Instalada',
+            value: _currentVersion,
+            highlighted: _state == _UpdateState.upToDate,
           ),
+          if (_info != null && (_info!.tagName.isNotEmpty)) ...[
+            const SizedBox(height: AppSpacing.xs),
+            _VersionRow(
+              label: 'Remota',
+              value: '${_info!.tagName} (release #${_info!.releaseId})',
+              highlighted: _state == _UpdateState.updateAvailable,
+            ),
+          ],
           const SizedBox(height: AppSpacing.sm),
           Text(
             'Las nuevas versiones se publican automaticamente cuando '
@@ -231,6 +245,52 @@ class _BusyButton extends StatelessWidget {
         child: CircularProgressIndicator(strokeWidth: 2),
       ),
       label: Text(label),
+    );
+  }
+}
+
+/// One row in the version table. The "highlighted" flag colours the
+/// value cell (green for the installed version when the device is
+/// up-to-date, primary for the remote version when an update is
+/// waiting). The label is always muted so the value carries the
+/// signal.
+class _VersionRow extends StatelessWidget {
+  const _VersionRow({
+    required this.label,
+    required this.value,
+    this.highlighted = false,
+  });
+
+  final String label;
+  final String value;
+  final bool highlighted;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        SizedBox(
+          width: 88,
+          child: Text(
+            label,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: theme.textTheme.bodyLarge?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: highlighted
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.onSurface,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

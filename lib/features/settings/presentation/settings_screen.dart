@@ -10,6 +10,7 @@ import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../core/security/local_encrypted_vault_repository.dart';
 import '../../../core/security/native_biometric_auth_service.dart';
+import '../../../core/security/secure_storage_service.dart';
 import '../../../core/security/vault_security_controller.dart';
 import '../../../core/sync/device_registration_repository.dart';
 import '../../../core/sync/sync_conflict.dart';
@@ -25,6 +26,7 @@ class SettingsScreen extends StatefulWidget {
     required this.localeController,
     this.conflictResolver,
     this.revocationService,
+    this.secureStorage,
   });
 
   final VaultSecurityController securityController;
@@ -32,6 +34,7 @@ class SettingsScreen extends StatefulWidget {
 
   final SyncConflictResolver? conflictResolver;
   final DeviceSessionRevocationService? revocationService;
+  final SecureStorageService? secureStorage;
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -753,6 +756,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             service: UpdateService(
               owner: 'Rene-Kuhm',
               repo: 'Gestor-de-Contrase-as',
+              storage: widget.secureStorage,
             ),
           ),
           const SizedBox(height: AppSpacing.md),

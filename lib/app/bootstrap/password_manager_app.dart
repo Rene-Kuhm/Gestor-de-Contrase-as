@@ -12,6 +12,7 @@ import '../../core/security/biometric_unlock_service.dart';
 import '../../core/security/flutter_secure_storage_service.dart';
 import '../../core/security/local_encrypted_vault_repository.dart';
 import '../../core/security/master_password_service.dart';
+import '../../core/security/secure_storage_service.dart';
 import '../../core/security/native_biometric_auth_service.dart';
 import '../../core/security/vault_repository.dart';
 import '../../core/security/vault_security_controller.dart';
@@ -76,6 +77,7 @@ Future<void> runPasswordManagerApp() async {
       repository: repository,
       securityController: securityController,
       localeController: localeController,
+      secureStorage: storage,
       deviceSyncLifecycle: deviceSyncLifecycle,
     ),
   );
@@ -144,12 +146,14 @@ class PasswordManagerApp extends StatelessWidget {
     required this.repository,
     required this.securityController,
     required this.localeController,
+    required this.secureStorage,
     this.deviceSyncLifecycle,
   });
 
   final VaultRepository repository;
   final VaultSecurityController securityController;
   final AppLocaleController localeController;
+  final SecureStorageService secureStorage;
   final DeviceSyncLifecycle? deviceSyncLifecycle;
 
   @override
@@ -171,17 +175,18 @@ class PasswordManagerApp extends StatelessWidget {
             GlobalWidgetsLocalizations.delegate,
           ],
           supportedLocales: AppLocalizations.supportedLocales,
-          home: SecurityGate(
-            controller: securityController,
-            deviceSyncLifecycle: deviceSyncLifecycle,
-            child: AppShell(
-              repository: repository,
-              securityController: securityController,
-              localeController: localeController,
-              conflictResolver: deviceSyncLifecycle?.conflictResolver,
-              revocationService: deviceSyncLifecycle?.revocationService,
-            ),
-          ),
+      home: SecurityGate(
+        controller: securityController,
+        deviceSyncLifecycle: deviceSyncLifecycle,
+        child: AppShell(
+          repository: repository,
+          securityController: securityController,
+          localeController: localeController,
+          conflictResolver: deviceSyncLifecycle?.conflictResolver,
+          revocationService: deviceSyncLifecycle?.revocationService,
+          secureStorage: secureStorage,
+        ),
+      ),
         );
       },
     );

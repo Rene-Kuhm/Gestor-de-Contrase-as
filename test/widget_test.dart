@@ -39,6 +39,7 @@ void main() {
         ),
         securityController: controller,
         localeController: localeController,
+        secureStorage: _InMemorySecureStorageService(),
       ),
     );
     await tester.pumpAndSettle();
