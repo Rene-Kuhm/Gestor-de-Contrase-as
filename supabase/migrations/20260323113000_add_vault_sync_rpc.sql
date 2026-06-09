@@ -7,7 +7,7 @@ create or replace function public.rpc_vault_upsert_blob(
   p_expected_version bigint,
   p_ciphertext text,
   p_nonce text,
-  p_aad text,
+  p_gcm_tag text,
   p_key_version integer,
   p_request_hash text default null
 )
@@ -30,6 +30,9 @@ declare
   v_user_id uuid;
   v_existing_op public.vault_ops%rowtype;
   v_blob public.vault_blobs%rowtype;
+  v_device public.vault_devices%rowtype;
+  v_revoke_all_after timestamptz;
+  v_auth_issued_at timestamptz;
   v_applied_version bigint;
   v_current_deleted_at timestamptz;
 begin
@@ -65,14 +68,37 @@ begin
     return;
   end if;
 
-  if not exists (
-    select 1
-    from public.vault_devices vd
-    where vd.user_id = v_user_id
-      and vd.device_id = p_device_id
-  ) then
+  select *
+  into v_device
+  from public.vault_devices vd
+  where vd.user_id = v_user_id
+    and vd.device_id = p_device_id
+  limit 1;
+
+  if not found then
     return query
     select 'invalid_device'::text, false, false, true, 'device_id is not registered for current user'::text, p_record_id, null::bigint, null::bigint, null::timestamptz;
+    return;
+  end if;
+
+  select revoke_all_after
+  into v_revoke_all_after
+  from public.vault_session_controls
+  where user_id = v_user_id;
+
+  v_auth_issued_at := to_timestamp(
+    nullif(auth.jwt() ->> 'iat', '')::double precision
+  );
+
+  if v_device.revoked_at is not null then
+    return query
+    select 'revoked_device'::text, false, false, true, 'device was revoked explicitly'::text, p_record_id, null::bigint, null::bigint, v_device.revoked_at;
+    return;
+  end if;
+
+  if v_revoke_all_after is not null and v_auth_issued_at < v_revoke_all_after then
+    return query
+    select 'revoked_all'::text, false, false, true, 'auth session was issued before revoke_all_after marker'::text, p_record_id, null::bigint, null::bigint, null::timestamptz;
     return;
   end if;
 
@@ -159,6 +185,7 @@ begin
       version,
       ciphertext,
       nonce,
+      gcm_tag,
       aad,
       key_version,
       deleted_at
@@ -169,7 +196,8 @@ begin
       1,
       p_ciphertext,
       p_nonce,
-      p_aad,
+      p_gcm_tag,
+      null,
       p_key_version,
       null
     )
@@ -202,7 +230,8 @@ begin
   set version = v_applied_version,
       ciphertext = p_ciphertext,
       nonce = p_nonce,
-      aad = p_aad,
+      gcm_tag = p_gcm_tag,
+      aad = null,
       key_version = p_key_version,
       deleted_at = null
   where vb.user_id = v_user_id
@@ -244,6 +273,9 @@ declare
   v_user_id uuid;
   v_existing_op public.vault_ops%rowtype;
   v_blob public.vault_blobs%rowtype;
+  v_device public.vault_devices%rowtype;
+  v_revoke_all_after timestamptz;
+  v_auth_issued_at timestamptz;
   v_applied_version bigint;
   v_deleted_at timestamptz;
 begin
@@ -267,14 +299,37 @@ begin
     return;
   end if;
 
-  if not exists (
-    select 1
-    from public.vault_devices vd
-    where vd.user_id = v_user_id
-      and vd.device_id = p_device_id
-  ) then
+  select *
+  into v_device
+  from public.vault_devices vd
+  where vd.user_id = v_user_id
+    and vd.device_id = p_device_id
+  limit 1;
+
+  if not found then
     return query
     select 'invalid_device'::text, false, false, true, 'device_id is not registered for current user'::text, p_record_id, null::bigint, null::bigint, null::timestamptz;
+    return;
+  end if;
+
+  select revoke_all_after
+  into v_revoke_all_after
+  from public.vault_session_controls
+  where user_id = v_user_id;
+
+  v_auth_issued_at := to_timestamp(
+    nullif(auth.jwt() ->> 'iat', '')::double precision
+  );
+
+  if v_device.revoked_at is not null then
+    return query
+    select 'revoked_device'::text, false, false, true, 'device was revoked explicitly'::text, p_record_id, null::bigint, null::bigint, v_device.revoked_at;
+    return;
+  end if;
+
+  if v_revoke_all_after is not null and v_auth_issued_at < v_revoke_all_after then
+    return query
+    select 'revoked_all'::text, false, false, true, 'auth session was issued before revoke_all_after marker'::text, p_record_id, null::bigint, null::bigint, null::timestamptz;
     return;
   end if;
 

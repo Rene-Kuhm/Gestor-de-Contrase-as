@@ -65,6 +65,7 @@ declare
   v_device public.vault_devices%rowtype;
   v_revoke_all_after timestamptz;
   v_reference_seen_at timestamptz;
+  v_auth_issued_at timestamptz;
 begin
   v_user_id := auth.uid();
   if v_user_id is null then
@@ -99,22 +100,38 @@ begin
     and device_id = v_device_id
   limit 1;
 
+  select revoke_all_after
+  into v_revoke_all_after
+  from public.vault_session_controls
+  where user_id = v_user_id;
+
+  v_auth_issued_at := to_timestamp(
+    nullif(auth.jwt() ->> 'iat', '')::double precision
+  );
+
+  if v_revoke_all_after is not null and v_auth_issued_at < v_revoke_all_after then
+    return query
+    select
+      'revoked_all'::text,
+      v_device_id,
+      false,
+      'auth session was issued before revoke_all_after marker'::text,
+      null::timestamptz,
+      v_revoke_all_after;
+    return;
+  end if;
+
   if not found then
     return query
     select
       'unknown_device'::text,
       v_device_id,
-      true,
+      false,
       'device has not been registered yet'::text,
       null::timestamptz,
-      null::timestamptz;
+      v_revoke_all_after;
     return;
   end if;
-
-  select revoke_all_after
-  into v_revoke_all_after
-  from public.vault_session_controls
-  where user_id = v_user_id;
 
   v_reference_seen_at := coalesce(v_device.last_seen_at, v_device.created_at);
 
@@ -179,6 +196,7 @@ declare
   v_existing public.vault_devices%rowtype;
   v_has_existing boolean;
   v_revoke_all_after timestamptz;
+  v_auth_issued_at timestamptz;
 begin
   v_user_id := auth.uid();
   if v_user_id is null then
@@ -218,6 +236,22 @@ begin
   into v_revoke_all_after
   from public.vault_session_controls
   where user_id = v_user_id;
+
+  v_auth_issued_at := to_timestamp(
+    nullif(auth.jwt() ->> 'iat', '')::double precision
+  );
+
+  if v_revoke_all_after is not null and v_auth_issued_at < v_revoke_all_after then
+    return query
+    select
+      'revoked_all'::text,
+      v_device_id,
+      false,
+      'auth session was issued before revoke_all_after marker'::text,
+      null::timestamptz,
+      v_revoke_all_after;
+    return;
+  end if;
 
   if v_has_existing and v_existing.revoked_at is not null then
     return query
@@ -310,6 +344,7 @@ declare
   v_existing public.vault_devices%rowtype;
   v_has_existing boolean;
   v_revoke_all_after timestamptz;
+  v_auth_issued_at timestamptz;
 begin
   v_user_id := auth.uid();
   if v_user_id is null then
@@ -349,6 +384,22 @@ begin
   into v_revoke_all_after
   from public.vault_session_controls
   where user_id = v_user_id;
+
+  v_auth_issued_at := to_timestamp(
+    nullif(auth.jwt() ->> 'iat', '')::double precision
+  );
+
+  if v_revoke_all_after is not null and v_auth_issued_at < v_revoke_all_after then
+    return query
+    select
+      'revoked_all'::text,
+      v_device_id,
+      false,
+      'auth session was issued before revoke_all_after marker'::text,
+      null::timestamptz,
+      v_revoke_all_after;
+    return;
+  end if;
 
   if v_has_existing and v_existing.revoked_at is not null then
     return query

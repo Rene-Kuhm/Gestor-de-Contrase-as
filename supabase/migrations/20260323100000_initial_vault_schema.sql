@@ -20,6 +20,7 @@ create table if not exists public.vault_devices (
   device_name text,
   device_public_key text,
   last_seen_at timestamptz,
+  revoked_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint vault_devices_user_device_unique unique (user_id, device_id),
@@ -33,7 +34,8 @@ create table if not exists public.vault_blobs (
   version bigint not null default 1,
   ciphertext text not null,
   nonce text not null,
-  aad text,
+  gcm_tag text,
+  aad text, -- Legacy transport name kept only for existing beta data.
   key_version integer not null default 1,
   deleted_at timestamptz,
   created_at timestamptz not null default now(),
@@ -65,6 +67,13 @@ create table if not exists public.vault_ops (
   constraint vault_ops_request_hash_not_empty check (request_hash is null or char_length(trim(request_hash)) > 0)
 );
 
+create table if not exists public.vault_session_controls (
+  user_id uuid primary key references auth.users (id) on delete cascade,
+  revoke_all_after timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create index if not exists idx_vault_devices_user_last_seen
   on public.vault_devices (user_id, last_seen_at desc);
 
@@ -93,6 +102,12 @@ before update on public.vault_blobs
 for each row
 execute function public.set_updated_at();
 
+drop trigger if exists trg_vault_session_controls_set_updated_at on public.vault_session_controls;
+create trigger trg_vault_session_controls_set_updated_at
+before update on public.vault_session_controls
+for each row
+execute function public.set_updated_at();
+
 alter table public.vault_devices enable row level security;
 alter table public.vault_devices force row level security;
 
@@ -101,6 +116,9 @@ alter table public.vault_blobs force row level security;
 
 alter table public.vault_ops enable row level security;
 alter table public.vault_ops force row level security;
+
+alter table public.vault_session_controls enable row level security;
+alter table public.vault_session_controls force row level security;
 
 drop policy if exists vault_devices_select_owner on public.vault_devices;
 create policy vault_devices_select_owner
@@ -174,5 +192,30 @@ with check (auth.uid() = user_id);
 drop policy if exists vault_ops_delete_owner on public.vault_ops;
 create policy vault_ops_delete_owner
 on public.vault_ops
+for delete
+using (auth.uid() = user_id);
+
+drop policy if exists vault_session_controls_select_owner on public.vault_session_controls;
+create policy vault_session_controls_select_owner
+on public.vault_session_controls
+for select
+using (auth.uid() = user_id);
+
+drop policy if exists vault_session_controls_insert_owner on public.vault_session_controls;
+create policy vault_session_controls_insert_owner
+on public.vault_session_controls
+for insert
+with check (auth.uid() = user_id);
+
+drop policy if exists vault_session_controls_update_owner on public.vault_session_controls;
+create policy vault_session_controls_update_owner
+on public.vault_session_controls
+for update
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
+
+drop policy if exists vault_session_controls_delete_owner on public.vault_session_controls;
+create policy vault_session_controls_delete_owner
+on public.vault_session_controls
 for delete
 using (auth.uid() = user_id);
