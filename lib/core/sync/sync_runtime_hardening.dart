@@ -2,6 +2,18 @@ import 'package:flutter/foundation.dart';
 
 typedef SyncDiagnosticsHook = void Function(SyncDiagnosticEvent event);
 
+const bool syncDiagnosticsLoggingEnabled = bool.fromEnvironment(
+  'VAULTA_SYNC_DIAGNOSTICS_LOGS',
+);
+
+void syncDebugPrint(String message) {
+  if (!syncDiagnosticsLoggingEnabled) {
+    return;
+  }
+
+  debugPrint(message);
+}
+
 class SyncDiagnosticEvent {
   const SyncDiagnosticEvent({
     required this.scope,
@@ -112,7 +124,7 @@ void emitSyncDiagnostic({
     'message': event.message,
     'metadata': event.metadata,
   };
-  debugPrint('[sync][diag] $payload');
+  syncDebugPrint('[sync][diag] $payload');
   hook?.call(event);
 }
 

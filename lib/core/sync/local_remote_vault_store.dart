@@ -237,8 +237,8 @@ class LocalRemoteVaultStore {
   }) async {
     final raw = await _storage.read(_recordIdMapKey(userId: userId));
     if (raw != null && raw.isNotEmpty) {
-      final map =
-          (jsonDecode(raw) as Map<String, dynamic>).cast<String, String>();
+      final map = (jsonDecode(raw) as Map<String, dynamic>)
+          .cast<String, String>();
       final localId = map[remoteRecordId];
       if (localId != null) {
         return localId;
@@ -308,7 +308,7 @@ class PushQueueItem {
     this.expectedVersion,
     this.ciphertext,
     this.nonce,
-    this.aad,
+    this.gcmTag,
     this.keyVersion,
     this.idempotencyKey,
     this.attemptCount = 0,
@@ -326,7 +326,7 @@ class PushQueueItem {
   final int? expectedVersion;
   final String? ciphertext;
   final String? nonce;
-  final String? aad;
+  final String? gcmTag;
   final int? keyVersion;
   final String? idempotencyKey;
   final int attemptCount;
@@ -357,7 +357,7 @@ class PushQueueItem {
       expectedVersion: expectedVersion ?? this.expectedVersion,
       ciphertext: ciphertext,
       nonce: nonce,
-      aad: aad,
+      gcmTag: gcmTag,
       keyVersion: keyVersion,
       idempotencyKey: idempotencyKey ?? this.idempotencyKey,
       attemptCount: attemptCount ?? this.attemptCount,
@@ -385,7 +385,7 @@ class PushQueueItem {
       status: PushQueueStatus.pending,
       ciphertext: mutation.ciphertext,
       nonce: mutation.nonce,
-      aad: mutation.aad,
+      gcmTag: mutation.gcmTag,
       keyVersion: mutation.keyVersion,
       createdAt: mutation.occurredAt,
       updatedAt: mutation.occurredAt,
@@ -402,7 +402,7 @@ class PushQueueItem {
       expectedVersion: json['expectedVersion'] as int?,
       ciphertext: json['ciphertext'] as String?,
       nonce: json['nonce'] as String?,
-      aad: json['aad'] as String?,
+      gcmTag: (json['gcmTag'] ?? json['aad']) as String?,
       keyVersion: json['keyVersion'] as int?,
       idempotencyKey: json['idempotencyKey'] as String?,
       attemptCount: json['attemptCount'] as int? ?? 0,
@@ -427,7 +427,7 @@ class PushQueueItem {
       'expectedVersion': expectedVersion,
       'ciphertext': ciphertext,
       'nonce': nonce,
-      'aad': aad,
+      'gcmTag': gcmTag,
       'keyVersion': keyVersion,
       'idempotencyKey': idempotencyKey,
       'attemptCount': attemptCount,

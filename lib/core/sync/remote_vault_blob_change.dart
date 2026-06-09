@@ -7,7 +7,7 @@ class RemoteVaultBlobChange {
     required this.updatedAt,
     this.ciphertext,
     this.nonce,
-    this.aad,
+    this.gcmTag,
     this.deletedAt,
   });
 
@@ -17,7 +17,7 @@ class RemoteVaultBlobChange {
   final int keyVersion;
   final String? ciphertext;
   final String? nonce;
-  final String? aad;
+  final String? gcmTag;
   final DateTime? deletedAt;
   final DateTime updatedAt;
 
@@ -47,7 +47,7 @@ class RemoteVaultBlobChange {
       keyVersion: _readRequiredInt(blobRow, 'key_version'),
       ciphertext: deletedAt == null ? blobRow['ciphertext'] as String? : null,
       nonce: deletedAt == null ? blobRow['nonce'] as String? : null,
-      aad: deletedAt == null ? blobRow['aad'] as String? : null,
+      gcmTag: deletedAt == null ? _readNullableGcmTag(blobRow) : null,
       deletedAt: deletedAt,
       updatedAt: updatedAt,
     );
@@ -61,7 +61,7 @@ class RemoteVaultBlobChange {
       'keyVersion': keyVersion,
       'ciphertext': ciphertext,
       'nonce': nonce,
-      'aad': aad,
+      'gcmTag': gcmTag,
       'deletedAt': deletedAt?.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -75,7 +75,7 @@ class RemoteVaultBlobChange {
       keyVersion: json['keyVersion'] as int,
       ciphertext: json['ciphertext'] as String?,
       nonce: json['nonce'] as String?,
-      aad: json['aad'] as String?,
+      gcmTag: _readNullableGcmTag(json),
       deletedAt: json['deletedAt'] == null
           ? null
           : DateTime.parse(json['deletedAt'] as String).toUtc(),
@@ -101,6 +101,11 @@ class RemoteVaultBlobChange {
     }
     throw FormatException('Missing string field: $key');
   }
+
+  static String? _readNullableGcmTag(Map<String, dynamic> row) {
+    final value = row['gcmTag'] ?? row['gcm_tag'] ?? row['aad'];
+    return value is String && value.isNotEmpty ? value : null;
+  }
 }
 
 class RemoteVaultBlobSnapshot {
@@ -111,7 +116,7 @@ class RemoteVaultBlobSnapshot {
     required this.updatedAt,
     this.ciphertext,
     this.nonce,
-    this.aad,
+    this.gcmTag,
     this.deletedAt,
   });
 
@@ -120,7 +125,7 @@ class RemoteVaultBlobSnapshot {
   final int keyVersion;
   final String? ciphertext;
   final String? nonce;
-  final String? aad;
+  final String? gcmTag;
   final DateTime? deletedAt;
   final DateTime updatedAt;
 
@@ -133,7 +138,7 @@ class RemoteVaultBlobSnapshot {
       keyVersion: change.keyVersion,
       ciphertext: change.ciphertext,
       nonce: change.nonce,
-      aad: change.aad,
+      gcmTag: change.gcmTag,
       deletedAt: change.deletedAt,
       updatedAt: change.updatedAt,
     );
@@ -146,7 +151,7 @@ class RemoteVaultBlobSnapshot {
       'keyVersion': keyVersion,
       'ciphertext': ciphertext,
       'nonce': nonce,
-      'aad': aad,
+      'gcmTag': gcmTag,
       'deletedAt': deletedAt?.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -159,7 +164,7 @@ class RemoteVaultBlobSnapshot {
       keyVersion: json['keyVersion'] as int,
       ciphertext: json['ciphertext'] as String?,
       nonce: json['nonce'] as String?,
-      aad: json['aad'] as String?,
+      gcmTag: RemoteVaultBlobChange._readNullableGcmTag(json),
       deletedAt: json['deletedAt'] == null
           ? null
           : DateTime.parse(json['deletedAt'] as String).toUtc(),

@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart';
-
 import 'local_remote_vault_store.dart';
 import 'remote_vault_blob_change.dart';
 import 'remote_vault_sync_repository.dart';
@@ -133,7 +131,7 @@ class IncrementalPullSyncService {
             keyVersion: base.keyVersion,
             ciphertext: base.ciphertext,
             nonce: base.nonce,
-            aad: base.aad,
+            gcmTag: base.gcmTag,
             deletedAt: base.deletedAt,
             updatedAt: base.updatedAt,
           ),
@@ -181,7 +179,7 @@ class IncrementalPullSyncService {
           error: error,
           metadata: {'afterOpId': afterOpId},
         );
-        debugPrint(
+        syncDebugPrint(
           '[sync][pull] fetch after=$afterOpId attempt=$attempt/$maxRetryAttempts failed: $error',
         );
         if (attempt >= maxRetryAttempts || !retriable) {
@@ -193,7 +191,7 @@ class IncrementalPullSyncService {
       }
     }
 
-    debugPrint(
+    syncDebugPrint(
       '[sync][pull] aborting pull after $maxRetryAttempts attempts (after=$afterOpId): ${lastError ?? 'unknown error'}',
     );
     return null;

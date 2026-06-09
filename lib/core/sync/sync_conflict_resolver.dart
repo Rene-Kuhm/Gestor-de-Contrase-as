@@ -1,8 +1,7 @@
-import 'package:flutter/foundation.dart';
-
 import 'local_remote_vault_store.dart';
 import 'remote_vault_sync_repository.dart';
 import 'sync_conflict.dart';
+import 'sync_runtime_hardening.dart';
 
 class SyncConflictResolveResult {
   const SyncConflictResolveResult({required this.ok, required this.message});
@@ -44,7 +43,7 @@ class SyncConflictResolver {
   }) async {
     final userId = await _readUserId();
     if (userId == null) {
-      debugPrint('[sync][conflict] resolve failed: unauthenticated user.');
+      syncDebugPrint('[sync][conflict] resolve failed: unauthenticated user.');
       return const SyncConflictResolveResult(
         ok: false,
         message:
@@ -55,7 +54,7 @@ class SyncConflictResolver {
     final conflicts = await _localStore.readPendingConflicts(userId: userId);
     final conflictIndex = conflicts.indexWhere((item) => item.id == conflictId);
     if (conflictIndex == -1) {
-      debugPrint(
+      syncDebugPrint(
         '[sync][conflict] conflict=$conflictId missing before resolve.',
       );
       return const SyncConflictResolveResult(
@@ -77,7 +76,7 @@ class SyncConflictResolver {
         userId: userId,
         conflictId: conflict.id,
       );
-      debugPrint(
+      syncDebugPrint(
         '[sync][conflict] conflict=${conflict.id} resolved as keep_remote.',
       );
       return const SyncConflictResolveResult(
@@ -88,7 +87,7 @@ class SyncConflictResolver {
     }
 
     if (queueIndex == -1) {
-      debugPrint(
+      syncDebugPrint(
         '[sync][conflict] conflict=${conflict.id} missing queue mutation.',
       );
       return const SyncConflictResolveResult(
@@ -103,7 +102,7 @@ class SyncConflictResolver {
         conflict.currentVersion ?? conflict.remoteSnapshot?.version;
     if (queueItem.kind == PushQueueOperationKind.delete &&
         remoteVersion == null) {
-      debugPrint(
+      syncDebugPrint(
         '[sync][conflict] conflict=${conflict.id} delete retry missing remote version.',
       );
       return const SyncConflictResolveResult(
@@ -123,7 +122,7 @@ class SyncConflictResolver {
       expectedVersion: remoteVersion,
       ciphertext: queueItem.ciphertext,
       nonce: queueItem.nonce,
-      aad: queueItem.aad,
+      gcmTag: queueItem.gcmTag,
       keyVersion: queueItem.keyVersion,
       idempotencyKey: null,
       attemptCount: queueItem.attemptCount,
@@ -139,7 +138,7 @@ class SyncConflictResolver {
       conflictId: conflict.id,
     );
     await _triggerPushSync?.call();
-    debugPrint(
+    syncDebugPrint(
       '[sync][conflict] conflict=${conflict.id} resolved as keep_local.',
     );
 

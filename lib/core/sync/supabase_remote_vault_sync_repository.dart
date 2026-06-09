@@ -48,7 +48,7 @@ class SupabaseRemoteVaultSyncRepository implements RemoteVaultSyncRepository {
     final blobsResponse = await _client
         .from('vault_blobs')
         .select(
-          'record_id,version,ciphertext,nonce,aad,key_version,deleted_at,updated_at',
+          'record_id,version,ciphertext,nonce,gcm_tag,aad,key_version,deleted_at,updated_at',
         )
         .inFilter('record_id', recordIds);
     final blobRows = (blobsResponse as List<dynamic>)
@@ -93,7 +93,7 @@ class SupabaseRemoteVaultSyncRepository implements RemoteVaultSyncRepository {
     required int? expectedVersion,
     required String ciphertext,
     required String nonce,
-    required String? aad,
+    required String? gcmTag,
     required int keyVersion,
   }) async {
     final response = await _client.rpc(
@@ -105,7 +105,7 @@ class SupabaseRemoteVaultSyncRepository implements RemoteVaultSyncRepository {
         'p_expected_version': expectedVersion,
         'p_ciphertext': ciphertext,
         'p_nonce': nonce,
-        'p_aad': aad,
+        'p_gcm_tag': gcmTag,
         'p_key_version': keyVersion,
       },
     );

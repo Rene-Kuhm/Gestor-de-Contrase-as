@@ -15,7 +15,7 @@ abstract interface class RemoteVaultSyncRepository {
     required int? expectedVersion,
     required String ciphertext,
     required String nonce,
-    required String? aad,
+    required String? gcmTag,
     required int keyVersion,
   });
 

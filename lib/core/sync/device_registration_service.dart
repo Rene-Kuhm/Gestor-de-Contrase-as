@@ -281,7 +281,7 @@ class DeviceSyncLifecycle {
       hook: diagnosticsHook,
       metadata: {'reason': status.reason?.name ?? 'unknown'},
     );
-    debugPrint(
+    syncDebugPrint(
       '[sync][session][revoked] reason=${status.reason?.name ?? 'unknown'} message=$message',
     );
     if (onCurrentDeviceRevoked case final callback?) {
@@ -324,7 +324,7 @@ class DeviceSyncLifecycle {
           maxAttempts: maxRetryAttempts,
           error: error,
         );
-        debugPrint(
+        syncDebugPrint(
           '[sync][session][$operationName] attempt=$attempt/$maxRetryAttempts failed: $error',
         );
         if (attempt >= maxRetryAttempts || !retriable) {
@@ -336,7 +336,7 @@ class DeviceSyncLifecycle {
       }
     }
 
-    debugPrint(
+    syncDebugPrint(
       '[sync][session][$operationName] aborted after $maxRetryAttempts attempts: ${lastError ?? 'unknown error'}',
     );
     return null;

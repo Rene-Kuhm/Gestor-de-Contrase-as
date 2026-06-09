@@ -8,7 +8,7 @@ class SyncConflictSnapshot {
     this.keyVersion,
     this.ciphertext,
     this.nonce,
-    this.aad,
+    this.gcmTag,
     this.deletedAt,
     this.updatedAt,
   });
@@ -17,7 +17,7 @@ class SyncConflictSnapshot {
   final int? keyVersion;
   final String? ciphertext;
   final String? nonce;
-  final String? aad;
+  final String? gcmTag;
   final DateTime? deletedAt;
   final DateTime? updatedAt;
 
@@ -27,7 +27,7 @@ class SyncConflictSnapshot {
       keyVersion: json['keyVersion'] as int?,
       ciphertext: json['ciphertext'] as String?,
       nonce: json['nonce'] as String?,
-      aad: json['aad'] as String?,
+      gcmTag: (json['gcmTag'] ?? json['aad']) as String?,
       deletedAt: json['deletedAt'] == null
           ? null
           : DateTime.parse(json['deletedAt'] as String).toUtc(),
@@ -43,7 +43,7 @@ class SyncConflictSnapshot {
       'keyVersion': keyVersion,
       'ciphertext': ciphertext,
       'nonce': nonce,
-      'aad': aad,
+      'gcmTag': gcmTag,
       'deletedAt': deletedAt?.toUtc().toIso8601String(),
       'updatedAt': updatedAt?.toUtc().toIso8601String(),
     };

@@ -5,7 +5,7 @@ class LocalVaultMutation {
     required this.occurredAt,
     this.ciphertext,
     this.nonce,
-    this.aad,
+    this.gcmTag,
     this.keyVersion,
   });
 
@@ -13,7 +13,7 @@ class LocalVaultMutation {
     required String localRecordId,
     required String ciphertext,
     required String nonce,
-    String? aad,
+    String? gcmTag,
     required int keyVersion,
     required DateTime occurredAt,
   }) {
@@ -22,7 +22,7 @@ class LocalVaultMutation {
       localRecordId: localRecordId,
       ciphertext: ciphertext,
       nonce: nonce,
-      aad: aad,
+      gcmTag: gcmTag,
       keyVersion: keyVersion,
       occurredAt: occurredAt,
     );
@@ -43,7 +43,7 @@ class LocalVaultMutation {
   final String localRecordId;
   final String? ciphertext;
   final String? nonce;
-  final String? aad;
+  final String? gcmTag;
   final int? keyVersion;
   final DateTime occurredAt;
 }
