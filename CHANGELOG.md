@@ -16,13 +16,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   `setUserAuthenticationRequired(true)` and, on API 30+,
   `setUserAuthenticationParameters(0, AUTH_BIOMETRIC_STRONG)` so the
   private key is released only after a fresh `BiometricPrompt` per
-  decrypt. The prompt authenticator set is
-  `BIOMETRIC_STRONG or DEVICE_CREDENTIAL` so users on devices with
-  only weak biometrics enrolled can still unlock with their device
-  PIN. On non-mobile targets the unlock is reported as unavailable
-  rather than silently failing. The platform key provider is
-  pluggable so a real Android Keystore / iOS Secure Enclave binding
-  can be dropped in without touching the controller. If the
+  decrypt. The prompt authenticator set is `BIOMETRIC_STRONG`
+  because the operation is bound to a `CryptoObject`; Android device
+  credential fallback remains a master-password recovery path rather
+  than a KeyStore decrypt path. On non-Android targets the biometric
+  vault unlock is reported as unavailable rather than silently
+  failing. The platform key provider is pluggable so an iOS Secure
+  Enclave binding can be added without touching the controller. If the
   platform reports biometrics are no longer enrolled, Vaulta
   automatically clears both the preference and the envelope.
 
@@ -31,9 +31,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   (`com.insyd.vaulta/biometric`). The previous implementation mixed
   `local_auth` for the gate and a custom MethodChannel for the
   prompt; on devices with weak biometrics the two would disagree
-  and the unlock button would silently disappear. iOS / desktop /
-  web keep the `local_auth` path; only Android uses the new
-  native service.
+  and the unlock button would silently disappear. Only Android uses
+  the new native vault-unlock service today; iOS / desktop / web keep
+  the master-password path until equivalent bindings are added.
 
 - **VaultSession invariant.** The session class now requires `kdf` and
   `dekWrap` to be either both present or both absent. A new
@@ -71,11 +71,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - **CHANGELOG discipline.** This file is now kept in sync with
   notable security-relevant changes from each iteration.
 - **OTA updates.** A new "Actualizaciones" section in Settings lets
-  the user check for and install a newer debug APK over the air
-  (no uninstall, no Play Store, no data loss). A new GitHub
-  Actions workflow (`.github/workflows/dev-apk-release.yml`)
-  rebuilds the debug APK on every push to `master` and overwrites
-  the `dev-latest` GitHub Release. The app also auto-checks
+  the user check for and install a newer signed release APK over the
+  air (no uninstall, no Play Store, no data loss when the signing key
+  is stable). A GitHub Actions workflow
+  (`.github/workflows/dev-apk-release.yml`) rebuilds the signed APK on
+  every push to `master` and overwrites the `dev-latest` GitHub
+  Release. The app also auto-checks
   silently after unlock and surfaces a SnackBar with an
   "Actualizar" action when a newer build is available.
 
@@ -87,14 +88,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   biometrics succeed, the controller actually unwraps the DEK and
   builds a `VaultSession` the same way a password unlock would.
 - **Biometric unlock button would silently vanish** on devices
-  whose only biometric is class-2 (face unlock). The previous
-  `canAuthenticate(BIOMETRIC_STRONG)` check returned
-  `BIOMETRIC_ERROR_NO_HARDWARE` on those devices, the catch-all
-  branch returned `BIOMETRIC_UNAVAILABLE`, and the prompt was never
-  opened. The new authenticator set is
-  `BIOMETRIC_STRONG or DEVICE_CREDENTIAL` and the system draws its
-  own fallback button (PIN / pattern / password) so the user always
-  has a path.
+  whose only biometric is class-2 (face unlock). The app now separates
+  capability probing from KeyStore decrypt eligibility: Android
+  vault-key decrypt requires `BIOMETRIC_STRONG`, while weaker biometric
+  or credential-only devices stay on the master-password path with a
+  clear message.
 - **No prompt for "no biometric enrolled"** is no longer
   indistinguishable from "no hardware". The native probe now
   reports the exact `BiometricManager` reason code (`NO_HARDWARE`,

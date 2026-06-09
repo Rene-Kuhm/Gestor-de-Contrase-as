@@ -22,10 +22,10 @@ import java.net.URL
  * the app's private files directory, and hands it off to the
  * system installer via FileProvider.
  *
- * The APK keeps the same debug signature across builds, so Android
- * accepts it as an in-place update — the user's master password,
- * envelope, and secure storage are preserved. No Play Store
- * involved.
+ * The APK must keep the same release signing key across builds, so
+ * Android accepts it as an in-place update — the user's master
+ * password, envelope, and secure storage are preserved. No Play
+ * Store involved.
  *
  * Methods exposed to Dart:
  *   * `checkForUpdate(owner, repo, currentVersion)` -> map describing

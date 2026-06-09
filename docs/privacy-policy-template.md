@@ -12,7 +12,7 @@ Vaulta may store information you enter into the vault, such as account names, us
 
 ## Local storage and encryption
 
-Vaulta encrypts vault entries locally. The app uses a master password to derive encryption material for the local vault. Biometrics, when enabled, are used as local presence verification while the vault is open; a locked vault still requires the master password in this release.
+Vaulta encrypts vault entries locally. The app uses a master password to derive encryption material for the local vault. On Android, biometrics can unlock the vault through an Android KeyStore-protected key envelope after the user enables the feature with the master password. The master password remains the recovery path and is required to activate or re-enroll biometrics. iOS, macOS, web, and desktop releases should be documented according to their actual platform support before publication.
 
 ## Optional Supabase sync
 

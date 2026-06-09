@@ -383,10 +383,10 @@ class _UnlockScreenState extends State<_UnlockScreen> {
     if (!mounted) return;
     final capChanged =
         nextCap.canUseStrongOrCredential !=
-                _biometricCapability.canUseStrongOrCredential ||
-            nextCap.canUseStrong != _biometricCapability.canUseStrong ||
-            nextCap.canUseWeak != _biometricCapability.canUseWeak ||
-            nextCap.needsEnrollment != _biometricCapability.needsEnrollment;
+            _biometricCapability.canUseStrongOrCredential ||
+        nextCap.canUseStrong != _biometricCapability.canUseStrong ||
+        nextCap.canUseWeak != _biometricCapability.canUseWeak ||
+        nextCap.needsEnrollment != _biometricCapability.needsEnrollment;
     if (nextOffer != _canOfferBiometricButton ||
         nextMessage != _biometricStatusMessage ||
         capChanged ||
@@ -443,9 +443,9 @@ class _UnlockScreenState extends State<_UnlockScreen> {
           content: Text(
             ok
                 ? widget.controller.message ??
-                    context.l10n.securitySetupBiometricSuccess
+                      context.l10n.securitySetupBiometricSuccess
                 : widget.controller.message ??
-                    context.l10n.securitySetupBiometricError,
+                      context.l10n.securitySetupBiometricError,
           ),
         ),
       );
@@ -781,21 +781,25 @@ class _StatusBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colors = theme.colorScheme;
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: AppColors.cloud,
+        color: colors.surfaceContainerHighest.withValues(alpha: 0.92),
         borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: colors.outlineVariant),
       ),
       child: Row(
         children: [
-          const Icon(Icons.info_outline_rounded, color: AppColors.ink),
+          Icon(Icons.info_outline_rounded, color: colors.onSurfaceVariant),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(
               message,
-              style: theme.textTheme.bodyMedium?.copyWith(color: AppColors.ink),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: colors.onSurface,
+              ),
             ),
           ),
         ],
@@ -845,12 +849,14 @@ class _BiometricEnrollInline extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colors = theme.colorScheme;
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: AppColors.cloud,
+        color: colors.surfaceContainerHighest.withValues(alpha: 0.92),
         borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: colors.outlineVariant),
       ),
       child: Row(
         children: [
@@ -859,7 +865,9 @@ class _BiometricEnrollInline extends StatelessWidget {
           Expanded(
             child: Text(
               title,
-              style: theme.textTheme.bodyMedium?.copyWith(color: AppColors.ink),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: colors.onSurface,
+              ),
             ),
           ),
           const SizedBox(width: AppSpacing.sm),

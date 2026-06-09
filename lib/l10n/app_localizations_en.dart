@@ -39,7 +39,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsLocalUnlockPostureTitle => 'Local unlock posture';
 
   @override
-  String get settingsLocalUnlockPostureDescription => 'Vaulta keeps sensitive state in Keychain / Keystore. Biometrics only verify local presence; the locked vault still requires the master password.';
+  String get settingsLocalUnlockPostureDescription => 'Vaulta keeps sensitive state in Keychain / Keystore. On Android, biometrics unlock the vault through a hardware-protected key; other platforms still use the master password path.';
 
   @override
   String get settingsMasterPasswordCreated => 'Master password created';
@@ -51,11 +51,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsBiometricsEnabled => 'Biometrics enabled';
 
   @override
-  String get settingsUnlockWithBiometrics => 'Use biometrics as a local check';
+  String get settingsUnlockWithBiometrics => 'Use biometrics to unlock on Android';
 
   @override
   String settingsBiometricSupportedSubtitle(Object biometricLabel) {
-    return 'Use $biometricLabel as a local presence check while the vault is open. Vaulta does not persist a recoverable vault key for biometric unlock.';
+    return 'Use $biometricLabel to unlock the vault on Android. The master password is still required for recovery, activation, or biometric re-enrollment.';
   }
 
   @override
@@ -140,7 +140,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsRoadmapTitle => 'Platform security roadmap';
 
   @override
-  String get settingsRoadmapNotes => 'Vault items use ADR-001 v2: Argon2id derives a KEK from the master password, a random DEK encrypts entries with AES-256-GCM. Biometric unlock without the master password requires a future hardware-bound implementation.';
+  String get settingsRoadmapNotes => 'Vault items use ADR-001 v2: Argon2id derives a KEK from the master password, and a random DEK encrypts entries with AES-256-GCM. Android now uses KeyStore for biometric unlock; iOS/macOS bindings remain pending.';
 
   @override
   String get settingsSecureStorage => 'Secure storage';
@@ -240,7 +240,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String securityBiometricAvailable(Object biometricLabel) {
-    return 'Enable $biometricLabel as a local presence check. Vaulta does not store a recoverable vault key, so a locked vault still needs the master password.';
+    return 'Enable $biometricLabel to unlock Vaulta on Android. The master password remains the recovery and re-enrollment path.';
   }
 
   @override
@@ -257,7 +257,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String securityUnlockBiometricSubtitle(Object biometricLabel) {
-    return 'Unlock with your master password. Biometrics do not replace it in this release.';
+    return 'Use your master password or the biometrics already enabled on this device.';
   }
 
   @override
@@ -579,7 +579,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get syncConflictKindDelete => 'Delete conflict';
 
   @override
-  String get biometricSlotExpired => 'Biometric vault-key unlock is not enabled in this release. Enter your master password.';
+  String get biometricSlotExpired => 'The biometric vault key is not ready or was invalidated. Enter your master password and enable biometrics again.';
 
   @override
   String get biometricUnlockSuccess => 'Biometric verification accepted.';

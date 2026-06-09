@@ -27,10 +27,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get languageSelectorLabel => 'Idioma de la app';
 
   @override
-  String get languageEnglish => 'Ingles';
+  String get languageEnglish => 'Inglés';
 
   @override
-  String get languageSpanish => 'Espanol';
+  String get languageSpanish => 'Español';
 
   @override
   String get settingsTitle => 'Ajustes';
@@ -39,27 +39,27 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingsLocalUnlockPostureTitle => 'Postura de desbloqueo local';
 
   @override
-  String get settingsLocalUnlockPostureDescription => 'Vaulta guarda el estado sensible en Keychain / Keystore. La biometria solo valida presencia local; el vault bloqueado sigue requiriendo master password.';
+  String get settingsLocalUnlockPostureDescription => 'Vaulta guarda el estado sensible en Keychain / Keystore. En Android, la biometría desbloquea el vault con una clave protegida por hardware; en otras plataformas se usa master password.';
 
   @override
   String get settingsMasterPasswordCreated => 'Master password creada';
 
   @override
-  String get settingsBiometricsAvailable => 'Biometria disponible';
+  String get settingsBiometricsAvailable => 'Biometría disponible';
 
   @override
-  String get settingsBiometricsEnabled => 'Biometria activada';
+  String get settingsBiometricsEnabled => 'Biometría activada';
 
   @override
-  String get settingsUnlockWithBiometrics => 'Usar biometria como verificacion local';
+  String get settingsUnlockWithBiometrics => 'Usar biometría para desbloquear en Android';
 
   @override
   String settingsBiometricSupportedSubtitle(Object biometricLabel) {
-    return 'Usa $biometricLabel como verificacion local mientras el vault esta abierto. Vaulta no persiste una clave recuperable para desbloqueo biometrico.';
+    return 'Usa $biometricLabel para desbloquear el vault en Android. La master password sigue siendo necesaria para recuperar acceso, activar o re-enrolar biometría.';
   }
 
   @override
-  String get settingsBiometricUnavailableSubtitle => 'No hay biometria configurada o soportada en este entorno.';
+  String get settingsBiometricUnavailableSubtitle => 'No hay biometría configurada o soportada en este entorno.';
 
   @override
   String get settingsAutoLockBackgroundTitle => 'Auto-lock al pasar a background';
@@ -80,7 +80,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingsSessionsTitle => 'Dispositivos y sesiones';
 
   @override
-  String get settingsSessionsSubtitle => 'Podes revocar un equipo puntual o cortar el resto de sesiones activas.';
+  String get settingsSessionsSubtitle => 'Podés revocar un equipo puntual o cortar el resto de sesiones activas.';
 
   @override
   String get settingsSessionsRefresh => 'Refrescar sesiones';
@@ -95,7 +95,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingsRevokeCurrentDeviceTitle => 'Revocar este dispositivo?';
 
   @override
-  String get settingsRevokeCurrentDeviceBody => 'Revocar el dispositivo actual va a bloquear esta sesion inmediatamente. Vas a tener que desbloquear de nuevo para continuar.';
+  String get settingsRevokeCurrentDeviceBody => 'Revocar el dispositivo actual va a bloquear esta sesión inmediatamente. Vas a tener que desbloquear de nuevo para continuar.';
 
   @override
   String get settingsRevokeNow => 'Revocar ahora';
@@ -113,7 +113,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingsCurrentDeviceRevokedTitle => 'Dispositivo actual revocado';
 
   @override
-  String get settingsCurrentDeviceRevokedBody => 'Este dispositivo ya no tiene una sesion activa. Vaulta se va a bloquear por seguridad.';
+  String get settingsCurrentDeviceRevokedBody => 'Este dispositivo ya no tiene una sesión activa. Vaulta se va a bloquear por seguridad.';
 
   @override
   String get settingsNoDevices => 'No hay dispositivos registrados para este usuario.';
@@ -140,13 +140,13 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingsRoadmapTitle => 'Roadmap de seguridad de plataforma';
 
   @override
-  String get settingsRoadmapNotes => 'Los items del vault usan ADR-001 v2: Argon2id deriva una KEK desde la master password y una DEK aleatoria cifra entradas con AES-256-GCM. El desbloqueo biometrico sin master password requiere una implementacion futura con claves vinculadas al hardware.';
+  String get settingsRoadmapNotes => 'Los ítems del vault usan ADR-001 v2: Argon2id deriva una KEK desde la master password y una DEK aleatoria cifra entradas con AES-256-GCM. Android ya usa KeyStore para desbloqueo biométrico; iOS/macOS quedan pendientes.';
 
   @override
   String get settingsSecureStorage => 'Almacenamiento seguro';
 
   @override
-  String get settingsBiometricUnlock => 'Recovery biometrico de clave';
+  String get settingsBiometricUnlock => 'Recovery biométrico de clave';
 
   @override
   String get settingsHardwareBackedKeys => 'Claves con respaldo de hardware';
@@ -236,15 +236,15 @@ class AppLocalizationsEs extends AppLocalizations {
   String get securityChecklistEncrypt => 'Items locales cifrados con AES-256-GCM y record guardado con Keychain / Keystore.';
 
   @override
-  String get securityEnableBiometrics => 'Habilitar biometria local';
+  String get securityEnableBiometrics => 'Habilitar biometría';
 
   @override
   String securityBiometricAvailable(Object biometricLabel) {
-    return 'Habilita $biometricLabel como verificacion local. Vaulta no guarda una clave recuperable del vault, asi que un vault bloqueado sigue necesitando la master password.';
+    return 'Habilita $biometricLabel para desbloquear Vaulta en Android. La master password sigue siendo el camino de recuperación y re-enrolamiento.';
   }
 
   @override
-  String get securityBiometricUnavailable => 'No detectamos biometria disponible. Igual vas a poder entrar con tu master password.';
+  String get securityBiometricUnavailable => 'No detectamos biometría disponible. Igual vas a poder entrar con tu master password.';
 
   @override
   String get securityCreateSecureAccess => 'Crear acceso seguro al vault';
@@ -257,7 +257,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String securityUnlockBiometricSubtitle(Object biometricLabel) {
-    return 'Desbloquea con tu master password. La biometria no la reemplaza en esta release.';
+    return 'Usa tu master password o la biometría ya activada en este dispositivo.';
   }
 
   @override
@@ -324,7 +324,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get entryDeleteDialogTitle => 'Eliminar entrada?';
 
   @override
-  String get entryDeleteDialogBody => 'Esto elimina el registro cifrado del vault local. El recovery remoto no esta disponible en modo offline.';
+  String get entryDeleteDialogBody => 'Esto elimina el registro cifrado del vault local. El recovery remoto no está disponible en modo offline.';
 
   @override
   String get entryDeleteConfirm => 'Eliminar';
@@ -348,7 +348,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get dashboardHeroTitle => 'Protegido por hardware del sistema';
 
   @override
-  String get dashboardHeroBody => 'El vault local cifra cada entrada con AES-256-GCM. CRUD local, busqueda, filtros y generador de passwords estan listos; el sync remoto queda opcional y experimental.';
+  String get dashboardHeroBody => 'El vault local cifra cada entrada con AES-256-GCM. CRUD local, búsqueda, filtros y generador de passwords están listos; el sync remoto queda opcional y experimental.';
 
   @override
   String dashboardPillTrustedDevices(int count) {
@@ -397,10 +397,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get planNextHardeningStep => 'Planificar siguiente hardening';
 
   @override
-  String get dashboardRoadmapSyncEnabled => 'El sync remoto es experimental y requiere una sesion Supabase configurada.';
+  String get dashboardRoadmapSyncEnabled => 'El sync remoto es experimental y requiere una sesión Supabase configurada.';
 
   @override
-  String get dashboardRoadmapSyncDisabled => 'Release offline-first: vault local, busqueda, filtros y generador funcionan sin sync cloud.';
+  String get dashboardRoadmapSyncDisabled => 'Release offline-first: vault local, búsqueda, filtros y generador funcionan sin sync cloud.';
 
   @override
   String get vaultEntriesSectionTitle => 'Entradas del vault';
@@ -427,7 +427,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get noResultsTitle => 'Ninguna entrada coincide con los filtros';
 
   @override
-  String get noResultsSubtitle => 'Proba otra busqueda o reinicia filtros para ver todo otra vez.';
+  String get noResultsSubtitle => 'Probá otra búsqueda o reiniciá filtros para ver todo otra vez.';
 
   @override
   String get emptyVaultTitle => 'Tu vault esta vacio';
@@ -585,28 +585,28 @@ class AppLocalizationsEs extends AppLocalizations {
   String get syncConflictKindDelete => 'Conflicto de borrado';
 
   @override
-  String get biometricSlotExpired => 'El desbloqueo biometrico con clave del vault no esta habilitado en esta release. Ingresa tu master password.';
+  String get biometricSlotExpired => 'La clave biométrica del vault no está lista o fue invalidada. Ingresa tu master password y vuelve a activar biometría.';
 
   @override
-  String get biometricUnlockSuccess => 'Verificacion biometrica aceptada.';
+  String get biometricUnlockSuccess => 'Verificación biométrica aceptada.';
 
   @override
-  String get biometricEnrollCta => 'Configurar biometria en el dispositivo';
+  String get biometricEnrollCta => 'Configurar biometría en el dispositivo';
 
   @override
-  String get biometricEnrollSubtitle => 'Tu dispositivo no tiene biometria registrada (huella o reconocimiento facial). Abri los ajustes del sistema para activarla.';
+  String get biometricEnrollSubtitle => 'Tu dispositivo no tiene biometría registrada (huella o reconocimiento facial). Abrí los ajustes del sistema para activarla.';
 
   @override
   String get biometricEnrollAction => 'Abrir ajustes';
 
   @override
-  String get biometricEnrollUnavailable => 'La biometria no esta disponible en este dispositivo. Usa la master password para desbloquear.';
+  String get biometricEnrollUnavailable => 'La biometría no está disponible en este dispositivo. Usa la master password para desbloquear.';
 
   @override
-  String get securitySetupBiometricCta => 'Activar desbloqueo biometrico';
+  String get securitySetupBiometricCta => 'Activar desbloqueo biométrico';
 
   @override
-  String get securitySetupBiometricDialogTitle => 'Activar desbloqueo biometrico';
+  String get securitySetupBiometricDialogTitle => 'Activar desbloqueo biométrico';
 
   @override
   String get securitySetupBiometricDialogBody => 'Ingresa tu master password una sola vez para que Vaulta pueda cifrar la clave que protege tu huella.';
@@ -618,7 +618,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get securitySetupBiometricDialogCancel => 'Cancelar';
 
   @override
-  String get securitySetupBiometricSuccess => 'Listo. La proxima vez podras desbloquear Vaulta con tu huella.';
+  String get securitySetupBiometricSuccess => 'Listo. La próxima vez podrás desbloquear Vaulta con tu huella.';
 
   @override
   String get securitySetupBiometricError => 'No pudimos activar la huella. Verifica tu master password e intenta de nuevo.';

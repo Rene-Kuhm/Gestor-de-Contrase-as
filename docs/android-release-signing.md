@@ -13,6 +13,11 @@ keyAlias=...
 keyPassword=...
 ```
 
+On Windows, prefer forward slashes in `storeFile`, for example
+`F:/Vaulta-release-secrets/vaulta-upload-keystore.jks`. Raw backslashes
+can be interpreted as escapes by Gradle/Kotlin and produce an invalid
+path.
+
 ## Option B: environment variables
 
 Set these in CI or your shell:
@@ -23,3 +28,38 @@ Set these in CI or your shell:
 - `VAULTA_UPLOAD_KEY_PASSWORD`
 
 If none are present, Gradle leaves `release` unsigned instead of falling back to debug signing. That is intentional.
+
+## GitHub Actions OTA secrets
+
+The rolling `dev-latest` OTA workflow builds `app-release.apk`, so GitHub must also have:
+
+- `VAULTA_UPLOAD_KEYSTORE_BASE64`
+- `VAULTA_UPLOAD_STORE_PASSWORD`
+- `VAULTA_UPLOAD_KEY_ALIAS`
+- `VAULTA_UPLOAD_KEY_PASSWORD`
+
+From a machine that has `android/key.properties` and the keystore, set them without printing secret values:
+
+```powershell
+$props = @{}
+Get-Content android\key.properties | ForEach-Object {
+  if ($_ -match '^\s*([^#][^=]+)=(.*)$') {
+    $props[$matches[1].Trim()] = $matches[2].Trim()
+  }
+}
+$storeFile = $props['storeFile']
+if (-not [System.IO.Path]::IsPathRooted($storeFile)) {
+  $storeFile = Join-Path (Resolve-Path android).Path $storeFile
+}
+[Convert]::ToBase64String([System.IO.File]::ReadAllBytes($storeFile)) |
+  gh secret set VAULTA_UPLOAD_KEYSTORE_BASE64 --repo Rene-Kuhm/Gestor-de-Contrase-as
+$props['storePassword'] | gh secret set VAULTA_UPLOAD_STORE_PASSWORD --repo Rene-Kuhm/Gestor-de-Contrase-as
+$props['keyAlias'] | gh secret set VAULTA_UPLOAD_KEY_ALIAS --repo Rene-Kuhm/Gestor-de-Contrase-as
+$props['keyPassword'] | gh secret set VAULTA_UPLOAD_KEY_PASSWORD --repo Rene-Kuhm/Gestor-de-Contrase-as
+```
+
+Verify only names/timestamps, never values:
+
+```bash
+gh secret list --repo Rene-Kuhm/Gestor-de-Contrase-as
+```

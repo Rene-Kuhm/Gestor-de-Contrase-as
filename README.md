@@ -1,19 +1,19 @@
 # Vaulta
 
-Vaulta es un gestor de contrasenas offline-first en Flutter orientado a un MVP release-ready: cifrado local real, identidad visual propia y UX honesta sobre lo que esta implementado.
+Vaulta es un gestor de contraseñas offline-first en Flutter orientado a un MVP release-ready: cifrado local real, identidad visual propia y UX honesta sobre lo que está implementado.
 
 ## Estado actual
 
-- MVP offline-first para Android, iOS, web, desktop y desarrollo local.
+- MVP offline-first para Android, iOS, web, desktop y desarrollo local. El desbloqueo biométrico real del vault está implementado y probado en Android; iOS/macOS/web/desktop conservan el camino de master password hasta tener un binding equivalente.
 - App principal renombrada visualmente como `Vaulta`.
 - Shell de navegacion con secciones iniciales para vault, access y settings.
 - Dashboard del vault con CRUD local cifrado, metricas de seguridad y estados de sync.
 - Cifrado local real con ADR-001 v2: Argon2id para KEK, DEK aleatoria por vault, DEK envuelta con AES-256-GCM y payloads AES-256-GCM.
 - Migracion de blobs legacy v1 al desbloquear/re-cifrar con master password.
-- Supabase sync es opcional/experimental: requiere variables de entorno, sesion autenticada y todavia necesita validacion operativa antes de prometer confiabilidad.
+- Supabase sync queda fuera del MVP público por defecto: es opcional/experimental, requiere variables de entorno, sesión autenticada y QA operativo completo antes de prometer confiabilidad.
 - Smoke test y tests de seguridad/sync alineados al estado actual.
 
-Nota de seguridad: Vaulta ya cifra datos locales, pero no tuvo auditoria externa. La biometria funciona como verificacion local/UX: por seguridad portable no se persiste ninguna vault key recuperable en base64/JSON; si el vault esta bloqueado, el desbloqueo real requiere la master password.
+Nota de seguridad: Vaulta ya cifra datos locales, pero no tuvo auditoría externa. En Android, la biometría desbloquea el vault usando un envelope protegido por Android KeyStore y `BiometricPrompt` con `BIOMETRIC_STRONG`; la master password sigue siendo el camino de recuperación y el requisito para activar o re-enrolar biometría. En iOS, macOS, web y desktop, el vault bloqueado todavía requiere la master password hasta implementar un binding equivalente por plataforma.
 
 ## Stack
 
@@ -38,13 +38,13 @@ Nota de seguridad: Vaulta ya cifra datos locales, pero no tuvo auditoria externa
 - `lib/core/sync/`: push/pull incremental, snapshots remotos, conflictos y bootstrap Supabase opcional.
 - `test/widget_test.dart`: smoke test principal actual.
 
-## Como ejecutar en desarrollo
+## Cómo ejecutar en desarrollo
 
 1. Instalar Flutter y validar el entorno con `flutter doctor`.
 2. Obtener dependencias con `flutter pub get`.
 3. Ejecutar la app con `flutter run`.
 
-## Como verificar sin hacer build final
+## Cómo verificar sin hacer build final
 
 Usa estas validaciones locales durante desarrollo:
 
@@ -62,7 +62,7 @@ Para checklist de Google Play / App Store y plantilla de privacidad, ver:
 - `docs/store-release-checklist.md`
 - `docs/privacy-policy-template.md`
 
-Si queres correr en un target especifico:
+Si querés correr en un target específico:
 
 ```bash
 flutter run -d chrome
@@ -70,14 +70,14 @@ flutter run -d windows
 flutter run -d android
 ```
 
-## Proximos pasos
+## Próximos pasos
 
-- Auditar criptografia y manejo de memoria antes de declarar produccion.
-- Implementar binding biometrico real por plataforma si se quiere unlock sin master password; hasta entonces no guardar claves recuperables.
-- Completar hardening de Supabase sync antes de declararlo confiable/sync-ready por defecto.
+- Auditar criptografía y manejo de memoria antes de declarar producción.
+- Implementar binding biométrico equivalente en iOS/macOS si se quiere desbloqueo biométrico sin master password fuera de Android.
+- Mantener Supabase sync desactivado por defecto para MVP público hasta completar QA operativo: sesión, conflictos, revocación, restore, offline/online y privacidad.
 - Expandir tests de UI, dominio y estado.
 
-## Verificacion reciente
+## Verificación reciente
 
 - `flutter analyze`
 - `flutter test`
@@ -85,5 +85,5 @@ flutter run -d android
 ## Notas para contributors
 
 - No asumir que los datos demo representan seguridad real.
-- Evitar mezclar UI con decisiones de criptografia o almacenamiento seguro.
-- Mantener la separacion entre contratos de dominio y adaptadores concretos.
+- Evitar mezclar UI con decisiones de criptografía o almacenamiento seguro.
+- Mantener la separación entre contratos de dominio y adaptadores concretos.

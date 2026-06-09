@@ -11,12 +11,12 @@
 
   "settingsTitle": "Settings",
   "settingsLocalUnlockPostureTitle": "Local unlock posture",
-  "settingsLocalUnlockPostureDescription": "Vaulta keeps sensitive state in Keychain / Keystore. Biometrics only verify local presence; the locked vault still requires the master password.",
+  "settingsLocalUnlockPostureDescription": "Vaulta keeps sensitive state in Keychain / Keystore. On Android, biometrics unlock the vault through a hardware-protected key; other platforms still use the master password path.",
   "settingsMasterPasswordCreated": "Master password created",
   "settingsBiometricsAvailable": "Biometrics available",
   "settingsBiometricsEnabled": "Biometrics enabled",
-  "settingsUnlockWithBiometrics": "Use biometrics as a local check",
-  "settingsBiometricSupportedSubtitle": "Use {biometricLabel} as a local presence check while the vault is open. Vaulta does not persist a recoverable vault key for biometric unlock.",
+  "settingsUnlockWithBiometrics": "Use biometrics to unlock on Android",
+  "settingsBiometricSupportedSubtitle": "Use {biometricLabel} to unlock the vault on Android. The master password is still required for recovery, activation, or biometric re-enrollment.",
   "@settingsBiometricSupportedSubtitle": {
     "placeholders": {
       "biometricLabel": {}
@@ -49,7 +49,7 @@
   "settingsDeviceRevokedMessage": "Device revoked successfully.",
   "settingsRevokeOthersDone": "Other active sessions were revoked.",
   "settingsRoadmapTitle": "Platform security roadmap",
-  "settingsRoadmapNotes": "Vault items use ADR-001 v2: Argon2id derives a KEK from the master password, a random DEK encrypts entries with AES-256-GCM. Biometric unlock without the master password requires a future hardware-bound implementation.",
+  "settingsRoadmapNotes": "Vault items use ADR-001 v2: Argon2id derives a KEK from the master password, and a random DEK encrypts entries with AES-256-GCM. Android now uses KeyStore for biometric unlock; iOS/macOS bindings remain pending.",
   "settingsSecureStorage": "Secure storage",
   "settingsBiometricUnlock": "Biometric key recovery",
   "settingsHardwareBackedKeys": "Hardware-backed keys",
@@ -83,7 +83,7 @@
   "securityChecklistDerive": "Argon2id derives a KEK that unwraps a random vault DEK.",
   "securityChecklistEncrypt": "Local items are encrypted with AES-256-GCM and records are stored with Keychain / Keystore.",
   "securityEnableBiometrics": "Enable local biometrics",
-  "securityBiometricAvailable": "Enable {biometricLabel} as a local presence check. Vaulta does not store a recoverable vault key, so a locked vault still needs the master password.",
+  "securityBiometricAvailable": "Enable {biometricLabel} to unlock Vaulta on Android. The master password remains the recovery and re-enrollment path.",
   "@securityBiometricAvailable": {
     "placeholders": {
       "biometricLabel": {}
@@ -93,7 +93,7 @@
   "securityCreateSecureAccess": "Create secure vault access",
   "securityUnlockEyebrow": "Unlock",
   "securityUnlockTitle": "Your vault stays closed until real identity is verified.",
-  "securityUnlockBiometricSubtitle": "Unlock with your master password. Biometrics do not replace it in this release.",
+  "securityUnlockBiometricSubtitle": "Use your master password or the biometrics already enabled on this device.",
   "@securityUnlockBiometricSubtitle": {
     "placeholders": {
       "biometricLabel": {}
@@ -248,7 +248,7 @@
   "syncConflictKindUpsert": "Edit conflict",
   "syncConflictKindDelete": "Delete conflict",
 
-  "biometricSlotExpired": "Biometric vault-key unlock is not enabled in this release. Enter your master password.",
+  "biometricSlotExpired": "The biometric vault key is not ready or was invalidated. Enter your master password and enable biometrics again.",
   "biometricUnlockSuccess": "Biometric verification accepted.",
   "biometricEnrollCta": "Set up biometrics on this device",
   "biometricEnrollSubtitle": "Your device has no biometric enrolled (fingerprint or face unlock). Open the system settings to enable it.",

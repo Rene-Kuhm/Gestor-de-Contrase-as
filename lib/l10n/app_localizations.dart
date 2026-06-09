@@ -158,7 +158,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsLocalUnlockPostureDescription.
   ///
   /// In en, this message translates to:
-  /// **'Vaulta keeps sensitive state in Keychain / Keystore. Biometrics only verify local presence; the locked vault still requires the master password.'**
+  /// **'Vaulta keeps sensitive state in Keychain / Keystore. On Android, biometrics unlock the vault through a hardware-protected key; other platforms still use the master password path.'**
   String get settingsLocalUnlockPostureDescription;
 
   /// No description provided for @settingsMasterPasswordCreated.
@@ -182,13 +182,13 @@ abstract class AppLocalizations {
   /// No description provided for @settingsUnlockWithBiometrics.
   ///
   /// In en, this message translates to:
-  /// **'Use biometrics as a local check'**
+  /// **'Use biometrics to unlock on Android'**
   String get settingsUnlockWithBiometrics;
 
   /// No description provided for @settingsBiometricSupportedSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Use {biometricLabel} as a local presence check while the vault is open. Vaulta does not persist a recoverable vault key for biometric unlock.'**
+  /// **'Use {biometricLabel} to unlock the vault on Android. The master password is still required for recovery, activation, or biometric re-enrollment.'**
   String settingsBiometricSupportedSubtitle(Object biometricLabel);
 
   /// No description provided for @settingsBiometricUnavailableSubtitle.
@@ -356,7 +356,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsRoadmapNotes.
   ///
   /// In en, this message translates to:
-  /// **'Vault items use ADR-001 v2: Argon2id derives a KEK from the master password, a random DEK encrypts entries with AES-256-GCM. Biometric unlock without the master password requires a future hardware-bound implementation.'**
+  /// **'Vault items use ADR-001 v2: Argon2id derives a KEK from the master password, and a random DEK encrypts entries with AES-256-GCM. Android now uses KeyStore for biometric unlock; iOS/macOS bindings remain pending.'**
   String get settingsRoadmapNotes;
 
   /// No description provided for @settingsSecureStorage.
@@ -554,7 +554,7 @@ abstract class AppLocalizations {
   /// No description provided for @securityBiometricAvailable.
   ///
   /// In en, this message translates to:
-  /// **'Enable {biometricLabel} as a local presence check. Vaulta does not store a recoverable vault key, so a locked vault still needs the master password.'**
+  /// **'Enable {biometricLabel} to unlock Vaulta on Android. The master password remains the recovery and re-enrollment path.'**
   String securityBiometricAvailable(Object biometricLabel);
 
   /// No description provided for @securityBiometricUnavailable.
@@ -584,7 +584,7 @@ abstract class AppLocalizations {
   /// No description provided for @securityUnlockBiometricSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Unlock with your master password. Biometrics do not replace it in this release.'**
+  /// **'Use your master password or the biometrics already enabled on this device.'**
   String securityUnlockBiometricSubtitle(Object biometricLabel);
 
   /// No description provided for @securityUnlockPasswordSubtitle.
@@ -1190,7 +1190,7 @@ abstract class AppLocalizations {
   /// No description provided for @biometricSlotExpired.
   ///
   /// In en, this message translates to:
-  /// **'Biometric vault-key unlock is not enabled in this release. Enter your master password.'**
+  /// **'The biometric vault key is not ready or was invalidated. Enter your master password and enable biometrics again.'**
   String get biometricSlotExpired;
 
   /// No description provided for @biometricUnlockSuccess.

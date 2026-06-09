@@ -46,11 +46,11 @@ void main() {
       UpdateInfo(
         available: true,
         tagName: 'dev-latest',
-        apkUrl: 'https://example.com/app-debug.apk',
+        apkUrl: 'https://example.com/app-release.apk',
         changelog: 'test changelog',
         publishedAt: '2026-06-09T18:00:00Z',
         releaseId: 12345,
-        currentVersion: '1.0.1+2',
+        currentVersion: '1.0.2+3',
         buildFingerprint: '12345:99:2026-06-09T18:00:00Z:123456',
       ),
     );
@@ -66,7 +66,7 @@ void main() {
       'available=false', (tester) async {
     final service = _StubUpdateService(
       checkResult: Future.value(
-        UpdateInfo.notAvailable(currentVersion: '1.0.1+2'),
+        UpdateInfo.notAvailable(currentVersion: '1.0.2+3'),
       ),
     );
 
@@ -119,11 +119,11 @@ void main() {
           const UpdateInfo(
             available: true,
             tagName: 'dev-latest',
-            apkUrl: 'https://example.com/app-debug.apk',
+            apkUrl: 'https://example.com/app-release.apk',
             changelog: 'test changelog',
             publishedAt: '2026-06-09T18:00:00Z',
             releaseId: 12345,
-            currentVersion: '1.0.1+2',
+            currentVersion: '1.0.2+3',
             buildFingerprint: '12345:99:2026-06-09T18:00:00Z:123456',
           ),
         ),
@@ -180,12 +180,12 @@ class _StubUpdateService implements UpdateService {
   }
 
   @override
-  Future<String> currentVersion() async => '1.0.1+2';
+  Future<String> currentVersion() async => '1.0.2+3';
 
   @override
   Future<String> downloadApk(UpdateInfo info) async {
     downloadCallCount++;
-    return '/tmp/app-debug.apk';
+    return '/tmp/app-release.apk';
   }
 
   @override
@@ -226,10 +226,10 @@ class _ThrowingUpdateService implements UpdateService {
   }
 
   @override
-  Future<String> currentVersion() async => '1.0.1+2';
+  Future<String> currentVersion() async => '1.0.2+3';
 
   @override
-  Future<String> downloadApk(UpdateInfo info) async => '/tmp/app-debug.apk';
+  Future<String> downloadApk(UpdateInfo info) async => '/tmp/app-release.apk';
 
   @override
   Future<String> lastSeenBuildFingerprint() async => '';

@@ -533,13 +533,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       Container(
                         padding: const EdgeInsets.all(AppSpacing.md),
                         decoration: BoxDecoration(
-                          color: AppColors.cloud,
+                          color: theme.colorScheme.surfaceContainerHighest
+                              .withValues(alpha: 0.92),
                           borderRadius: BorderRadius.circular(18),
+                          border: Border.all(
+                            color: theme.colorScheme.outlineVariant,
+                          ),
                         ),
                         child: Text(
                           message,
                           style: theme.textTheme.bodyMedium?.copyWith(
-                            color: AppColors.ink,
+                            color: theme.colorScheme.onSurface,
                           ),
                         ),
                       ),
@@ -1242,13 +1246,17 @@ class _ChangeMasterPasswordDialogState
                     width: double.infinity,
                     padding: const EdgeInsets.all(AppSpacing.sm),
                     decoration: BoxDecoration(
-                      color: AppColors.cloud,
+                      color: theme.colorScheme.surfaceContainerHighest
+                          .withValues(alpha: 0.92),
                       borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: theme.colorScheme.outlineVariant,
+                      ),
                     ),
                     child: Text(
                       feedback,
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: AppColors.ink,
+                        color: theme.colorScheme.onSurface,
                       ),
                     ),
                   ),
@@ -1334,8 +1342,11 @@ class _BiometricEnrollBanner extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: AppColors.cloud,
+        color: theme.colorScheme.surfaceContainerHighest.withValues(
+          alpha: 0.92,
+        ),
         borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

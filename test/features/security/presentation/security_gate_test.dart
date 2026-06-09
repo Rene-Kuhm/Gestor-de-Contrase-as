@@ -211,7 +211,7 @@ class _FakeAppVersionProvider implements AppVersionProvider {
   const _FakeAppVersionProvider();
 
   @override
-  Future<String> readAppVersion() async => '1.0.0+1';
+  Future<String> readAppVersion() async => '1.0.2+3';
 }
 
 class _RevokedDeviceRegistrationRepository

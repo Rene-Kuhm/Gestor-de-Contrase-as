@@ -7,23 +7,24 @@ This checklist tracks the external assets, secrets, accounts, and policy decisio
 - App name/label: `Vaulta` on Android, iOS, macOS, and web.
 - Android package/application ID: `com.insyd.gestor_contrasenas`.
 - iOS/macOS bundle ID: `com.insyd.gestorContrasenas`.
-- Flutter version source: `pubspec.yaml` `version: 1.0.0+1`.
+- Flutter version source: `pubspec.yaml` `version: 1.0.2+3`.
 - Android release signing does not fall back to debug signing; see `docs/android-release-signing.md`.
 - Android backup/data extraction is disabled for local vault data.
 - Android cleartext traffic is disabled.
-- iOS/macOS biometric usage strings explain local verification and master-password requirement.
+- Android biometric vault unlock is implemented with Android KeyStore + `BiometricPrompt` / `BIOMETRIC_STRONG`; iOS/macOS biometric vault unlock remains pending unless a platform binding is added.
 - macOS sandbox allows outbound network access for optional Supabase sync.
-- Supabase sync remains optional and only initializes when `SUPABASE_URL` and `SUPABASE_ANON_KEY` are supplied with `--dart-define`.
+- Supabase sync remains optional/experimental and should stay disabled for the public MVP unless release QA covers sessions, conflicts, revocation, restore, offline/online behavior, and privacy copy.
 
 ## Google Play blockers
 
 - [ ] Create/verify Play Console app for package `com.insyd.gestor_contrasenas`.
 - [ ] Generate Android upload keystore locally/CI and keep it outside the repo.
-- [ ] Configure one signing path: `android/key.properties` (gitignored/local) or CI `VAULTA_UPLOAD_*` variables.
-- [ ] Decide whether Supabase sync is enabled. If yes, pass `--dart-define=SUPABASE_URL=...` and `--dart-define=SUPABASE_ANON_KEY=...` from CI only.
+- [x] Configure GitHub Actions `VAULTA_UPLOAD_KEYSTORE_BASE64`, `VAULTA_UPLOAD_STORE_PASSWORD`, `VAULTA_UPLOAD_KEY_ALIAS`, and `VAULTA_UPLOAD_KEY_PASSWORD` for the rolling OTA APK.
+- [ ] Decide whether Supabase sync is enabled. MVP recommendation: keep it disabled by default. If yes, pass `--dart-define=SUPABASE_URL=...` and `--dart-define=SUPABASE_ANON_KEY=...` from CI only and complete operational QA first.
 - [ ] Complete Play Data Safety: user-provided password-vault data is sensitive; local entries are encrypted; if Supabase sync is enabled, encrypted snapshots/device IDs/session metadata may be transmitted to Supabase.
 - [ ] Provide privacy policy URL, support URL/email, app category (`Productivity` or `Tools`), screenshots, feature graphic, store descriptions, and release notes.
 - [ ] Confirm target SDK requirements at submission time.
+- [ ] Migrate Android/Kotlin Gradle Plugin usage to Flutter's built-in Kotlin plugin path before the Flutter version that makes the current warning fatal.
 - [ ] Confirm encryption/export compliance statements for password-management cryptography.
 
 ## Apple App Store / TestFlight blockers
@@ -32,7 +33,7 @@ This checklist tracks the external assets, secrets, accounts, and policy decisio
 - [ ] Configure signing team, certificates, provisioning profiles, and App Store Connect app record outside the repo.
 - [ ] Complete App Privacy questionnaire: sensitive user vault data; local encryption; optional Supabase encrypted sync metadata if enabled; no tracking unless SDKs are added later.
 - [ ] Provide privacy policy URL, support URL, category (`Productivity` or `Utilities`), screenshots, app icon, store copy, and release notes.
-- [ ] Explain in App Review notes that biometrics are local presence verification only; locked vault still requires the master password.
+- [ ] Explain in App Review notes that Android has biometric vault unlock, while iOS/macOS require master password unless a native binding is added before submission.
 - [ ] Answer export compliance/encryption questions for AES-256-GCM/Argon2id password-vault cryptography.
 
 ## Mac App Store / desktop blockers
@@ -53,6 +54,6 @@ This checklist tracks the external assets, secrets, accounts, and policy decisio
 ## Security/release review before submission
 
 - [ ] Run `flutter analyze` and `flutter test` before every release candidate.
-- [ ] Manual QA: vault create/unlock/lock, CRUD, search, password generation, biometric local verification, and optional sync.
+- [ ] Manual QA matrix: fresh install, signed OTA update, master password create/unlock, biometric activation, biometric unlock, biometric removal/re-enrollment, master password change, CRUD, search, password generation, clipboard auto-clear, background/idle auto-lock, and optional Supabase sync if enabled.
 - [ ] Review `docs/architecture/ADR-001-crypto.md`, `ADR-002-sync.md`, and `ADR-003-session-revocation.md` for user-facing claims.
-- [ ] Avoid claiming third-party audit, breach monitoring, autofill, passkeys, or biometric unlock without master password unless implemented and verified.
+- [ ] Avoid claiming third-party audit, breach monitoring, autofill, passkeys, or non-Android biometric vault unlock unless implemented and verified.
