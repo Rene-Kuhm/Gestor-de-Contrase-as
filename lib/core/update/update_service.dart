@@ -16,6 +16,7 @@ class UpdateInfo {
     required this.publishedAt,
     required this.releaseId,
     required this.currentVersion,
+    this.buildFingerprint = '',
   });
 
   final bool available;
@@ -30,6 +31,7 @@ class UpdateInfo {
   /// dismissed the SnackBar for.
   final int releaseId;
   final String currentVersion;
+  final String buildFingerprint;
 
   /// Result the platform returned when no update is available.
   /// We still keep the optional metadata so the UI can explain why
@@ -41,6 +43,7 @@ class UpdateInfo {
     this.changelog = '',
     this.publishedAt = '',
     this.releaseId = 0,
+    this.buildFingerprint = '',
   }) : available = false;
 }
 
@@ -67,11 +70,12 @@ class UpdateService {
     required this.repo,
     SecureStorageService? storage,
     MethodChannel? channel,
-  })  : _storage = storage,
-        _channel = channel ??
-            const MethodChannel('com.insyd.vaulta/update');
+  }) : _storage = storage,
+       _channel = channel ?? const MethodChannel('com.insyd.vaulta/update');
 
   static const _lastSeenReleaseIdKey = 'vaulta_last_seen_release_id_v1';
+  static const _lastSeenBuildFingerprintKey =
+      'vaulta_last_seen_update_build_v1';
 
   final String owner;
   final String repo;
@@ -98,6 +102,22 @@ class UpdateService {
     if (storage == null) return;
     if (releaseId <= 0) return;
     await storage.save(_lastSeenReleaseIdKey, releaseId.toString());
+  }
+
+  Future<String> lastSeenBuildFingerprint() async {
+    final storage = _storage;
+    if (storage == null) return '';
+    return await storage.read(_lastSeenBuildFingerprintKey) ?? '';
+  }
+
+  Future<void> markBuildPrompted(UpdateInfo info) async {
+    final storage = _storage;
+    if (storage == null) return;
+    final fingerprint = info.buildFingerprint;
+    if (fingerprint.isNotEmpty) {
+      await storage.save(_lastSeenBuildFingerprintKey, fingerprint);
+    }
+    await markInstalled(info.releaseId);
   }
 
   /// Reads the running app's version (CFBundleShortVersionString on
@@ -130,11 +150,7 @@ class UpdateService {
     try {
       final raw = await _channel.invokeMapMethod<String, dynamic>(
         'checkForUpdate',
-        {
-          'owner': owner,
-          'repo': repo,
-          'currentVersion': current,
-        },
+        {'owner': owner, 'repo': repo, 'currentVersion': current},
       );
       if (raw == null) {
         return UpdateInfo.notAvailable(currentVersion: current);
@@ -151,10 +167,13 @@ class UpdateService {
       }
       // Idempotent gate: if the user has already installed (or
       // dismissed) this exact build id, do not nag.
-      final lastSeen = await lastSeenReleaseId();
-      if (releaseId != 0 && lastSeen == releaseId) {
-        debugPrint('[Vaulta/Update] check: releaseId=$releaseId already '
-            'seen; treating as up-to-date');
+      final buildFingerprint = (raw['buildFingerprint'] as String?) ?? '';
+      final lastSeenBuild = await lastSeenBuildFingerprint();
+      if (buildFingerprint.isNotEmpty && lastSeenBuild == buildFingerprint) {
+        debugPrint(
+          '[Vaulta/Update] check: build=$buildFingerprint already '
+          'seen; treating as up-to-date',
+        );
         return UpdateInfo(
           available: false,
           tagName: (raw['tagName'] as String?) ?? '',
@@ -163,6 +182,24 @@ class UpdateService {
           publishedAt: (raw['publishedAt'] as String?) ?? '',
           releaseId: releaseId,
           currentVersion: current,
+          buildFingerprint: buildFingerprint,
+        );
+      }
+      final lastSeen = await lastSeenReleaseId();
+      if (buildFingerprint.isEmpty && releaseId != 0 && lastSeen == releaseId) {
+        debugPrint(
+          '[Vaulta/Update] check: releaseId=$releaseId already '
+          'seen; treating as up-to-date',
+        );
+        return UpdateInfo(
+          available: false,
+          tagName: (raw['tagName'] as String?) ?? '',
+          apkUrl: (raw['apkUrl'] as String?) ?? '',
+          changelog: (raw['changelog'] as String?) ?? '',
+          publishedAt: (raw['publishedAt'] as String?) ?? '',
+          releaseId: releaseId,
+          currentVersion: current,
+          buildFingerprint: buildFingerprint,
         );
       }
       return UpdateInfo(
@@ -173,10 +210,13 @@ class UpdateService {
         publishedAt: (raw['publishedAt'] as String?) ?? '',
         releaseId: releaseId,
         currentVersion: current,
+        buildFingerprint: buildFingerprint,
       );
     } on PlatformException catch (error, stack) {
-      debugPrint('[Vaulta/Update] check failed: ${error.code} '
-          '${error.message}\n$stack');
+      debugPrint(
+        '[Vaulta/Update] check failed: ${error.code} '
+        '${error.message}\n$stack',
+      );
       return UpdateInfo.notAvailable(currentVersion: current);
     }
   }
@@ -187,10 +227,9 @@ class UpdateService {
     if (!Platform.isAndroid) {
       throw UnsupportedError('OTA updates are only wired for Android.');
     }
-    final path = await _channel.invokeMethod<String>(
-      'downloadApk',
-      {'apkUrl': info.apkUrl},
-    );
+    final path = await _channel.invokeMethod<String>('downloadApk', {
+      'apkUrl': info.apkUrl,
+    });
     if (path == null || path.isEmpty) {
       throw StateError('Downloaded APK path was empty.');
     }
@@ -204,10 +243,9 @@ class UpdateService {
     if (!Platform.isAndroid) {
       throw UnsupportedError('OTA updates are only wired for Android.');
     }
-    final ok = await _channel.invokeMethod<bool>(
-      'openInstallPrompt',
-      {'filePath': filePath},
-    );
+    final ok = await _channel.invokeMethod<bool>('openInstallPrompt', {
+      'filePath': filePath,
+    });
     return ok ?? false;
   }
 }

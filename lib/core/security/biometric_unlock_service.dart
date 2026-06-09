@@ -16,10 +16,10 @@ import 'vault_session.dart';
 /// something did.
 class BiometricEnvelopeKeyResult {
   const BiometricEnvelopeKeyResult.success(SecretKey this.key)
-      : failureReason = null;
+    : failureReason = null;
 
   const BiometricEnvelopeKeyResult.unavailable(String this.failureReason)
-      : key = null;
+    : key = null;
 
   /// True when [key] is non-null and safe to use.
   bool get isSuccess => key != null;
@@ -224,8 +224,9 @@ class BiometricUnlockService {
     }
 
     try {
-      final dekBytes =
-          await _envelopeService.unwrap(envelopeKey: envelopeKeyResult.key!);
+      final dekBytes = await _envelopeService.unwrap(
+        envelopeKey: envelopeKeyResult.key!,
+      );
       final session = VaultSession.v2(
         keyId: record.keyId,
         secretKey: SecretKey(dekBytes),
@@ -250,6 +251,10 @@ class BiometricUnlockService {
   /// envelope on disk.
   Future<void> invalidate() async {
     await _envelopeService.clear();
+    final provider = _envelopeKeyProvider;
+    if (provider is BiometricEnvelopeKeyInvalidator) {
+      await (provider as BiometricEnvelopeKeyInvalidator).deleteKey();
+    }
     await _storage.delete(envelopeKeySlotKey);
   }
 
@@ -266,6 +271,10 @@ class BiometricUnlockService {
   /// not available" instead of crashing.
   static final BiometricEnvelopeKeyProvider _defaultKeyProvider =
       _NoopEnvelopeKeyProvider();
+}
+
+abstract interface class BiometricEnvelopeKeyInvalidator {
+  Future<void> deleteKey();
 }
 
 class _NoopEnvelopeKeyProvider implements BiometricEnvelopeKeyProvider {

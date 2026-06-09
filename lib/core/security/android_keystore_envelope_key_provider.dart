@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
@@ -26,18 +27,18 @@ import 'secure_storage_service.dart';
 /// The RSA-encrypted seed is persisted in [SecureStorageService] on
 /// enrollment so the unlock side can hand it back to the platform.
 class AndroidKeystoreEnvelopeKeyProvider
-    implements BiometricEnvelopeKeyProvider {
+    implements BiometricEnvelopeKeyProvider, BiometricEnvelopeKeyInvalidator {
   AndroidKeystoreEnvelopeKeyProvider({
     required SecureStorageService storage,
     MethodChannel? keystoreChannel,
     MethodChannel? biometricChannel,
     Random? random,
-  })  : _storage = storage,
-        _keystoreChannel =
-            keystoreChannel ?? const MethodChannel(keystoreChannelName),
-        _biometricChannel =
-            biometricChannel ?? const MethodChannel(biometricChannelName),
-        _random = random ?? Random.secure();
+  }) : _storage = storage,
+       _keystoreChannel =
+           keystoreChannel ?? const MethodChannel(keystoreChannelName),
+       _biometricChannel =
+           biometricChannel ?? const MethodChannel(biometricChannelName),
+       _random = random ?? Random.secure();
 
   static const keystoreChannelName = 'com.insyd.vaulta/keystore';
   static const biometricChannelName = 'com.insyd.vaulta/biometric';
@@ -57,18 +58,28 @@ class AndroidKeystoreEnvelopeKeyProvider
       );
     }
     if (!await isHardwareBackedBiometricAvailable()) {
-      debugPrint('[Vaulta/KeyStore] acquire skipped: hardware-backed '
-          'biometric not available on this device');
+      debugPrint(
+        '[Vaulta/KeyStore] acquire skipped: hardware-backed '
+        'biometric not available on this device',
+      );
       return const BiometricEnvelopeKeyResult.unavailable(
         'platform_no_hardware_backed_biometric',
       );
     }
 
     try {
+      // Always rebuild the AndroidKeyStore alias during enrollment.
+      // Older app versions could leave an alias generated with a
+      // different biometric contract, and reusing it makes the next
+      // unlock fail with BIOMETRIC_UNAVAILABLE even though the UI can
+      // show the fingerprint button.
+      await deleteKey();
       await ensureKey();
     } on PlatformException catch (error) {
-      debugPrint('[Vaulta/KeyStore] ensureKey failed: ${error.code} '
-          '${error.message}');
+      debugPrint(
+        '[Vaulta/KeyStore] ensureKey failed: ${error.code} '
+        '${error.message}',
+      );
       return BiometricEnvelopeKeyResult.unavailable(
         'ensure_key_failed:${error.code}',
       );
@@ -93,18 +104,22 @@ class AndroidKeystoreEnvelopeKeyProvider
     try {
       await _storage.save(
         _encryptedSeedKey,
-        String.fromCharCodes(rsaEncrypted),
+        encodeEncryptedSeedForStorage(rsaEncrypted),
       );
     } catch (error, stack) {
-      debugPrint('[Vaulta/KeyStore] persist encrypted seed failed: '
-          '$error\n$stack');
+      debugPrint(
+        '[Vaulta/KeyStore] persist encrypted seed failed: '
+        '$error\n$stack',
+      );
       return BiometricEnvelopeKeyResult.unavailable(
         'persist_encrypted_seed_failed:${error.runtimeType}',
       );
     }
 
-    debugPrint('[Vaulta/KeyStore] acquire OK: '
-        'envelope seed encrypted and persisted (${rsaEncrypted.length} bytes)');
+    debugPrint(
+      '[Vaulta/KeyStore] acquire OK: '
+      'envelope seed encrypted and persisted (${rsaEncrypted.length} bytes)',
+    );
     return BiometricEnvelopeKeyResult.success(SecretKey(seed));
   }
 
@@ -124,32 +139,55 @@ class AndroidKeystoreEnvelopeKeyProvider
 
     final stored = await _storage.read(_encryptedSeedKey);
     if (stored == null || stored.isEmpty) {
-      debugPrint('[Vaulta/KeyStore] release skipped: no encrypted seed on disk');
+      debugPrint(
+        '[Vaulta/KeyStore] release skipped: no encrypted seed on disk',
+      );
       return const BiometricEnvelopeKeyResult.unavailable(
         'no_encrypted_seed_on_disk',
       );
     }
-    final ciphertext = Uint8List.fromList(
-      stored.codeUnits,
-    );
+    final Uint8List ciphertext;
+    try {
+      ciphertext = decodeEncryptedSeedFromStorage(stored);
+    } on FormatException {
+      debugPrint(
+        '[Vaulta/KeyStore] release skipped: encrypted seed is not base64',
+      );
+      await deleteKey();
+      return const BiometricEnvelopeKeyResult.unavailable(
+        'encrypted_seed_not_base64',
+      );
+    }
 
     try {
       final seed = await rsaDecryptSeedAuthorized(ciphertext);
       if (seed == null) {
-        debugPrint('[Vaulta/KeyStore] release: rsaDecrypt returned null '
-            '(user cancelled or platform rejected the private key)');
+        debugPrint(
+          '[Vaulta/KeyStore] release: rsaDecrypt returned null '
+          '(user cancelled or platform rejected the private key)',
+        );
         return const BiometricEnvelopeKeyResult.unavailable(
           'rsa_decrypt_returned_null',
         );
       }
-      debugPrint('[Vaulta/KeyStore] release OK: seed recovered '
-          '(${seed.length} bytes)');
+      debugPrint(
+        '[Vaulta/KeyStore] release OK: seed recovered '
+        '(${seed.length} bytes)',
+      );
       return BiometricEnvelopeKeyResult.success(SecretKey(seed));
     } on PlatformException catch (error) {
-      debugPrint('[Vaulta/KeyStore] release: rsaDecrypt threw '
-          '${error.code} ${error.message}');
+      debugPrint(
+        '[Vaulta/KeyStore] release: rsaDecrypt threw '
+        '${error.code} ${error.message}',
+      );
+      if (_looksLikeInvalidRsaCiphertext(error)) {
+        await deleteKey();
+        return BiometricEnvelopeKeyResult.unavailable(
+          _platformFailure('rsa_decrypt_invalid_ciphertext', error),
+        );
+      }
       return BiometricEnvelopeKeyResult.unavailable(
-        'rsa_decrypt_failed:${error.code}',
+        _platformFailure('rsa_decrypt_failed', error),
       );
     } catch (error, stack) {
       debugPrint('[Vaulta/KeyStore] release unexpected: $error\n$stack');
@@ -182,6 +220,7 @@ class AndroidKeystoreEnvelopeKeyProvider
   /// Wipes the hardware-backed RSA keypair and the encrypted seed.
   /// The next call to `acquireEnvelopeKey` will return null until the
   /// user re-enrolls.
+  @override
   Future<void> deleteKey() async {
     if (!Platform.isAndroid) return;
     try {
@@ -201,30 +240,25 @@ class AndroidKeystoreEnvelopeKeyProvider
       );
       return result;
     } on PlatformException catch (error) {
-      debugPrint('[Vaulta/KeyStore] rsaEncrypt threw ${error.code} '
-          '${error.message}');
+      debugPrint(
+        '[Vaulta/KeyStore] rsaEncrypt threw ${error.code} '
+        '${error.message}',
+      );
       return null;
     }
   }
 
   /// Drives a full biometric unlock round-trip:
   ///   1. Asks the platform to open a BiometricPrompt.
-  ///   2. The platform returns the same ciphertext (as a "go ahead"
-  ///      signal — the private key is now authorized for this process).
-  ///   3. We then invoke `rsaDecryptAuthorized` on the keystore channel
-  ///      to actually unwrap the seed.
+  ///   2. The platform binds the prompt to the RSA private-key
+  ///      `Cipher` via `BiometricPrompt.CryptoObject`.
+  ///   3. On success, native code returns the unwrapped seed bytes.
   Future<Uint8List?> rsaDecryptSeedAuthorized(Uint8List ciphertext) async {
     if (!Platform.isAndroid) return null;
     try {
-      final authorized = await _biometricChannel.invokeMethod<Uint8List>(
+      final plaintext = await _biometricChannel.invokeMethod<Uint8List>(
         'requestDecryptAuthorization',
         {'ciphertext': ciphertext},
-      );
-      if (authorized == null) return null;
-
-      final plaintext = await _keystoreChannel.invokeMethod<Uint8List>(
-        'rsaDecryptAuthorized',
-        {'ciphertext': authorized},
       );
       return plaintext;
     } on PlatformException catch (error) {
@@ -239,5 +273,29 @@ class AndroidKeystoreEnvelopeKeyProvider
     return Uint8List.fromList(
       List<int>.generate(length, (_) => _random.nextInt(256)),
     );
+  }
+
+  String _platformFailure(String prefix, PlatformException error) {
+    final message = error.message;
+    if (message == null || message.isEmpty) {
+      return '$prefix:${error.code}';
+    }
+    return '$prefix:${error.code}:$message';
+  }
+
+  bool _looksLikeInvalidRsaCiphertext(PlatformException error) {
+    final message = error.message ?? '';
+    return error.code == 'BIOMETRIC_DECRYPT_FAILED' &&
+        message.contains('IllegalBlockSizeException');
+  }
+
+  @visibleForTesting
+  static String encodeEncryptedSeedForStorage(Uint8List encryptedSeed) {
+    return base64Encode(encryptedSeed);
+  }
+
+  @visibleForTesting
+  static Uint8List decodeEncryptedSeedFromStorage(String stored) {
+    return Uint8List.fromList(base64Decode(stored));
   }
 }

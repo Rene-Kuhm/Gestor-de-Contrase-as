@@ -12,6 +12,12 @@ import androidx.core.content.ContextCompat
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import java.security.InvalidKeyException
+import java.security.KeyStore
+import java.security.spec.MGF1ParameterSpec
+import javax.crypto.Cipher
+import javax.crypto.spec.OAEPParameterSpec
+import javax.crypto.spec.PSource
 
 /**
  * Hosts the Flutter engine and the BiometricPrompt used to authorize
@@ -21,14 +27,13 @@ import io.flutter.plugin.common.MethodChannel
  * [io.flutter.embedding.android.FlutterActivity]) so the
  * [BiometricPrompt] fragment can attach.
  *
- * Best-practice notes (androidx.biometric 1.2.0-alpha05 + Android 14/15):
- *   * We use `BIOMETRIC_STRONG or DEVICE_CREDENTIAL` so the user
- *     always has a path: strong biometric when available, otherwise
- *     the device PIN/pattern/password. Strong-only is a common source
- *     of "the button vanished" bugs on devices that only expose a
- *     face-unlock hardware (which Android classifies as WEAK).
- *   * `setNegativeButtonText` is mutually exclusive with
- *     DEVICE_CREDENTIAL — the system uses its own fallback label.
+ * Best-practice notes (androidx.biometric 1.4.x + Android 14/15):
+ *   * The unlock prompt uses `BIOMETRIC_STRONG` and a `CryptoObject`
+ *     because the RSA private key is generated with
+ *     `AUTH_BIOMETRIC_STRONG`. PIN/pattern/password can still protect
+ *     the device, but they cannot authorize this per-operation key.
+ *   * The availability probe still reports device-credential status
+ *     separately so Dart can render better diagnostics.
  *   * Every error path is mapped to a stable string code that the
  *     Dart side can switch on, and every code we hit is logged with
  *     the `[Vaulta/Biometric]` prefix for adb logcat diagnosis.
@@ -139,10 +144,13 @@ class MainActivity : FlutterFragmentActivity() {
      * each call opens a fresh system dialog and only authorizes the
      * single KeyStore decrypt that follows it.
      *
-     * The authenticator set is `BIOMETRIC_STRONG or DEVICE_CREDENTIAL`
-     * (see class docs for why). When neither is available, we return
-     * [BiometricErrorCode.UNAVAILABLE] with a precise cause so the
-     * Dart side can render a specific message.
+     * The authenticator set is `BIOMETRIC_STRONG` because this prompt
+     * is bound to a KeyStore private-key [Cipher] via [BiometricPrompt.CryptoObject].
+     * Device credentials cannot unlock a key generated with
+     * [android.security.keystore.KeyProperties.AUTH_BIOMETRIC_STRONG].
+     * When strong biometrics are unavailable, we return
+     * [BiometricErrorCode.UNAVAILABLE] with a precise cause so the Dart side
+     * can render a specific message.
      */
     private fun authenticateAndDecrypt(
         ciphertext: ByteArray,
@@ -158,8 +166,7 @@ class MainActivity : FlutterFragmentActivity() {
         }
 
         val manager = BiometricManager.from(this)
-        val authenticators =
-            Authenticators.BIOMETRIC_STRONG or Authenticators.DEVICE_CREDENTIAL
+        val authenticators = Authenticators.BIOMETRIC_STRONG
         val canAuthenticate = manager.canAuthenticate(authenticators)
         if (canAuthenticate != BiometricManager.BIOMETRIC_SUCCESS) {
             val code = mapCanAuthenticateCodeToError(canAuthenticate)
@@ -190,12 +197,26 @@ class MainActivity : FlutterFragmentActivity() {
                     pendingCiphertext = null
                     if (r == null || ct == null) return
 
-                    // The KeyStore private key is now authorized for
-                    // the rest of this process lifetime (or until the
-                    // user locks the device). We hand the ciphertext
-                    // back to the Dart side, which forwards it to
-                    // `rsaDecryptAuthorized` and returns the seed.
-                    r.success(ct)
+                    val cipher = authResult.cryptoObject?.cipher
+                    if (cipher == null) {
+                        r.error(
+                            BiometricErrorCode.UNAVAILABLE,
+                            "No authorized cipher returned by biometric prompt.",
+                            null
+                        )
+                        return
+                    }
+
+                    try {
+                        r.success(cipher.doFinal(ct))
+                    } catch (e: Throwable) {
+                        Log.w(TAG, "authenticateAndDecrypt: decrypt failed", e)
+                        r.error(
+                            BiometricErrorCode.DECRYPT_FAILED,
+                            "decrypt_failed:${e.javaClass.simpleName}:${e.message.orEmpty()}",
+                            null
+                        )
+                    }
                 }
 
                 override fun onAuthenticationError(
@@ -228,14 +249,53 @@ class MainActivity : FlutterFragmentActivity() {
             .setTitle(getString(R.string.vaulta_biometric_prompt_title))
             .setSubtitle(getString(R.string.vaulta_biometric_prompt_subtitle))
             .setDescription(getString(R.string.vaulta_biometric_prompt_description))
-            // setNegativeButtonText is mutually exclusive with
-            // DEVICE_CREDENTIAL — the system renders its own fallback
-            // button ("Use PIN" / "Use pattern" / "Use password").
+            .setNegativeButtonText(getString(android.R.string.cancel))
             .setAllowedAuthenticators(authenticators)
             .setConfirmationRequired(false)
             .build()
 
-        prompt.authenticate(info)
+        val cipher = try {
+            buildDecryptCipher()
+        } catch (e: Throwable) {
+            val errorCode = mapCipherInitErrorToCode(e)
+            Log.w(TAG, "authenticateAndDecrypt: cipher init failed", e)
+            result.error(
+                errorCode,
+                "cipher_init_failed:${e.javaClass.simpleName}:${e.message.orEmpty()}",
+                null
+            )
+            pendingResult = null
+            pendingCiphertext = null
+            return
+        }
+
+        prompt.authenticate(info, BiometricPrompt.CryptoObject(cipher))
+    }
+
+    private fun buildDecryptCipher(): Cipher {
+        val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
+        if (!keyStore.containsAlias(KEY_ALIAS)) {
+            throw IllegalStateException("No biometric key enrolled.")
+        }
+        val entry = keyStore.getEntry(KEY_ALIAS, null) as KeyStore.PrivateKeyEntry
+        return Cipher.getInstance(TRANSFORMATION_RSA).apply {
+            init(Cipher.DECRYPT_MODE, entry.privateKey, OAEP_SHA256_MGF1_SHA1)
+        }
+    }
+
+    private fun mapCipherInitErrorToCode(error: Throwable): String {
+        if (error is IllegalStateException) return BiometricErrorCode.KEY_MISSING
+        if (error is InvalidKeyException) return BiometricErrorCode.KEY_INVALIDATED
+        val message = error.message.orEmpty()
+        return when {
+            message.contains("permanently invalidated", ignoreCase = true) ->
+                BiometricErrorCode.KEY_INVALIDATED
+            message.contains("invalidated", ignoreCase = true) ->
+                BiometricErrorCode.KEY_INVALIDATED
+            message.contains("not authenticated", ignoreCase = true) ->
+                BiometricErrorCode.KEY_NOT_AUTHENTICATED
+            else -> BiometricErrorCode.CIPHER_INIT_FAILED
+        }
     }
 
     // ---- Error mapping ----
@@ -321,6 +381,15 @@ class MainActivity : FlutterFragmentActivity() {
 
     companion object {
         private const val TAG = "Vaulta/Biometric"
+        private const val ANDROID_KEYSTORE = "AndroidKeyStore"
+        private const val KEY_ALIAS = "vaulta_biometric_envelope_v1"
+        private const val TRANSFORMATION_RSA = "RSA/ECB/OAEPWithSHA-256AndMGF1Padding"
+        private val OAEP_SHA256_MGF1_SHA1 = OAEPParameterSpec(
+            "SHA-256",
+            "MGF1",
+            MGF1ParameterSpec.SHA1,
+            PSource.PSpecified.DEFAULT
+        )
     }
 }
 
@@ -362,6 +431,21 @@ object BiometricErrorCode {
 
     /** Long/permanent lockout — user must re-enroll or wait significantly. */
     const val LOCKOUT_PERMANENT = "BIOMETRIC_LOCKOUT_PERMANENT"
+
+    /** The AndroidKeyStore alias is missing and must be enrolled again. */
+    const val KEY_MISSING = "BIOMETRIC_KEY_MISSING"
+
+    /** The AndroidKeyStore alias was invalidated and must be enrolled again. */
+    const val KEY_INVALIDATED = "BIOMETRIC_KEY_INVALIDATED"
+
+    /** The AndroidKeyStore key rejected cipher initialization before prompt. */
+    const val CIPHER_INIT_FAILED = "BIOMETRIC_CIPHER_INIT_FAILED"
+
+    /** The key requires auth but Android refused to bind it to the prompt. */
+    const val KEY_NOT_AUTHENTICATED = "BIOMETRIC_KEY_NOT_AUTHENTICATED"
+
+    /** The prompt succeeded but RSA decrypt failed. */
+    const val DECRYPT_FAILED = "BIOMETRIC_DECRYPT_FAILED"
 
     /** The system prompt timed out. */
     const val TIMEOUT = "BIOMETRIC_TIMEOUT"

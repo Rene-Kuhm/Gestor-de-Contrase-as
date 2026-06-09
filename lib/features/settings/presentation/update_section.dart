@@ -92,24 +92,19 @@ class _UpdateSectionState extends State<UpdateSection> {
     try {
       final path = await widget.service.downloadApk(info);
       if (!mounted) return;
-      // Mark this build as "shown" before we hand control to the
-      // system installer. If the user bails out of the install
-      // dialog the silent check will re-fire next time and the
-      // SnackBar comes back; if they confirm, this widget is gone.
-      if (info.releaseId != 0) {
-        await widget.service.markInstalled(info.releaseId);
-      }
       setState(() => _state = _UpdateState.installing);
       final ok = await widget.service.openInstallPrompt(path);
       if (!mounted) return;
       if (!ok) {
         setState(() {
           _state = _UpdateState.failed;
-          _errorMessage = 'No pudimos abrir el instalador del sistema. '
+          _errorMessage =
+              'No pudimos abrir el instalador del sistema. '
               'Verifica que "Fuentes desconocidas" este habilitado.';
         });
         return;
       }
+      await widget.service.markBuildPrompted(info);
       // The system installer is now in charge. The user confirms
       // there and the new APK replaces the running one — at which
       // point this widget is gone.

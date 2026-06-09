@@ -143,12 +143,20 @@ class UpdateChannel(
         // file with .apk in the name we care about.
         val assets = root.optJSONArray("assets")
         var apkUrl: String? = null
+        var apkAssetId = 0L
+        var apkAssetName = ""
+        var apkAssetUpdatedAt = ""
+        var apkAssetSize = 0L
         if (assets != null) {
             for (i in 0 until assets.length()) {
                 val asset = assets.getJSONObject(i)
                 val name = asset.optString("name", "")
                 if (name.endsWith(".apk", ignoreCase = true)) {
                     apkUrl = asset.optString("browser_download_url", null)
+                    apkAssetId = asset.optLong("id", 0L)
+                    apkAssetName = name
+                    apkAssetUpdatedAt = asset.optString("updated_at", "")
+                    apkAssetSize = asset.optLong("size", 0L)
                     if (apkUrl != null) break
                 }
             }
@@ -178,6 +186,11 @@ class UpdateChannel(
             "changelog" to body,
             "publishedAt" to publishedAt,
             "releaseId" to releaseId,
+            "assetId" to apkAssetId,
+            "assetName" to apkAssetName,
+            "assetUpdatedAt" to apkAssetUpdatedAt,
+            "assetSize" to apkAssetSize,
+            "buildFingerprint" to "$releaseId:$apkAssetId:$apkAssetUpdatedAt:$apkAssetSize",
             "currentVersion" to currentVersion,
         )
     }

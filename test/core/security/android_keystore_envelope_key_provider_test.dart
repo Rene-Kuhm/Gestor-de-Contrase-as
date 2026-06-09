@@ -19,12 +19,34 @@ void main() {
     );
 
     tearDown(() {
-      TestDefaultBinaryMessengerBinding
-          .instance.defaultBinaryMessenger
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(keystoreChannel, null);
-      TestDefaultBinaryMessengerBinding
-          .instance.defaultBinaryMessenger
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(biometricChannel, null);
+    });
+
+    test('stores encrypted RSA seed as base64-safe text', () {
+      final encryptedSeed = Uint8List.fromList([
+        0x00,
+        0x01,
+        0x7F,
+        0x80,
+        0xFE,
+        0xFF,
+      ]);
+
+      final stored =
+          AndroidKeystoreEnvelopeKeyProvider.encodeEncryptedSeedForStorage(
+            encryptedSeed,
+          );
+
+      expect(stored, isNot(String.fromCharCodes(encryptedSeed)));
+      expect(
+        AndroidKeystoreEnvelopeKeyProvider.decodeEncryptedSeedFromStorage(
+          stored,
+        ),
+        encryptedSeed,
+      );
     });
 
     test('returns null on non-Android targets', () async {
@@ -42,20 +64,16 @@ void main() {
         final release = await provider.releaseEnvelopeKey();
         expect(release.isSuccess, isFalse);
         expect(release.failureReason, 'platform_not_android');
-        expect(
-          await provider.isHardwareBackedBiometricAvailable(),
-          isFalse,
-        );
+        expect(await provider.isHardwareBackedBiometricAvailable(), isFalse);
       }
     });
 
     test('isAvailable forwards the platform response', () async {
-      TestDefaultBinaryMessengerBinding
-          .instance.defaultBinaryMessenger
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(keystoreChannel, (call) async {
-        if (call.method == 'isAvailable') return true;
-        return null;
-      });
+            if (call.method == 'isAvailable') return true;
+            return null;
+          });
       final provider = AndroidKeystoreEnvelopeKeyProvider(
         storage: _InMemoryStorage(),
       );
@@ -64,10 +82,7 @@ void main() {
       if (Platform.isAndroid) {
         expect(await provider.isHardwareBackedBiometricAvailable(), isTrue);
       } else {
-        expect(
-          await provider.isHardwareBackedBiometricAvailable(),
-          isFalse,
-        );
+        expect(await provider.isHardwareBackedBiometricAvailable(), isFalse);
       }
     });
 
@@ -79,40 +94,40 @@ void main() {
         }
         final storage = _InMemoryStorage();
         final ciphertextStore = <String>['encrypted-bytes'];
-        TestDefaultBinaryMessengerBinding
-            .instance.defaultBinaryMessenger
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
             .setMockMethodCallHandler(keystoreChannel, (call) async {
-          switch (call.method) {
-            case 'isAvailable':
-              return true;
-            case 'ensureKey':
-              return 'vaulta_biometric_envelope_v1';
-            case 'rsaEncrypt':
-              // We do not actually encrypt in the mock; we just
-              // return a non-empty ciphertext that the platform would
-              // have produced.
-              return Uint8List.fromList(ciphertextStore[0].codeUnits);
-            case 'deleteKey':
-              return null;
-            default:
-              return null;
-          }
-        });
+              switch (call.method) {
+                case 'isAvailable':
+                  return true;
+                case 'ensureKey':
+                  return 'vaulta_biometric_envelope_v1';
+                case 'rsaEncrypt':
+                  // We do not actually encrypt in the mock; we just
+                  // return a non-empty ciphertext that the platform would
+                  // have produced.
+                  return Uint8List.fromList(ciphertextStore[0].codeUnits);
+                case 'deleteKey':
+                  return null;
+                default:
+                  return null;
+              }
+            });
 
-        final provider = AndroidKeystoreEnvelopeKeyProvider(
-          storage: storage,
-        );
+        final provider = AndroidKeystoreEnvelopeKeyProvider(storage: storage);
         final acquireResult = await provider.acquireEnvelopeKey();
         expect(acquireResult.isSuccess, isTrue);
         expect(acquireResult.key, isNotNull);
 
         // The RSA-encrypted seed must have been persisted under the
         // documented storage key.
-        final stored = await storage.read(
-          'vaulta_biometric_envelope_seed_v1',
-        );
+        final stored = await storage.read('vaulta_biometric_envelope_seed_v1');
         expect(stored, isNotNull);
-        expect(stored, ciphertextStore[0]);
+        expect(
+          AndroidKeystoreEnvelopeKeyProvider.decodeEncryptedSeedFromStorage(
+            stored!,
+          ),
+          Uint8List.fromList(ciphertextStore[0].codeUnits),
+        );
       },
     );
 
@@ -121,29 +136,75 @@ void main() {
       final storage = _InMemoryStorage();
       await storage.save(
         'vaulta_biometric_envelope_seed_v1',
-        'seed-bytes',
+        AndroidKeystoreEnvelopeKeyProvider.encodeEncryptedSeedForStorage(
+          Uint8List.fromList('seed-bytes'.codeUnits),
+        ),
       );
-      TestDefaultBinaryMessengerBinding
-          .instance.defaultBinaryMessenger
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(keystoreChannel, (call) async {
-        if (call.method == 'isAvailable') return true;
-        return null;
-      });
-      TestDefaultBinaryMessengerBinding
-          .instance.defaultBinaryMessenger
+            if (call.method == 'isAvailable') return true;
+            return null;
+          });
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(biometricChannel, (call) async {
-        if (call.method == 'requestDecryptAuthorization') {
-          throw PlatformException(code: 'USER_CANCELLED');
-        }
-        return null;
-      });
-      final provider = AndroidKeystoreEnvelopeKeyProvider(
-        storage: storage,
-      );
+            if (call.method == 'requestDecryptAuthorization') {
+              throw PlatformException(code: 'USER_CANCELLED');
+            }
+            return null;
+          });
+      final provider = AndroidKeystoreEnvelopeKeyProvider(storage: storage);
       final releaseResult = await provider.releaseEnvelopeKey();
       expect(releaseResult.isSuccess, isFalse);
       expect(releaseResult.failureReason, isNotNull);
     });
+
+    test(
+      'releaseEnvelopeKey clears native slot when RSA ciphertext is invalid',
+      () async {
+        if (!Platform.isAndroid) return;
+        final storage = _InMemoryStorage();
+        await storage.save(
+          'vaulta_biometric_envelope_seed_v1',
+          AndroidKeystoreEnvelopeKeyProvider.encodeEncryptedSeedForStorage(
+            Uint8List.fromList('bad-ciphertext'.codeUnits),
+          ),
+        );
+        var deleteKeyCalls = 0;
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(keystoreChannel, (call) async {
+              switch (call.method) {
+                case 'isAvailable':
+                  return true;
+                case 'deleteKey':
+                  deleteKeyCalls++;
+                  return null;
+                default:
+                  return null;
+              }
+            });
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(biometricChannel, (call) async {
+              if (call.method == 'requestDecryptAuthorization') {
+                throw PlatformException(
+                  code: 'BIOMETRIC_DECRYPT_FAILED',
+                  message: 'decrypt_failed:IllegalBlockSizeException:',
+                );
+              }
+              return null;
+            });
+
+        final provider = AndroidKeystoreEnvelopeKeyProvider(storage: storage);
+        final releaseResult = await provider.releaseEnvelopeKey();
+
+        expect(releaseResult.isSuccess, isFalse);
+        expect(
+          releaseResult.failureReason,
+          contains('rsa_decrypt_invalid_ciphertext'),
+        );
+        expect(deleteKeyCalls, 1);
+        expect(await storage.read('vaulta_biometric_envelope_seed_v1'), isNull);
+      },
+    );
 
     test('end-to-end envelope + provider round-trip is symmetric', () async {
       if (!Platform.isAndroid) return;
@@ -152,48 +213,46 @@ void main() {
       final rsaCiphertexts = <String>[];
       final recoveredSeeds = <Uint8List>[];
 
-      TestDefaultBinaryMessengerBinding
-          .instance.defaultBinaryMessenger
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(keystoreChannel, (call) async {
-        switch (call.method) {
-          case 'isAvailable':
-            return true;
-          case 'ensureKey':
-            return 'alias';
-          case 'rsaEncrypt':
-            final pt =
-                (call.arguments as Map)['plaintext'] as Uint8List;
-            rsaCiphertexts.add(String.fromCharCodes(pt));
-            // Pretend the platform "encrypted" by returning a marker.
-            return Uint8List.fromList(
-              List<int>.generate(pt.length, (i) => pt[i] ^ 0xAA),
-            );
-          case 'rsaDecryptAuthorized':
-            final ct =
-                (call.arguments as Map)['ciphertext'] as Uint8List;
-            // Reverse the fake encryption so the seed round-trips.
-            final pt = Uint8List.fromList(
-              List<int>.generate(ct.length, (i) => ct[i] ^ 0xAA),
-            );
-            recoveredSeeds.add(pt);
-            return pt;
-          default:
-            return null;
-        }
-      });
-      TestDefaultBinaryMessengerBinding
-          .instance.defaultBinaryMessenger
+            switch (call.method) {
+              case 'isAvailable':
+                return true;
+              case 'ensureKey':
+                return 'alias';
+              case 'rsaEncrypt':
+                final pt = (call.arguments as Map)['plaintext'] as Uint8List;
+                rsaCiphertexts.add(String.fromCharCodes(pt));
+                // Pretend the platform "encrypted" by returning a marker.
+                return Uint8List.fromList(
+                  List<int>.generate(pt.length, (i) => pt[i] ^ 0xAA),
+                );
+              case 'rsaDecryptAuthorized':
+                final ct = (call.arguments as Map)['ciphertext'] as Uint8List;
+                // Reverse the fake encryption so the seed round-trips.
+                final pt = Uint8List.fromList(
+                  List<int>.generate(ct.length, (i) => ct[i] ^ 0xAA),
+                );
+                recoveredSeeds.add(pt);
+                return pt;
+              default:
+                return null;
+            }
+          });
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(biometricChannel, (call) async {
-        if (call.method == 'requestDecryptAuthorization') {
-          // Echo the ciphertext so the keystore channel can act on it.
-          return (call.arguments as Map)['ciphertext'] as Uint8List;
-        }
-        return null;
-      });
+            if (call.method == 'requestDecryptAuthorization') {
+              final ct = (call.arguments as Map)['ciphertext'] as Uint8List;
+              final pt = Uint8List.fromList(
+                List<int>.generate(ct.length, (i) => ct[i] ^ 0xAA),
+              );
+              recoveredSeeds.add(pt);
+              return pt;
+            }
+            return null;
+          });
 
-      final provider = AndroidKeystoreEnvelopeKeyProvider(
-        storage: storage,
-      );
+      final provider = AndroidKeystoreEnvelopeKeyProvider(storage: storage);
       final envelopeService = BiometricKeyEnvelopeService(storage: storage);
       final dek = Uint8List.fromList(List<int>.generate(32, (i) => i + 1));
 

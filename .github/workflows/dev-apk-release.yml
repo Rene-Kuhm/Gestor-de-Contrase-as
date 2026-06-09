@@ -1,14 +1,15 @@
 name: Build dev APK and publish to GitHub Releases
 
-# Rebuilds the debug APK on every push to master and overwrites the
+# Rebuilds the signed APK on every push to master and overwrites the
 # `dev-latest` GitHub Release with the new asset. The native
 # UpdateChannel queries api.github.com/repos/<owner>/<repo>/releases
 # /tags/dev-latest, so this single tag acts as the "rolling latest"
 # channel for internal testing.
 #
-# The APK keeps the same debug signature across builds, so Android
-# accepts the new asset as an in-place update — the user's master
-# password, envelope, and secure storage are preserved.
+# The APK must keep the same signing key across builds or Android
+# will reject in-place updates. This workflow therefore requires the
+# VAULTA_UPLOAD_* secrets below and publishes a release APK instead
+# of an ephemeral debug-signed APK.
 
 on:
   push:
@@ -45,13 +46,29 @@ jobs:
       - name: Analyze
         run: flutter analyze
 
-      - name: Build debug APK
-        run: flutter build apk --debug
+      - name: Validate signing secrets
+        run: |
+          test -n "${{ secrets.VAULTA_UPLOAD_KEYSTORE_BASE64 }}" || (echo "Missing VAULTA_UPLOAD_KEYSTORE_BASE64" && exit 1)
+          test -n "${{ secrets.VAULTA_UPLOAD_STORE_PASSWORD }}" || (echo "Missing VAULTA_UPLOAD_STORE_PASSWORD" && exit 1)
+          test -n "${{ secrets.VAULTA_UPLOAD_KEY_ALIAS }}" || (echo "Missing VAULTA_UPLOAD_KEY_ALIAS" && exit 1)
+          test -n "${{ secrets.VAULTA_UPLOAD_KEY_PASSWORD }}" || (echo "Missing VAULTA_UPLOAD_KEY_PASSWORD" && exit 1)
+
+      - name: Restore signing keystore
+        run: |
+          echo "${{ secrets.VAULTA_UPLOAD_KEYSTORE_BASE64 }}" | base64 --decode > android/upload-keystore.jks
+
+      - name: Build signed APK
+        env:
+          VAULTA_UPLOAD_STORE_FILE: upload-keystore.jks
+          VAULTA_UPLOAD_STORE_PASSWORD: ${{ secrets.VAULTA_UPLOAD_STORE_PASSWORD }}
+          VAULTA_UPLOAD_KEY_ALIAS: ${{ secrets.VAULTA_UPLOAD_KEY_ALIAS }}
+          VAULTA_UPLOAD_KEY_PASSWORD: ${{ secrets.VAULTA_UPLOAD_KEY_PASSWORD }}
+        run: flutter build apk --release
 
       - name: Resolve APK path
         id: apk
         run: |
-          APK=$(ls -1 build/app/outputs/flutter-apk/app-debug.apk | head -n 1)
+          APK=$(ls -1 build/app/outputs/flutter-apk/app-release.apk | head -n 1)
           echo "apk_path=$APK" >> "$GITHUB_OUTPUT"
           echo "apk_size=$(stat -c %s "$APK")" >> "$GITHUB_OUTPUT"
 
@@ -79,7 +96,7 @@ jobs:
 
             Install with:
             ```
-            adb install -r app-debug.apk
+            adb install -r app-release.apk
             ```
             or open the Settings screen in the running app and tap
             "Buscar actualizaciones".

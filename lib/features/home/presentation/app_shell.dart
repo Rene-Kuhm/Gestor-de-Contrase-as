@@ -88,23 +88,18 @@ class _AppShellState extends State<AppShell> {
     try {
       final path = await _updateService.downloadApk(info);
       if (!mounted) return;
-      // Mark the build as "shown" *before* the user taps install so
-      // the next silent check does not nag them about a build they
-      // are literally in the middle of installing. If they bail out
-      // of the installer the SnackBar will simply come back next
-      // time.
-      if (info.releaseId != 0) {
-        await _updateService.markInstalled(info.releaseId);
-      }
       final ok = await _updateService.openInstallPrompt(path);
       if (!mounted) return;
+      if (ok) {
+        await _updateService.markBuildPrompted(info);
+      }
       messenger?.showSnackBar(
         SnackBar(
           content: Text(
             ok
                 ? 'Confirma la instalacion en la pantalla del sistema.'
                 : 'No pudimos abrir el instalador. Andá a Ajustes para '
-                    'habilitar "Fuentes desconocidas" y volve a intentar.',
+                      'habilitar "Fuentes desconocidas" y volve a intentar.',
           ),
         ),
       );

@@ -7,9 +7,14 @@ import android.util.Log
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
+import java.security.KeyFactory
+import java.security.KeyPairGenerator
 import java.security.KeyStore
+import java.security.spec.MGF1ParameterSpec
+import java.security.spec.X509EncodedKeySpec
 import javax.crypto.Cipher
-import javax.crypto.KeyGenerator
+import javax.crypto.spec.OAEPParameterSpec
+import javax.crypto.spec.PSource
 
 /**
  * Bridge between the Dart envelope and the Android KeyStore.
@@ -92,14 +97,15 @@ class KeystoreChannel(engine: FlutterEngine) : MethodChannel.MethodCallHandler {
             return false
         }
         return try {
-            val generator = KeyGenerator.getInstance(
+            val generator = KeyPairGenerator.getInstance(
                 KeyProperties.KEY_ALGORITHM_RSA,
                 ANDROID_KEYSTORE
             )
-            // Building the spec is enough to fail on devices that do
-            // not support STRONG biometric-bound keys. We never call
-            // init() so no real key is created.
-            buildKeySpec("vaulta-biometric-probe")
+            generator.initialize(buildKeySpec("vaulta-biometric-probe"))
+            generator.generateKeyPair()
+            if (ks.containsAlias("vaulta-biometric-probe")) {
+                ks.deleteEntry("vaulta-biometric-probe")
+            }
             Log.d(TAG, "isAvailable: KeyStore can build a biometric-bound RSA spec")
             true
         } catch (e: Throwable) {
@@ -115,13 +121,13 @@ class KeystoreChannel(engine: FlutterEngine) : MethodChannel.MethodCallHandler {
             return KEY_ALIAS
         }
 
-        val generator = KeyGenerator.getInstance(
+        val generator = KeyPairGenerator.getInstance(
             KeyProperties.KEY_ALGORITHM_RSA,
             ANDROID_KEYSTORE
         )
         val spec = buildKeySpec(KEY_ALIAS)
-        generator.init(spec)
-        generator.generateKey()
+        generator.initialize(spec)
+        generator.generateKeyPair()
         Log.i(TAG, "ensureKey: generated new RSA-2048 alias=$KEY_ALIAS")
         return KEY_ALIAS
     }
@@ -181,12 +187,14 @@ class KeystoreChannel(engine: FlutterEngine) : MethodChannel.MethodCallHandler {
             ensureKey()
         }
         val entry = ks.getEntry(KEY_ALIAS, null) as KeyStore.PrivateKeyEntry
+        val publicKey = KeyFactory.getInstance(KeyProperties.KEY_ALGORITHM_RSA)
+            .generatePublic(X509EncodedKeySpec(entry.certificate.publicKey.encoded))
         val cipher = Cipher.getInstance(TRANSFORMATION_RSA)
         // No IvParameter for RSA-OAEP. Encryption is a public-key
         // operation, so the biometric gate is intentionally not
         // consulted here: this is the path the app uses to wrap a
         // fresh seed at activation time, not to unwrap it.
-        cipher.init(Cipher.ENCRYPT_MODE, entry.certificate.publicKey)
+        cipher.init(Cipher.ENCRYPT_MODE, publicKey, OAEP_SHA256_MGF1_SHA1)
         val out = cipher.doFinal(plaintext)
         Log.d(TAG, "rsaEncrypt: ${plaintext.size} bytes -> ${out.size} bytes")
         return out
@@ -244,5 +252,11 @@ class KeystoreChannel(engine: FlutterEngine) : MethodChannel.MethodCallHandler {
         private const val KEY_ALIAS = "vaulta_biometric_envelope_v1"
         private const val TRANSFORMATION_RSA = "RSA/ECB/OAEPWithSHA-256AndMGF1Padding"
         private const val TAG = "Vaulta/KeyStore"
+        private val OAEP_SHA256_MGF1_SHA1 = OAEPParameterSpec(
+            "SHA-256",
+            "MGF1",
+            MGF1ParameterSpec.SHA1,
+            PSource.PSpecified.DEFAULT
+        )
     }
 }
