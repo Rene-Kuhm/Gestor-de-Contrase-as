@@ -39,7 +39,7 @@ void main() {
           localRecordId: 'entry-1',
           ciphertext: 'cipher-a',
           nonce: 'nonce-a',
-          aad: 'aad-a',
+          gcmTag: 'gcmTag-a',
           keyVersion: 1,
           occurredAt: DateTime.utc(2026, 3, 23, 14, 0),
         ),
@@ -87,7 +87,7 @@ void main() {
             keyVersion: 1,
             ciphertext: 'seed',
             nonce: 'seed',
-            aad: 'seed',
+            gcmTag: 'seed',
             updatedAt: DateTime.utc(2026, 3, 23, 13, 0),
           ),
         );
@@ -140,7 +140,7 @@ void main() {
           localRecordId: 'entry-retry',
           ciphertext: 'cipher-r',
           nonce: 'nonce-r',
-          aad: 'aad-r',
+          gcmTag: 'gcmTag-r',
           keyVersion: 1,
           occurredAt: DateTime.utc(2026, 3, 23, 14, 0),
         ),
@@ -214,7 +214,7 @@ class _FakeRemoteVaultSyncRepository implements RemoteVaultSyncRepository {
     required int? expectedVersion,
     required String ciphertext,
     required String nonce,
-    required String? aad,
+    required String? gcmTag,
     required int keyVersion,
   }) async {
     upsertCalls.add({
@@ -224,7 +224,7 @@ class _FakeRemoteVaultSyncRepository implements RemoteVaultSyncRepository {
       'expectedVersion': expectedVersion,
       'ciphertext': ciphertext,
       'nonce': nonce,
-      'aad': aad,
+      'gcmTag': gcmTag,
       'keyVersion': keyVersion,
     });
     return _nextResponse();

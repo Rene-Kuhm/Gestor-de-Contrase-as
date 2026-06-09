@@ -35,7 +35,7 @@ void main() {
             expectedVersion: 2,
             ciphertext: 'cipher-v3',
             nonce: 'nonce-v3',
-            aad: 'aad-v3',
+            gcmTag: 'gcmTag-v3',
             keyVersion: 1,
             idempotencyKey: 'idem-1',
             attemptCount: 1,
@@ -179,7 +179,7 @@ class _FakeRemoteVaultSyncRepository implements RemoteVaultSyncRepository {
     required int? expectedVersion,
     required String ciphertext,
     required String nonce,
-    required String? aad,
+    required String? gcmTag,
     required int keyVersion,
   }) async {
     throw UnimplementedError();

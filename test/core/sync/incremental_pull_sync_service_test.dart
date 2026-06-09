@@ -24,7 +24,7 @@ void main() {
           'version': 7,
           'ciphertext': 'cipher-blob',
           'nonce': 'nonce',
-          'aad': 'aad',
+          'gcm_tag': 'gcmTag',
           'key_version': 3,
           'deleted_at': '2026-03-23T12:15:00Z',
           'updated_at': '2026-03-23T12:15:00Z',
@@ -38,7 +38,7 @@ void main() {
       expect(change.isTombstone, isTrue);
       expect(change.ciphertext, isNull);
       expect(change.nonce, isNull);
-      expect(change.aad, isNull);
+      expect(change.gcmTag, isNull);
     });
   });
 
@@ -67,7 +67,7 @@ void main() {
               keyVersion: 1,
               ciphertext: 'a1',
               nonce: 'na1',
-              aad: 'aa1',
+              gcmTag: 'aa1',
               updatedAt: DateTime.utc(2026, 3, 23, 12, 0),
             ),
             RemoteVaultBlobChange(
@@ -77,7 +77,7 @@ void main() {
               keyVersion: 1,
               ciphertext: 'b2',
               nonce: 'nb2',
-              aad: 'ab2',
+              gcmTag: 'ab2',
               updatedAt: DateTime.utc(2026, 3, 23, 12, 1),
             ),
           ],
@@ -118,7 +118,7 @@ void main() {
             keyVersion: 1,
             ciphertext: 'cipher-v3',
             nonce: 'nonce-v3',
-            aad: 'aad-v3',
+            gcmTag: 'gcmTag-v3',
             updatedAt: DateTime.utc(2026, 3, 23, 12, 0),
           ),
         ],
@@ -136,7 +136,7 @@ void main() {
             keyVersion: 1,
             ciphertext: 'stale',
             nonce: 'stale',
-            aad: 'stale',
+            gcmTag: 'stale',
             updatedAt: DateTime.utc(2026, 3, 23, 11, 59),
           ),
         ],
@@ -184,7 +184,7 @@ void main() {
               keyVersion: 1,
               ciphertext: 'cipher',
               nonce: 'nonce',
-              aad: 'aad',
+              gcmTag: 'gcmTag',
               updatedAt: DateTime.utc(2026, 3, 23, 12, 0),
             ),
           ],
@@ -257,7 +257,7 @@ void main() {
                 keyVersion: 2,
                 ciphertext: encryptedPayload['ciphertext_b64'] as String,
                 nonce: encryptedPayload['nonce_b64'] as String,
-                aad: encryptedPayload['tag_b64'] as String,
+                gcmTag: encryptedPayload['tag_b64'] as String,
                 updatedAt: DateTime.utc(2026, 3, 23, 12, 0),
               ),
             ],
@@ -364,7 +364,7 @@ class _FakeRemoteVaultSyncRepository implements RemoteVaultSyncRepository {
     required int? expectedVersion,
     required String ciphertext,
     required String nonce,
-    required String? aad,
+    required String? gcmTag,
     required int keyVersion,
   }) {
     throw UnimplementedError();
