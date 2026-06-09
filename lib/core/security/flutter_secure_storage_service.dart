@@ -8,7 +8,8 @@ class FlutterSecureStorageService implements SecureStorageService {
 
   static const _iosOptions = IOSOptions(
     accountName: 'VaultaSecureState',
-    accessibility: KeychainAccessibility.first_unlock_this_device,
+    accessibility: KeychainAccessibility.unlocked_this_device,
+    synchronizable: false,
   );
 
   static const _androidOptions = AndroidOptions();

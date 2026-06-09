@@ -72,7 +72,7 @@ from public.rpc_vault_upsert_blob(
   p_expected_version := 3,
   p_ciphertext := 'base64-ciphertext',
   p_nonce := 'base64-nonce',
-  p_aad := 'record-metadata',
+  p_gcm_tag := 'record-authentication-tag',
   p_key_version := 1,
   p_request_hash := 'sha256:...'
 );

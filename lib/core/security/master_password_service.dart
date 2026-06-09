@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
 
 import 'package:cryptography/cryptography.dart';
@@ -12,11 +13,16 @@ class MasterPasswordService {
     int argon2MemoryKiB = _defaultArgon2MemoryKiB,
     int argon2Parallelism = _defaultArgon2Parallelism,
     bool useFastTestKdf = false,
-  }) : _verifierIterations = verifierIterations,
-       _encryptionIterations = encryptionIterations,
-       _argon2MemoryKiB = argon2MemoryKiB,
-       _argon2Parallelism = argon2Parallelism,
-       _useFastTestKdf = useFastTestKdf;
+  })  : assert(
+          !useFastTestKdf || _isRunningInFlutterTest(),
+          'useFastTestKdf is only valid inside flutter_test. Use the .test() '
+          'factory or guard the caller explicitly.',
+        ),
+        _verifierIterations = verifierIterations,
+        _encryptionIterations = encryptionIterations,
+        _argon2MemoryKiB = argon2MemoryKiB,
+        _argon2Parallelism = argon2Parallelism,
+        _useFastTestKdf = useFastTestKdf;
 
   factory MasterPasswordService.test() {
     return MasterPasswordService(
@@ -34,6 +40,16 @@ class MasterPasswordService {
   static const _defaultArgon2MemoryKiB = 65536;
   static const _defaultArgon2Parallelism = 1;
   static final _wrapAlgorithm = AesGcm.with256bits();
+
+  /// True only when running under `package:flutter_test`. The Dart VM
+  /// does not expose a "is this a test" flag, but the flutter test
+  /// runner sets `FLUTTER_TEST=true` in the process environment, which
+  /// is enough to keep the test KDF from ever being constructed in
+  /// production.
+  static bool _isRunningInFlutterTest() {
+    final value = Platform.environment['FLUTTER_TEST'];
+    return value == 'true' || value == '1';
+  }
 
   final int _verifierIterations;
   final int _encryptionIterations;

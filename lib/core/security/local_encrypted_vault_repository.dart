@@ -142,7 +142,7 @@ class LocalEncryptedVaultRepository implements VaultRepository {
                 localRecordId: persisted.id,
                 ciphertext: syncPayload.ciphertext,
                 nonce: syncPayload.nonce,
-                aad: syncPayload.aad,
+                gcmTag: syncPayload.gcmTag,
                 keyVersion: syncPayload.keyVersion,
                 occurredAt: now.toUtc(),
               ),
@@ -254,7 +254,8 @@ class LocalEncryptedVaultRepository implements VaultRepository {
             as String?;
     final nonce =
         (nestedPayload['nonce_b64'] ?? nestedPayload['nonce']) as String?;
-    final aad = (nestedPayload['tag_b64'] ?? nestedPayload['mac']) as String?;
+    final gcmTag =
+        (nestedPayload['tag_b64'] ?? nestedPayload['mac']) as String?;
 
     if (ciphertext == null ||
         ciphertext.isEmpty ||
@@ -266,7 +267,7 @@ class LocalEncryptedVaultRepository implements VaultRepository {
     return _SyncBlobPayload(
       ciphertext: ciphertext,
       nonce: nonce,
-      aad: aad,
+      gcmTag: gcmTag,
       keyVersion: (payload['v'] ?? payload['version'] ?? 1) as int,
     );
   }
@@ -324,7 +325,7 @@ class LocalEncryptedVaultRepository implements VaultRepository {
           'alg': 'AES-256-GCM',
           'nonce_b64': nonce,
           'ciphertext_b64': ciphertext,
-          'tag_b64': snapshot.aad ?? '',
+          'tag_b64': snapshot.gcmTag ?? '',
         },
       });
     }
@@ -334,7 +335,7 @@ class LocalEncryptedVaultRepository implements VaultRepository {
       'keyId': session.keyId,
       'nonce': nonce,
       'ciphertext': ciphertext,
-      'mac': snapshot.aad ?? '',
+      'mac': snapshot.gcmTag ?? '',
     });
   }
 
@@ -397,12 +398,12 @@ class _SyncBlobPayload {
   const _SyncBlobPayload({
     required this.ciphertext,
     required this.nonce,
-    required this.aad,
+    required this.gcmTag,
     required this.keyVersion,
   });
 
   final String ciphertext;
   final String nonce;
-  final String? aad;
+  final String? gcmTag;
   final int keyVersion;
 }
