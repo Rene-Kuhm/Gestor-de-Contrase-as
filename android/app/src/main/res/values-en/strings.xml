@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="vaulta_biometric_prompt_title">Unlock Vaulta</string>
+    <string name="vaulta_biometric_prompt_subtitle">Confirm your identity to recover your session</string>
+    <string name="vaulta_biometric_prompt_description">Biometrics protects the key that encrypts your vault.</string>
+
+    <string name="vaulta_biometric_error_no_hardware">This device has no biometric hardware.</string>
+    <string name="vaulta_biometric_error_hw_unavailable">Biometric hardware is temporarily unavailable. Please retry in a few seconds.</string>
+    <string name="vaulta_biometric_error_none_enrolled">No biometrics enrolled on this device. Set one up in Settings.</string>
+    <string name="vaulta_biometric_error_security_update_required">A critical OS security update is required before biometrics can be used.</string>
+    <string name="vaulta_biometric_error_unsupported">Your device does not support the biometric verification required by Vaulta.</string>
+    <string name="vaulta_biometric_error_unknown">We could not verify your identity. Retry or use the master password.</string>
+</resources>

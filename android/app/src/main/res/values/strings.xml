@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Biometric prompt copy surfaced by MainActivity.kt.
+         The prompt authenticator set is BIOMETRIC_STRONG or DEVICE_CREDENTIAL,
+         so the system draws its own fallback button ("Use PIN" / "Use pattern").
+         setNegativeButtonText is therefore intentionally NOT used. -->
+    <string name="vaulta_biometric_prompt_title">Desbloquear Vaulta</string>
+    <string name="vaulta_biometric_prompt_subtitle">Confirma tu identidad para recuperar tu sesion</string>
+    <string name="vaulta_biometric_prompt_description">La biometria protege la clave que cifra tu vault.</string>
+
+    <!-- Per-error code messages returned through MethodChannel. The Dart
+         side has its own i18n for the user-facing message, but the native
+         side logs these in adb logcat for diagnosis. -->
+    <string name="vaulta_biometric_error_no_hardware">Este dispositivo no tiene hardware biometrico.</string>
+    <string name="vaulta_biometric_error_hw_unavailable">El hardware biometrico esta temporalmente no disponible. Reintenta en unos segundos.</string>
+    <string name="vaulta_biometric_error_none_enrolled">No hay biometria registrada en este dispositivo. Configurala en Ajustes.</string>
+    <string name="vaulta_biometric_error_security_update_required">Falta una actualizacion critica de seguridad del sistema. Biometria no disponible.</string>
+    <string name="vaulta_biometric_error_unsupported">Tu dispositivo no soporta la verificacion biometrica requerida por Vaulta.</string>
+    <string name="vaulta_biometric_error_unknown">No pudimos verificar tu identidad. Reintenta o usa la master password.</string>
+</resources>
