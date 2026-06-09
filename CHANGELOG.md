@@ -11,13 +11,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - **Biometric unlock envelope.** Vaulta can now enroll a per-vault
   biometric unlock path. The vault DEK is wrapped with HKDF-SHA256
   over a platform-protected key slot, and only the wrapped envelope is
-  persisted on disk. The unwrap step runs after a successful
-  `local_auth` prompt. On non-mobile targets the unlock is reported
-  as unavailable rather than silently failing. The platform key
-  provider is pluggable so a real Android Keystore / iOS Secure Enclave
-  binding can be dropped in without touching the controller. If the
+  persisted on disk. On Android the platform-protected key is an
+  RSA-2048 keypair in AndroidKeyStore with
+  `setUserAuthenticationRequired(true)` and, on API 30+,
+  `setUserAuthenticationParameters(0, AUTH_BIOMETRIC_STRONG)` so the
+  private key is released only after a fresh `BiometricPrompt` per
+  decrypt. The prompt authenticator set is
+  `BIOMETRIC_STRONG or DEVICE_CREDENTIAL` so users on devices with
+  only weak biometrics enrolled can still unlock with their device
+  PIN. On non-mobile targets the unlock is reported as unavailable
+  rather than silently failing. The platform key provider is
+  pluggable so a real Android Keystore / iOS Secure Enclave binding
+  can be dropped in without touching the controller. If the
   platform reports biometrics are no longer enrolled, Vaulta
   automatically clears both the preference and the envelope.
+
+- **Single source of biometric truth.** The availability check and
+  the `BiometricPrompt` itself now share one channel
+  (`com.insyd.vaulta/biometric`). The previous implementation mixed
+  `local_auth` for the gate and a custom MethodChannel for the
+  prompt; on devices with weak biometrics the two would disagree
+  and the unlock button would silently disappear. iOS / desktop /
+  web keep the `local_auth` path; only Android uses the new
+  native service.
 
 - **VaultSession invariant.** The session class now requires `kdf` and
   `dekWrap` to be either both present or both absent. A new
@@ -44,6 +60,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - **Auto-lock by default.** Background auto-lock and idle auto-lock
   remain on by default. The locked-state UI now reflects the real
   biometric availability instead of a hard-coded "false".
+- **Biometric library upgrade.** `androidx.biometric` moves from
+  `1.2.0-alpha05` to `1.4.0-alpha07` to pick up the bug fixes that
+  the alpha05 line was missing on compileSdk 36 (notably the
+  removal of the deprecated `setUserAuthenticationValidityDuration`
+  from the public surface).
+- **Biometric prompt is now localized.** Copy that used to be
+  hardcoded Spanish in `MainActivity.kt` now lives in
+  `res/values/strings.xml` and `res/values-en/strings.xml`.
 - **CHANGELOG discipline.** This file is now kept in sync with
   notable security-relevant changes from each iteration.
 
@@ -54,3 +78,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   user at the master password path; when an envelope is present and
   biometrics succeed, the controller actually unwraps the DEK and
   builds a `VaultSession` the same way a password unlock would.
+- **Biometric unlock button would silently vanish** on devices
+  whose only biometric is class-2 (face unlock). The previous
+  `canAuthenticate(BIOMETRIC_STRONG)` check returned
+  `BIOMETRIC_ERROR_NO_HARDWARE` on those devices, the catch-all
+  branch returned `BIOMETRIC_UNAVAILABLE`, and the prompt was never
+  opened. The new authenticator set is
+  `BIOMETRIC_STRONG or DEVICE_CREDENTIAL` and the system draws its
+  own fallback button (PIN / pattern / password) so the user always
+  has a path.
+- **No prompt for "no biometric enrolled"** is no longer
+  indistinguishable from "no hardware". The native probe now
+  reports the exact `BiometricManager` reason code (`NO_HARDWARE`,
+  `NONE_ENROLLED`, `HW_UNAVAILABLE`, `SECURITY_UPDATE_REQUIRED`,
+  `UNSUPPORTED`, `LOCKOUT`, `LOCKOUT_PERMANENT`, `TIMEOUT`,
+  `USER_CANCELLED`), and the Dart side turns `NONE_ENROLLED` into
+  a deep-link to `Settings.ACTION_BIOMETRIC_ENROLL` (API 30+) or
+  `Settings.ACTION_SECURITY_SETTINGS` on older devices, surfaced
+  from both the unlock screen and the settings screen.
+- **Double biometric prompt** during unlock. The previous
+  `LocalBiometricAuthService.authenticateForUnlock` was opening a
+  `local_auth` prompt before the native `BiometricPrompt` for the
+  KeyStore operation fired. The new
+  `NativeBiometricAuthService.authenticateForUnlock` is a passive
+  availability check; the actual prompt is opened once, by the
+  KeyStore provider's `releaseEnvelopeKey`.
+- **"Key permanently invalidated" was reported as a generic
+  error.** The new `KeyPermanentlyInvalidatedException` is mapped
+  to `BIOMETRIC_LOCKOUT_PERMANENT` so the UI can ask the user to
+  re-enroll instead of looping on a stale key.

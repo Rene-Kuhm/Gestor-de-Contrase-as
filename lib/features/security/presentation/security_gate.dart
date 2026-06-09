@@ -6,6 +6,7 @@ import '../../../app/design_system/app_panel.dart';
 import '../../../app/localization/l10n.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
+import '../../../core/security/native_biometric_auth_service.dart';
 import '../../../core/security/vault_security_controller.dart';
 import '../../../core/sync/device_registration_service.dart';
 
@@ -342,6 +343,11 @@ class _UnlockScreenState extends State<_UnlockScreen> {
   // user is no longer left wondering why the button disappeared.
   bool _canOfferBiometricButton = false;
   String? _biometricStatusMessage;
+  // Rich platform capability, used to render a "Set up biometrics"
+  // CTA when the device lost its enrollment between launches.
+  NativeBiometricCapability _biometricCapability =
+      NativeBiometricCapability.empty;
+  bool _enrollingBiometric = false;
 
   @override
   void initState() {
@@ -364,13 +370,43 @@ class _UnlockScreenState extends State<_UnlockScreen> {
   Future<void> _refreshBiometricUnlockAvailability() async {
     final nextOffer = widget.controller.canOfferBiometricUnlockButton;
     final nextMessage = await widget.controller.biometricUnlockStatusMessage();
+    final nextCap = await widget.controller.probeBiometricCapability();
     if (!mounted) return;
+    final capChanged =
+        nextCap.canUseStrongOrCredential !=
+                _biometricCapability.canUseStrongOrCredential ||
+            nextCap.canUseStrong != _biometricCapability.canUseStrong ||
+            nextCap.canUseWeak != _biometricCapability.canUseWeak ||
+            nextCap.needsEnrollment != _biometricCapability.needsEnrollment;
     if (nextOffer != _canOfferBiometricButton ||
-        nextMessage != _biometricStatusMessage) {
+        nextMessage != _biometricStatusMessage ||
+        capChanged) {
       setState(() {
         _canOfferBiometricButton = nextOffer;
         _biometricStatusMessage = nextMessage;
+        _biometricCapability = nextCap;
       });
+    }
+  }
+
+  Future<void> _openBiometricEnrollment() async {
+    if (_enrollingBiometric) return;
+    setState(() => _enrollingBiometric = true);
+    try {
+      final ok = await widget.controller.openBiometricEnrollment();
+      if (!ok && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.l10n.biometricEnrollUnavailable)),
+        );
+      }
+      // Re-probe a few seconds later in case the user came back from
+      // the system settings with a fresh biometric enrolled.
+      await Future<void>.delayed(const Duration(seconds: 1));
+      await _refreshBiometricUnlockAvailability();
+    } finally {
+      if (mounted) {
+        setState(() => _enrollingBiometric = false);
+      }
     }
   }
 
@@ -464,6 +500,22 @@ class _UnlockScreenState extends State<_UnlockScreen> {
                   if (controller.message case final message?) ...[
                     const SizedBox(height: AppSpacing.md),
                     _StatusBanner(message: message),
+                  ],
+                  // The user enabled biometrics at some point but the
+                  // platform now reports NONE_ENROLLED — most likely
+                  // they removed their fingerprint from the device or
+                  // wiped the keystore. Show a CTA so they can re-add
+                  // it without going through Settings.
+                  if (!_canOfferBiometricButton &&
+                      widget.controller.biometricEnabled &&
+                      _biometricCapability.needsEnrollment) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    _BiometricEnrollInline(
+                      title: l10n.biometricEnrollCta,
+                      actionLabel: l10n.biometricEnrollAction,
+                      busy: _enrollingBiometric,
+                      onAction: _openBiometricEnrollment,
+                    ),
                   ],
                 ],
               ),
@@ -702,6 +754,61 @@ class _GlowOrb extends StatelessWidget {
           shape: BoxShape.circle,
           gradient: RadialGradient(colors: [color, color.withValues(alpha: 0)]),
         ),
+      ),
+    );
+  }
+}
+
+/// Compact "biometric is enabled but not enrolled" CTA used in the
+/// unlock screen. Different from the banner in settings_screen so
+/// it fits in the narrower unlock layout — single row, primary
+/// action on the right.
+class _BiometricEnrollInline extends StatelessWidget {
+  const _BiometricEnrollInline({
+    required this.title,
+    required this.actionLabel,
+    required this.busy,
+    required this.onAction,
+  });
+
+  final String title;
+  final String actionLabel;
+  final bool busy;
+  final VoidCallback onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.cloud,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.fingerprint_rounded, color: AppColors.warning),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              title,
+              style: theme.textTheme.bodyMedium?.copyWith(color: AppColors.ink),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          FilledButton.tonalIcon(
+            onPressed: busy ? null : onAction,
+            icon: busy
+                ? const SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.open_in_new_rounded, size: 18),
+            label: Text(actionLabel),
+          ),
+        ],
       ),
     );
   }
