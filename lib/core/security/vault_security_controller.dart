@@ -1,7 +1,12 @@
 import 'dart:async';
+
+import 'package:cryptography/cryptography.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
 import 'biometric_auth_service.dart';
+import 'biometric_key_envelope_service.dart';
+import 'biometric_unlock_service.dart';
 import 'master_password_record.dart';
 import 'master_password_service.dart';
 import 'secure_storage_service.dart';
@@ -21,17 +26,18 @@ class VaultSecurityController extends ChangeNotifier {
     required MasterPasswordService masterPasswordService,
     required BiometricAuthService biometricAuthService,
     VaultRekeyEntries? rekeyEntries,
+    BiometricKeyEnvelopeService? biometricEnvelopeService,
+    BiometricUnlockService? biometricUnlockService,
   }) : _storage = storage,
        _masterPasswordService = masterPasswordService,
        _biometricAuthService = biometricAuthService,
-       _rekeyEntries = rekeyEntries ?? _unsupportedRekey;
+       _rekeyEntries = rekeyEntries ?? _unsupportedRekey,
+       _biometricEnvelopeService = biometricEnvelopeService ??
+           BiometricKeyEnvelopeService(storage: storage),
+       _biometricUnlockService = biometricUnlockService;
 
   static const masterPasswordRecordKey = 'vault_master_password_record';
   static const biometricEnabledKey = 'vault_biometric_enabled';
-  static const biometricRecoveryArtifactKey =
-      'vault_biometric_recovery_artifact';
-  static const biometricSeedKey = 'vault_biometric_seed';
-  static const biometricSlotKey = 'vault_biometric_key_slot_v2';
   static const autoLockOnBackgroundEnabledKey =
       'vault_auto_lock_on_background_enabled';
   static const idleTimeoutSecondsKey = 'vault_idle_timeout_seconds';
@@ -42,6 +48,8 @@ class VaultSecurityController extends ChangeNotifier {
   final MasterPasswordService _masterPasswordService;
   final BiometricAuthService _biometricAuthService;
   final VaultRekeyEntries _rekeyEntries;
+  final BiometricKeyEnvelopeService _biometricEnvelopeService;
+  final BiometricUnlockService? _biometricUnlockService;
 
   VaultSecurityStage _stage = VaultSecurityStage.loading;
   BiometricAvailability _biometricAvailability = const BiometricAvailability(
@@ -83,7 +91,56 @@ class VaultSecurityController extends ChangeNotifier {
       _biometricAvailability.canAuthenticate &&
       _biometricAvailability.hasEnrolledBiometrics;
 
-  bool get canUnlockWithBiometrics => false;
+  /// True when there is a real path to a biometric unlock on this
+  /// device: the platform supports it, biometrics are enrolled, AND
+  /// a wrapped-DEK envelope exists on disk for this vault.
+  ///
+  /// The flag is computed on demand because the platform keychain
+  /// state can change between app launches and we never want to show
+  /// a biometric button that would just fail.
+  Future<bool> canUnlockWithBiometrics() async {
+    final unlocker = _biometricUnlockService;
+    if (unlocker == null) {
+      debugPrint('[Vaulta] canUnlock: no unlocker wired up');
+      return false;
+    }
+    final result = await unlocker.canAttemptUnlock();
+    debugPrint('[Vaulta] canUnlock=$result '
+        '(enrolled=${_biometricAvailability.hasEnrolledBiometrics}, '
+        'canAuth=${_biometricAvailability.canAuthenticate}, '
+        'flag=$_biometricEnabled)');
+    return result;
+  }
+
+  /// True when the unlock screen should *offer* a biometric button.
+  /// This is broader than [canUnlockWithBiometrics]: it returns true
+  /// as long as the device can authenticate with biometrics AND the
+  /// user has the preference on. The actual unlock might still fail
+  /// (e.g. no envelope on disk yet) and the controller will explain
+  /// the reason in the message.
+  ///
+  /// The unlock screen uses this to decide whether to render the
+  /// fingerprint button. Hiding the button entirely when enrollment
+  /// failed silently in the past was a UX trap: the user flipped the
+  /// toggle and saw nothing happen.
+  bool get canOfferBiometricUnlockButton {
+    if (!_biometricEnabled) return false;
+    if (!canOfferBiometricToggle) return false;
+    return _biometricUnlockService != null;
+  }
+
+  /// Latest human-readable status of the biometric unlock path, for
+  /// the unlock screen to surface when the button is offered but the
+  /// underlying envelope is not yet on disk. Returns null when there
+  /// is nothing useful to say.
+  Future<String?> biometricUnlockStatusMessage() async {
+    if (!canOfferBiometricUnlockButton) return null;
+    if (await _biometricEnvelopeService.isEnrolled()) {
+      return null;
+    }
+    return 'Todavia no preparamos el desbloqueo biometrico. '
+        'Desbloquea una vez con la master password y la huella quedara lista.';
+  }
 
   Future<void> initialize() async {
     _setBusy(true);
@@ -106,14 +163,21 @@ class VaultSecurityController extends ChangeNotifier {
           ) ??
           defaultIdleTimeoutSeconds;
 
-      await _storage.delete(biometricRecoveryArtifactKey);
-      await _storage.delete(biometricSeedKey);
-      await _storage.delete(biometricSlotKey);
-
       final record = await _readRecord();
       _stage = record == null
           ? VaultSecurityStage.onboarding
           : VaultSecurityStage.locked;
+
+      // If the user previously turned biometrics on but the platform
+      // enrollment is gone (e.g. they removed Face ID from the device
+      // or wiped the keystore), drop the preference so the UI does not
+      // lie about what's available. The wrapped envelope is also wiped
+      // because without the platform-protected key it is useless.
+      if (_biometricEnabled && !canOfferBiometricToggle) {
+        _biometricEnabled = false;
+        await _storage.save(biometricEnabledKey, 'false');
+        await _biometricEnvelopeService.clear();
+      }
     } catch (_) {
       _stage = VaultSecurityStage.onboarding;
       _message =
@@ -150,17 +214,18 @@ class VaultSecurityController extends ChangeNotifier {
 
     return _runBusy(() async {
       final record = await _masterPasswordService.createRecord(password);
-      _vaultSession = VaultSession(
+      _vaultSession = VaultSession.v2(
         keyId: record.keyId,
         secretKey: await _masterPasswordService.deriveVaultKey(
           record: record,
           password: password,
         ),
-        kdf: record.kdf,
-        dekWrap: record.dekWrap,
+        kdf: record.kdf!,
+        dekWrap: record.dekWrap!,
       );
       await _storage.save(masterPasswordRecordKey, record.encode());
       await _persistBiometricPreference(enableBiometrics);
+      await _enrollBiometricEnvelopeIfNeeded(record);
 
       _message =
           'Master password creada. Tu sesion local queda protegida por el sistema.';
@@ -205,14 +270,14 @@ class VaultSecurityController extends ChangeNotifier {
         final migratedRecord = await _masterPasswordService.createRecord(
           password,
         );
-        final migratedSession = VaultSession(
+        final migratedSession = VaultSession.v2(
           keyId: migratedRecord.keyId,
           secretKey: await _masterPasswordService.deriveVaultKey(
             record: migratedRecord,
             password: password,
           ),
-          kdf: migratedRecord.kdf,
-          dekWrap: migratedRecord.dekWrap,
+          kdf: migratedRecord.kdf!,
+          dekWrap: migratedRecord.dekWrap!,
         );
         await _rekeyEntries(
           sourceSession: sourceSession,
@@ -221,12 +286,25 @@ class VaultSecurityController extends ChangeNotifier {
         await _storage.save(masterPasswordRecordKey, migratedRecord.encode());
         activeRecord = migratedRecord;
         activeSession = migratedSession;
+        // Re-enroll the envelope after migration so the new DEK is the
+        // one wrapped on disk, not the v1 derived key.
+        await _enrollBiometricEnvelopeIfNeeded(activeRecord);
       }
 
       _vaultSession = activeSession;
-      await _storage.delete(biometricRecoveryArtifactKey);
-      await _storage.delete(biometricSeedKey);
-      await _storage.delete(biometricSlotKey);
+
+      // Always try to (re)enroll the biometric envelope on a fresh
+      // unlock. The enrollment is silent (no biometric prompt) and
+      // only persists the wrapped DEK + RSA-encrypted seed. If the
+      // platform cannot provide a key slot (e.g. user removed their
+      // fingerprint from the device between unlocks) the call is a
+      // no-op and the unlock button will simply not appear next time.
+      if (!await _biometricEnvelopeService.isEnrolled() &&
+          _biometricEnabled &&
+          canOfferBiometricToggle) {
+        debugPrint('[Vaulta] envelope missing, retrying enrollment');
+        await _enrollBiometricEnvelopeIfNeeded(activeRecord);
+      }
 
       _message = activeRecord == record
           ? 'Vaulta desbloqueada.'
@@ -238,13 +316,47 @@ class VaultSecurityController extends ChangeNotifier {
   }
 
   Future<bool> unlockWithBiometrics() async {
-    await _storage.delete(biometricRecoveryArtifactKey);
-    await _storage.delete(biometricSeedKey);
-    await _storage.delete(biometricSlotKey);
-    _message =
-        'Por seguridad, Vaulta no guarda una clave recuperable para desbloqueo biometrico. Ingresa la master password.';
-    notifyListeners();
-    return false;
+    final unlocker = _biometricUnlockService;
+    if (unlocker == null) {
+      _message =
+          'El desbloqueo biometrico todavia no esta conectado en este dispositivo.';
+      notifyListeners();
+      return false;
+    }
+
+    return _runBusy(() async {
+      final record = await _readRecord();
+      if (record == null) {
+        _stage = VaultSecurityStage.onboarding;
+        _message = 'Todavia no configuraste una master password.';
+        return false;
+      }
+
+      final outcome = await unlocker.unlock(record: record);
+      switch (outcome) {
+        case BiometricUnlockSuccess(:final session):
+          _vaultSession = session;
+          _stage = VaultSecurityStage.unlocked;
+          _message = 'Vaulta desbloqueada con biometria.';
+          _restartIdleTimer();
+          return true;
+        case BiometricUnlockRejected(:final reason):
+          _message = reason;
+          // A rejection that looks like a stale envelope should be
+          // cleared so the next attempt is a clean password unlock
+          // and the user is not stuck retrying a broken path.
+          if (reason.contains('inconsistente') ||
+              reason.contains('rechazo')) {
+            await unlocker.invalidate();
+            _biometricEnabled = false;
+            await _storage.save(biometricEnabledKey, 'false');
+          }
+          return false;
+        case BiometricUnlockUnavailable(:final reason):
+          _message = reason;
+          return false;
+      }
+    });
   }
 
   Future<void> setBiometricEnabled(bool enabled) async {
@@ -256,9 +368,17 @@ class VaultSecurityController extends ChangeNotifier {
 
     await _runBusy(() async {
       await _persistBiometricPreference(enabled);
-      _message = enabled
-          ? 'Biometria activada como verificacion local. El vault bloqueado sigue requiriendo master password.'
-          : 'Biometria desactivada. Solo queda la master password.';
+      if (enabled) {
+        final record = await _readRecord();
+        if (record != null) {
+          await _enrollBiometricEnvelopeIfNeeded(record);
+        }
+        _message =
+            'Biometria activada. La proxima vez podras desbloquear Vaulta con tu biometria.';
+      } else {
+        await _biometricEnvelopeService.clear();
+        _message = 'Biometria desactivada. Solo queda la master password.';
+      }
       return true;
     });
   }
@@ -384,14 +504,14 @@ class VaultSecurityController extends ChangeNotifier {
       }
 
       final newRecord = await _masterPasswordService.createRecord(newPassword);
-      final targetSession = VaultSession(
+      final targetSession = VaultSession.v2(
         keyId: newRecord.keyId,
         secretKey: await _masterPasswordService.deriveVaultKey(
           record: newRecord,
           password: newPassword,
         ),
-        kdf: newRecord.kdf,
-        dekWrap: newRecord.dekWrap,
+        kdf: newRecord.kdf!,
+        dekWrap: newRecord.dekWrap!,
       );
 
       try {
@@ -433,9 +553,11 @@ class VaultSecurityController extends ChangeNotifier {
       }
 
       _vaultSession = targetSession;
-      await _storage.delete(biometricRecoveryArtifactKey);
-      await _storage.delete(biometricSeedKey);
-      await _storage.delete(biometricSlotKey);
+      // The DEK changed, so any previous biometric envelope is stale
+      // and would unwrap to the wrong key. Wipe it and re-enroll under
+      // the new DEK if the user still has biometrics enabled.
+      await _biometricEnvelopeService.clear();
+      await _enrollBiometricEnvelopeIfNeeded(newRecord);
       _message =
           'Master password actualizada y vault re-cifrado con una nueva clave.';
       return true;
@@ -475,10 +597,73 @@ class VaultSecurityController extends ChangeNotifier {
   Future<void> _persistBiometricPreference(bool enabled) async {
     _biometricEnabled = enabled;
     await _storage.save(biometricEnabledKey, enabled.toString());
+  }
 
-    await _storage.delete(biometricRecoveryArtifactKey);
-    await _storage.delete(biometricSeedKey);
-    await _storage.delete(biometricSlotKey);
+  /// Enrolls the wrapped-DEK envelope if biometrics are enabled on
+  /// this device and the platform reports a usable key slot. Silently
+  /// no-ops when any precondition is missing — the unlock UI will
+  /// surface the explanation.
+  Future<void> _enrollBiometricEnvelopeIfNeeded(
+    MasterPasswordRecord record,
+  ) async {
+    if (!_biometricEnabled) {
+      debugPrint('[Vaulta] enroll skipped: biometricEnabled=false');
+      return;
+    }
+    if (!canOfferBiometricToggle) {
+      debugPrint('[Vaulta] enroll skipped: no biometric available '
+          '(canAuth=${_biometricAvailability.canAuthenticate}, '
+          'enrolled=${_biometricAvailability.hasEnrolledBiometrics})');
+      return;
+    }
+    if (record.version < 2 || record.kdf == null || record.dekWrap == null) {
+      debugPrint('[Vaulta] enroll skipped: record is not v2');
+      return;
+    }
+
+    final unlocker = _biometricUnlockService;
+    if (unlocker == null) {
+      debugPrint('[Vaulta] enroll skipped: no unlock service');
+      return;
+    }
+    SecretKey? envelopeKey;
+    try {
+      envelopeKey = await unlocker.envelopeKeyProvider.acquireEnvelopeKey();
+    } catch (error, stack) {
+      debugPrint('[Vaulta] enroll: provider threw $error\n$stack');
+      envelopeKey = null;
+    }
+    if (envelopeKey == null) {
+      debugPrint('[Vaulta] enroll: provider returned null key '
+          '(platform cannot back the envelope on this device)');
+      return;
+    }
+
+    final dekBytes = await _unwrapCurrentDek(record);
+    if (dekBytes == null) {
+      debugPrint('[Vaulta] enroll: no DEK in current session');
+      return;
+    }
+    try {
+      await _biometricEnvelopeService.enroll(
+        dekBytes: dekBytes,
+        envelopeKey: envelopeKey,
+      );
+      debugPrint('[Vaulta] enroll: envelope persisted');
+    } catch (error, stack) {
+      debugPrint('[Vaulta] enroll: enroll() failed $error\n$stack');
+      // Enrollment failures should not block a successful password
+      // unlock; the user can re-enroll from settings.
+    }
+  }
+
+  Future<Uint8List?> _unwrapCurrentDek(MasterPasswordRecord record) async {
+    final session = _vaultSession;
+    if (session == null || session.keyId != record.keyId) {
+      return null;
+    }
+    final bytes = await session.secretKey.extractBytes();
+    return Uint8List.fromList(bytes);
   }
 
   Future<MasterPasswordRecord?> _readRecord() async {

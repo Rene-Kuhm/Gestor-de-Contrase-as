@@ -571,42 +571,48 @@ class _QuickActions extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.md),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            onTap: onCreateEntry,
-            leading: const CircleAvatar(
-              backgroundColor: Color(0x1A2D936C),
-              child: Icon(
-                Icons.add_moderator_rounded,
-                color: AppColors.success,
+          Material(
+            type: MaterialType.transparency,
+            child: ListTile(
+              contentPadding: EdgeInsets.zero,
+              onTap: onCreateEntry,
+              leading: const CircleAvatar(
+                backgroundColor: Color(0x1A2D936C),
+                child: Icon(
+                  Icons.add_moderator_rounded,
+                  color: AppColors.success,
+                ),
               ),
-            ),
-            title: Text(context.l10n.createEncryptedEntry),
-            subtitle: Text(context.l10n.createEncryptedEntrySubtitle),
-            trailing: Icon(
-              Icons.chevron_right_rounded,
-              color: theme.colorScheme.primary,
+              title: Text(context.l10n.createEncryptedEntry),
+              subtitle: Text(context.l10n.createEncryptedEntrySubtitle),
+              trailing: Icon(
+                Icons.chevron_right_rounded,
+                color: theme.colorScheme.primary,
+              ),
             ),
           ),
           const Divider(),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: const CircleAvatar(
-              backgroundColor: Color(0x1AF2C14E),
-              child: Icon(
-                Icons.manage_search_rounded,
-                color: AppColors.warning,
+          Material(
+            type: MaterialType.transparency,
+            child: ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const CircleAvatar(
+                backgroundColor: Color(0x1AF2C14E),
+                child: Icon(
+                  Icons.manage_search_rounded,
+                  color: AppColors.warning,
+                ),
               ),
-            ),
-            title: Text(context.l10n.planNextHardeningStep),
-            subtitle: Text(
-              summary.syncEnabled
-                  ? context.l10n.dashboardRoadmapSyncEnabled
-                  : context.l10n.dashboardRoadmapSyncDisabled,
-            ),
-            trailing: Icon(
-              Icons.chevron_right_rounded,
-              color: theme.colorScheme.primary,
+              title: Text(context.l10n.planNextHardeningStep),
+              subtitle: Text(
+                summary.syncEnabled
+                    ? context.l10n.dashboardRoadmapSyncEnabled
+                    : context.l10n.dashboardRoadmapSyncDisabled,
+              ),
+              trailing: Icon(
+                Icons.chevron_right_rounded,
+                color: theme.colorScheme.primary,
+              ),
             ),
           ),
         ],

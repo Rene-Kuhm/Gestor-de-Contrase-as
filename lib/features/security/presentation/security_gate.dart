@@ -28,6 +28,7 @@ class SecurityGate extends StatefulWidget {
 class _SecurityGateState extends State<SecurityGate>
     with WidgetsBindingObserver {
   late VaultSecurityStage _lastStage;
+  bool _canOfferBiometricButton = false;
 
   @override
   void initState() {
@@ -35,6 +36,7 @@ class _SecurityGateState extends State<SecurityGate>
     _lastStage = widget.controller.stage;
     widget.controller.addListener(_handleSecurityStageChange);
     WidgetsBinding.instance.addObserver(this);
+    unawaited(_refreshBiometricUnlockAvailability());
   }
 
   @override
@@ -49,12 +51,30 @@ class _SecurityGateState extends State<SecurityGate>
     _lastStage = widget.controller.stage;
   }
 
+  Future<void> _refreshBiometricUnlockAvailability() async {
+    final nextOffer = widget.controller.canOfferBiometricUnlockButton;
+    if (!mounted) return;
+    if (nextOffer != _canOfferBiometricButton) {
+      setState(() => _canOfferBiometricButton = nextOffer);
+    }
+  }
+
   void _handleSecurityStageChange() {
     final currentStage = widget.controller.stage;
     final movedToUnlocked =
         _lastStage != VaultSecurityStage.unlocked &&
         currentStage == VaultSecurityStage.unlocked;
+    final movedToLocked =
+        _lastStage != VaultSecurityStage.locked &&
+        currentStage == VaultSecurityStage.locked;
     _lastStage = currentStage;
+
+    // Biometric availability can change after lock/unlock, after the
+    // user toggles the preference, or after the platform reports a
+    // new enrollment. Always re-check when the stage moves.
+    if (movedToLocked || movedToUnlocked) {
+      unawaited(_refreshBiometricUnlockAvailability());
+    }
 
     if (!movedToUnlocked) {
       return;
@@ -244,21 +264,24 @@ class _OnboardingScreenState extends State<_OnboardingScreen> {
                       ],
                     ),
                     const SizedBox(height: AppSpacing.md),
-                    SwitchListTile.adaptive(
-                      contentPadding: EdgeInsets.zero,
-                      value: _enableBiometrics,
-                      onChanged: controller.canOfferBiometricToggle
-                          ? (value) {
-                              setState(() => _enableBiometrics = value);
-                            }
-                          : null,
-                      title: Text(l10n.securityEnableBiometrics),
-                      subtitle: Text(
-                        controller.canOfferBiometricToggle
-                            ? l10n.securityBiometricAvailable(
-                                controller.biometricAvailability.label,
-                              )
-                            : l10n.securityBiometricUnavailable,
+                    Material(
+                      type: MaterialType.transparency,
+                      child: SwitchListTile.adaptive(
+                        contentPadding: EdgeInsets.zero,
+                        value: _enableBiometrics,
+                        onChanged: controller.canOfferBiometricToggle
+                            ? (value) {
+                                setState(() => _enableBiometrics = value);
+                              }
+                            : null,
+                        title: Text(l10n.securityEnableBiometrics),
+                        subtitle: Text(
+                          controller.canOfferBiometricToggle
+                              ? l10n.securityBiometricAvailable(
+                                  controller.biometricAvailability.label,
+                                )
+                              : l10n.securityBiometricUnavailable,
+                        ),
                       ),
                     ),
                     if (controller.message case final message?) ...[
@@ -312,11 +335,43 @@ class _UnlockScreen extends StatefulWidget {
 class _UnlockScreenState extends State<_UnlockScreen> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  // Whether the unlock screen should *render* the biometric button.
+  // The button is offered whenever biometrics are enabled and the
+  // device supports them — even if the envelope is not yet on disk.
+  // The unlock itself can still fail with a clear message, and the
+  // user is no longer left wondering why the button disappeared.
+  bool _canOfferBiometricButton = false;
+  String? _biometricStatusMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_handleControllerChange);
+    unawaited(_refreshBiometricUnlockAvailability());
+  }
 
   @override
   void dispose() {
+    widget.controller.removeListener(_handleControllerChange);
     _passwordController.dispose();
     super.dispose();
+  }
+
+  void _handleControllerChange() {
+    unawaited(_refreshBiometricUnlockAvailability());
+  }
+
+  Future<void> _refreshBiometricUnlockAvailability() async {
+    final nextOffer = widget.controller.canOfferBiometricUnlockButton;
+    final nextMessage = await widget.controller.biometricUnlockStatusMessage();
+    if (!mounted) return;
+    if (nextOffer != _canOfferBiometricButton ||
+        nextMessage != _biometricStatusMessage) {
+      setState(() {
+        _canOfferBiometricButton = nextOffer;
+        _biometricStatusMessage = nextMessage;
+      });
+    }
   }
 
   @override
@@ -333,7 +388,7 @@ class _UnlockScreenState extends State<_UnlockScreen> {
             _BrandHero(
               eyebrow: l10n.securityUnlockEyebrow,
               title: l10n.securityUnlockTitle,
-              subtitle: controller.canUnlockWithBiometrics
+              subtitle: _canOfferBiometricButton
                   ? l10n.securityUnlockBiometricSubtitle(
                       controller.biometricAvailability.label,
                     )
@@ -390,7 +445,7 @@ class _UnlockScreenState extends State<_UnlockScreen> {
                               : Text(l10n.securityUnlockVault),
                         ),
                       ),
-                      if (controller.canUnlockWithBiometrics) ...[
+                      if (_canOfferBiometricButton) ...[
                         const SizedBox(width: AppSpacing.sm),
                         OutlinedButton.icon(
                           onPressed: controller.busy
@@ -402,6 +457,10 @@ class _UnlockScreenState extends State<_UnlockScreen> {
                       ],
                     ],
                   ),
+                  if (_biometricStatusMessage case final statusMessage?) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    _StatusBanner(message: statusMessage),
+                  ],
                   if (controller.message case final message?) ...[
                     const SizedBox(height: AppSpacing.md),
                     _StatusBanner(message: message),
@@ -431,10 +490,16 @@ class _UnlockScreenState extends State<_UnlockScreen> {
       FocusScope.of(context).unfocus();
       _passwordController.clear();
     }
+    if (mounted) {
+      unawaited(_refreshBiometricUnlockAvailability());
+    }
   }
 
   Future<void> _unlockWithBiometrics() async {
     await widget.controller.unlockWithBiometrics();
+    if (mounted) {
+      unawaited(_refreshBiometricUnlockAvailability());
+    }
   }
 }
 

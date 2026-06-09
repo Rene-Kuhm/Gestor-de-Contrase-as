@@ -32,16 +32,6 @@ void main() {
         await storage.read(VaultSecurityController.masterPasswordRecordKey),
         isNotNull,
       );
-      expect(
-        await storage.read(
-          VaultSecurityController.biometricRecoveryArtifactKey,
-        ),
-        isNull,
-      );
-      expect(
-        await storage.read(VaultSecurityController.biometricSeedKey),
-        isNull,
-      );
 
       await controller.lock();
 
@@ -52,11 +42,10 @@ void main() {
     });
 
     test(
-      'biometric unlock requires master password and deletes legacy slot',
+      'biometric unlock reports unavailable when no envelope is enrolled',
       () async {
-        final storage = _InMemorySecureStorageService();
         final controller = VaultSecurityController(
-          storage: storage,
+          storage: _InMemorySecureStorageService(),
           masterPasswordService: MasterPasswordService.test(),
           biometricAuthService: const _FakeBiometricAuthService(),
         );
@@ -68,10 +57,6 @@ void main() {
           confirmation: 'StrongPass!2026',
           enableBiometrics: true,
         );
-        await storage.save(
-          VaultSecurityController.biometricSlotKey,
-          '{"keyId":"legacy","secretKeyBytes":"AAAA"}',
-        );
         await controller.lock();
 
         final unlocked = await controller.unlockWithBiometrics();
@@ -79,19 +64,47 @@ void main() {
         expect(unlocked, isFalse);
         expect(controller.stage, VaultSecurityStage.locked);
         expect(controller.vaultSession, isNull);
-        expect(controller.message, contains('master password'));
-        expect(
-          await storage.read(
-            VaultSecurityController.biometricRecoveryArtifactKey,
-          ),
-          isNull,
-        );
-        expect(
-          await storage.read(VaultSecurityController.biometricSlotKey),
-          isNull,
-        );
+        expect(controller.message, contains('biometr'));
       },
     );
+
+    test('change master password invalidates a previously enrolled envelope',
+        () async {
+      final storage = _InMemorySecureStorageService();
+      final controller = VaultSecurityController(
+        storage: storage,
+        masterPasswordService: MasterPasswordService.test(),
+        biometricAuthService: const _FakeBiometricAuthService(),
+        rekeyEntries: ({required sourceSession, required targetSession}) async {
+          // No-op: the test does not need to rekey real items.
+        },
+      );
+      addTearDown(controller.dispose);
+
+      await controller.initialize();
+      await controller.createMasterPassword(
+        password: 'StrongPass!2026',
+        confirmation: 'StrongPass!2026',
+        enableBiometrics: true,
+      );
+      await storage.save(
+        'vault_biometric_envelope_v1',
+        '{"version":1,"alg":"AES-256-GCM","salt_b64":"AA==",'
+        '"nonce_b64":"AA==","ciphertext_b64":"AA==","tag_b64":"AA=="}',
+      );
+
+      final changed = await controller.changeMasterPassword(
+        currentPassword: 'StrongPass!2026',
+        newPassword: 'AnotherStrong!2027',
+        confirmation: 'AnotherStrong!2027',
+      );
+
+      expect(changed, isTrue);
+      expect(
+        await storage.read('vault_biometric_envelope_v1'),
+        isNull,
+      );
+    });
 
     test('rejects weak master passwords', () async {
       final controller = VaultSecurityController(

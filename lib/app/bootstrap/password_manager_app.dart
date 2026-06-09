@@ -1,10 +1,15 @@
+import 'package:cryptography/cryptography.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:gestor_contrasenas/l10n/app_localizations.dart';
 
 import '../localization/app_locale_controller.dart';
 import '../../core/security/aes_gcm_vault_crypto_service.dart';
+import '../../core/security/android_keystore_envelope_key_provider.dart';
 import '../../core/security/biometric_auth_service.dart';
+import '../../core/security/biometric_key_envelope_service.dart';
+import '../../core/security/biometric_unlock_service.dart';
 import '../../core/security/flutter_secure_storage_service.dart';
 import '../../core/security/local_encrypted_vault_repository.dart';
 import '../../core/security/master_password_service.dart';
@@ -31,11 +36,21 @@ Future<void> runPasswordManagerApp() async {
     readSession: () => securityController.vaultSession,
     mutationSink: mutationSink,
   );
+  final envelopeService = BiometricKeyEnvelopeService(storage: storage);
+  final envelopeKeyProvider = _buildEnvelopeKeyProvider(storage: storage);
+  final biometricUnlockService = BiometricUnlockService(
+    storage: storage,
+    biometricAuthService: LocalBiometricAuthService(),
+    envelopeService: envelopeService,
+    envelopeKeyProvider: envelopeKeyProvider,
+  );
   securityController = VaultSecurityController(
     storage: storage,
     masterPasswordService: MasterPasswordService(),
     biometricAuthService: LocalBiometricAuthService(),
     rekeyEntries: repository.rekeyEntries,
+    biometricEnvelopeService: envelopeService,
+    biometricUnlockService: biometricUnlockService,
   );
 
   await securityController.initialize();
@@ -58,6 +73,37 @@ Future<void> runPasswordManagerApp() async {
       deviceSyncLifecycle: deviceSyncLifecycle,
     ),
   );
+}
+
+/// On Android we use the hardware-backed KeyStore provider. On every
+/// other target we fall back to a no-op provider that always reports
+/// "no envelope key", which surfaces a clean "biometrics not
+/// available" message instead of crashing.
+///
+/// Tests that don't want to involve the platform channel can override
+/// the provider in their own bootstrap.
+BiometricEnvelopeKeyProvider _buildEnvelopeKeyProvider({
+  required dynamic storage,
+}) {
+  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+    return AndroidKeystoreEnvelopeKeyProvider(
+      storage: storage as FlutterSecureStorageService,
+    );
+  }
+  // The unlock service replaces this with its own no-op default if
+  // we pass null, so this branch is only here to make the intent
+  // explicit in the source.
+  return const _NullEnvelopeKeyProvider();
+}
+
+class _NullEnvelopeKeyProvider implements BiometricEnvelopeKeyProvider {
+  const _NullEnvelopeKeyProvider();
+
+  @override
+  Future<SecretKey?> acquireEnvelopeKey() async => null;
+
+  @override
+  Future<SecretKey?> releaseEnvelopeKey() async => null;
 }
 
 class PasswordManagerApp extends StatelessWidget {

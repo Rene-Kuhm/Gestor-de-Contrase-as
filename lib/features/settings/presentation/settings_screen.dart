@@ -195,8 +195,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _ => context.l10n.settingsCurrentDeviceRevokedTitle,
     };
     final message = switch (status) {
-      DeviceSessionStatus.revokedAll =>
-        context.l10n.settingsRevokedAllBody,
+      DeviceSessionStatus.revokedAll => context.l10n.settingsRevokedAllBody,
       _ => context.l10n.settingsCurrentDeviceRevokedBody,
     };
 
@@ -385,36 +384,43 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       enabled: securityController.biometricEnabled,
                     ),
                     const SizedBox(height: AppSpacing.sm),
-                    SwitchListTile.adaptive(
-                      contentPadding: EdgeInsets.zero,
-                      value: securityController.biometricEnabled,
-                      onChanged: securityController.busy
-                          ? null
-                          : (value) {
-                              securityController.setBiometricEnabled(value);
-                            },
-                      title: Text(l10n.settingsUnlockWithBiometrics),
-                      subtitle: Text(
-                        securityController.canOfferBiometricToggle
-                            ? l10n.settingsBiometricSupportedSubtitle(
-                                securityController.biometricAvailability.label,
-                              )
-                            : l10n.settingsBiometricUnavailableSubtitle,
+                    Material(
+                      type: MaterialType.transparency,
+                      child: SwitchListTile.adaptive(
+                        contentPadding: EdgeInsets.zero,
+                        value: securityController.biometricEnabled,
+                        onChanged: securityController.busy
+                            ? null
+                            : (value) {
+                                securityController.setBiometricEnabled(value);
+                              },
+                        title: Text(l10n.settingsUnlockWithBiometrics),
+                        subtitle: Text(
+                          securityController.canOfferBiometricToggle
+                              ? l10n.settingsBiometricSupportedSubtitle(
+                                  securityController
+                                      .biometricAvailability
+                                      .label,
+                                )
+                              : l10n.settingsBiometricUnavailableSubtitle,
+                        ),
                       ),
                     ),
                     const SizedBox(height: AppSpacing.sm),
-                    SwitchListTile.adaptive(
-                      contentPadding: EdgeInsets.zero,
-                      value: securityController.autoLockOnBackgroundEnabled,
-                      onChanged: securityController.busy
-                          ? null
-                          : (value) {
-                              securityController.setAutoLockOnBackgroundEnabled(
-                                value,
-                              );
-                            },
-                      title: Text(l10n.settingsAutoLockBackgroundTitle),
-                      subtitle: Text(l10n.settingsAutoLockBackgroundSubtitle),
+                    Material(
+                      type: MaterialType.transparency,
+                      child: SwitchListTile.adaptive(
+                        contentPadding: EdgeInsets.zero,
+                        value: securityController.autoLockOnBackgroundEnabled,
+                        onChanged: securityController.busy
+                            ? null
+                            : (value) {
+                                securityController
+                                    .setAutoLockOnBackgroundEnabled(value);
+                              },
+                        title: Text(l10n.settingsAutoLockBackgroundTitle),
+                        subtitle: Text(l10n.settingsAutoLockBackgroundSubtitle),
+                      ),
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     DropdownButtonFormField<_IdleTimeoutPreset>(

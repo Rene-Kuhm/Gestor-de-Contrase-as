@@ -44,10 +44,21 @@ android {
 
     defaultConfig {
         applicationId = "com.insyd.gestor_contrasenas"
-        minSdk = flutter.minSdkVersion
+        // Bumped to 23 so we can use AndroidKeyStore RSA keys with
+        // setUserAuthenticationRequired(true). The biometric prompt
+        // + androidx.biometric API used by MainActivity requires 23+.
+        minSdk = maxOf(flutter.minSdkVersion, 23)
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+    }
+
+    // androidx.biometric powers the BiometricPrompt used by
+    // MainActivity. androidx.fragment is required transitively by
+    // FlutterFragmentActivity when targeting the AndroidX support
+    // library. Both are pinned to the Flutter-recommended versions.
+    buildFeatures {
+        buildConfig = true
     }
 
     signingConfigs {
@@ -70,6 +81,11 @@ android {
             }
         }
     }
+}
+
+dependencies {
+    implementation("androidx.biometric:biometric:1.2.0-alpha05")
+    implementation("androidx.fragment:fragment-ktx:1.6.2")
 }
 
 flutter {
