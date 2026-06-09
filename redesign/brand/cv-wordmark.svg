@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 140" fill="none">
+  <title>Crimson Vault — Wordmark</title>
+  <!-- Símbolo -->
+  <g transform="translate(10, 10)">
+    <path d="M 36 52 L 30 58 L 30 100 L 90 100 L 90 58 L 84 52 Z" fill="#9B1B1F"/>
+    <path d="M 42 52 L 42 30 L 60 48 L 78 30 L 78 52" stroke="#9B1B1F" stroke-width="7" stroke-linecap="square" stroke-linejoin="miter" fill="none"/>
+    <rect x="40" y="70" width="40" height="2.5" fill="#F2C70F"/>
+    <rect x="56" y="78" width="8" height="8" fill="#F2C70F"/>
+  </g>
+  <!-- Wordmark "CRIMSON VAULT" -->
+  <text x="140" y="92" font-family="'Saira Condensed', 'Anton', 'Bebas Neue', 'Arial Narrow', sans-serif" font-weight="800" font-size="64" letter-spacing="-1.5" fill="#0A0A0B">CRIMSON<tspan fill="#9B1B1F"> VAULT</tspan></text>
+</svg>

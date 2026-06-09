@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" fill="none">
+  <title>Crimson Vault — App Icon (Crimson)</title>
+  <rect width="1024" height="1024" rx="230" fill="#9B1B1F"/>
+  <rect width="1024" height="1024" rx="230" fill="url(#bgGrad)"/>
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#A60E14"/>
+      <stop offset="1" stop-color="#7A0A0E"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(272, 272) scale(4)">
+    <!-- Cuerpo paper (contraste sobre crimson) -->
+    <path d="M 36 52 L 30 58 L 30 100 L 90 100 L 90 58 L 84 52 Z" fill="#F5F2EA"/>
+    <!-- Shackle en ink -->
+    <path d="M 42 52 L 42 30 L 60 48 L 78 30 L 78 52" stroke="#0A0A0B" stroke-width="7" stroke-linecap="square" stroke-linejoin="miter" fill="none"/>
+    <!-- Detalles dorados -->
+    <rect x="40" y="70" width="40" height="2.5" fill="#F2C70F"/>
+    <rect x="56" y="78" width="8" height="8" fill="#F2C70F"/>
+  </g>
+</svg>
