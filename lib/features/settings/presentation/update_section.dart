@@ -161,6 +161,13 @@ class _UpdateSectionState extends State<UpdateSection> {
           ),
           const SizedBox(height: AppSpacing.md),
           _buildAction(theme),
+          // Surface every terminal state explicitly so the user
+          // never has to guess whether "no button change" means
+          // "still working", "up to date", or "silently failed".
+          if (_state == _UpdateState.upToDate) ...[
+            const SizedBox(height: AppSpacing.md),
+            const _UpToDateBanner(),
+          ],
           if (_state == _UpdateState.updateAvailable && _info != null) ...[
             const SizedBox(height: AppSpacing.md),
             _UpdateAvailablePanel(info: _info!),
@@ -168,30 +175,7 @@ class _UpdateSectionState extends State<UpdateSection> {
           if (_state == _UpdateState.failed) ...[
             if (_errorMessage != null) ...[
               const SizedBox(height: AppSpacing.md),
-              Container(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.errorContainer,
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.error_outline_rounded,
-                      color: theme.colorScheme.onErrorContainer,
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      child: Text(
-                        _errorMessage!,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onErrorContainer,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              _ErrorBanner(message: _errorMessage!),
             ],
           ],
         ],
@@ -341,6 +325,97 @@ class _UpdateAvailablePanel extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Full-width success banner shown when the device is running the
+/// same build the server has. The user gets a clear "ya estás al
+/// día" signal so a no-op button tap is never confused with a
+/// broken button.
+class _UpToDateBanner extends StatelessWidget {
+  const _UpToDateBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.tertiaryContainer.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.check_circle_rounded,
+            color: theme.colorScheme.onTertiaryContainer,
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              'Ya estas al dia. La version instalada coincide con la '
+              'ultima publicada en master.',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onTertiaryContainer,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Full-width error banner with monospace message + copy button.
+/// The user can grab the raw error text in one tap and paste it
+/// into a chat — much more useful than a truncated one-liner.
+class _ErrorBanner extends StatelessWidget {
+  const _ErrorBanner({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.errorContainer,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.error_outline_rounded,
+                color: theme.colorScheme.onErrorContainer,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  'No pudimos comprobar actualizaciones',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: theme.colorScheme.onErrorContainer,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          SelectableText(
+            message,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onErrorContainer,
+              fontFamily: 'monospace',
+            ),
+          ),
         ],
       ),
     );
