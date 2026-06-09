@@ -70,6 +70,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   `res/values/strings.xml` and `res/values-en/strings.xml`.
 - **CHANGELOG discipline.** This file is now kept in sync with
   notable security-relevant changes from each iteration.
+- **OTA updates.** A new "Actualizaciones" section in Settings lets
+  the user check for and install a newer debug APK over the air
+  (no uninstall, no Play Store, no data loss). A new GitHub
+  Actions workflow (`.github/workflows/dev-apk-release.yml`)
+  rebuilds the debug APK on every push to `master` and overwrites
+  the `dev-latest` GitHub Release. The app also auto-checks
+  silently after unlock and surfaces a SnackBar with an
+  "Actualizar" action when a newer build is available.
 
 ### Fixed
 

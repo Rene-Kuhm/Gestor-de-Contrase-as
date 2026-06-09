@@ -1,0 +1,97 @@
+name: Build dev APK and publish to GitHub Releases
+
+# Rebuilds the debug APK on every push to master and overwrites the
+# `dev-latest` GitHub Release with the new asset. The native
+# UpdateChannel queries api.github.com/repos/<owner>/<repo>/releases
+# /tags/dev-latest, so this single tag acts as the "rolling latest"
+# channel for internal testing.
+#
+# The APK keeps the same debug signature across builds, so Android
+# accepts the new asset as an in-place update — the user's master
+# password, envelope, and secure storage are preserved.
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Build APK + publish to dev-latest
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Build debug APK
+        run: flutter build apk --debug
+
+      - name: Resolve APK path
+        id: apk
+        run: |
+          APK=$(ls -1 build/app/outputs/flutter-apk/app-debug.apk | head -n 1)
+          echo "apk_path=$APK" >> "$GITHUB_OUTPUT"
+          echo "apk_size=$(stat -c %s "$APK")" >> "$GITHUB_OUTPUT"
+
+      - name: Compute changelog
+        id: changelog
+        run: |
+          # Recent commits since the last successful run of this job,
+          # or all commits from today if there is no previous run.
+          CHANGELOG=$(git log --pretty=format:"- %s (%h)" -n 30)
+          echo "changelog<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$CHANGELOG" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+      - name: Publish to dev-latest release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: dev-latest
+          name: Dev latest
+          body: |
+            Rolling debug build of Vaulta. Updated automatically on
+            every push to `master`.
+
+            Recent commits in this build:
+            ${{ steps.changelog.outputs.changelog }}
+
+            Install with:
+            ```
+            adb install -r app-debug.apk
+            ```
+            or open the Settings screen in the running app and tap
+            "Buscar actualizaciones".
+          fail_on_unmatched_files: true
+          files: |
+            ${{ steps.apk.outputs.apk_path }}
+          # `overwrite: true` lets the action delete the previous asset
+          # and upload a fresh one with the same name. We keep the
+          # tag name `dev-latest` stable so the native side always
+          # knows where to look.
+          overwrite: true
+          # Pruning the existing release's other assets is a no-op for
+          # us — we only ever ship the one APK.
+          prerelease: false
+          draft: false

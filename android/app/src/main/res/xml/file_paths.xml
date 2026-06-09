@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- The OTA update channel writes downloaded APKs to
+         filesDir/updates/ and serves them through FileProvider using
+         this path. Keep the name and the path in sync with
+         UpdateChannel.downloadApk(). -->
+    <files-path
+        name="updates"
+        path="updates/" />
+</paths>

@@ -15,6 +15,8 @@ import '../../../core/sync/device_registration_repository.dart';
 import '../../../core/sync/sync_conflict.dart';
 import '../../../core/sync/sync_conflict_resolver.dart';
 import '../../../core/sync/device_session_revocation_service.dart';
+import '../../../core/update/update_service.dart';
+import 'update_section.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({
@@ -746,6 +748,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
           ],
+          const SizedBox(height: AppSpacing.md),
+          UpdateSection(
+            service: UpdateService(
+              owner: 'Rene-Kuhm',
+              repo: 'Gestor-de-Contrase-as',
+            ),
+          ),
           const SizedBox(height: AppSpacing.md),
           AppPanel(
             child: Column(
