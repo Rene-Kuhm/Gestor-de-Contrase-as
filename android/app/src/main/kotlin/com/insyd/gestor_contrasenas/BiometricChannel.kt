@@ -18,10 +18,20 @@ import io.flutter.plugin.common.MethodChannel
  * happens in the keystore helper, and the plaintext is materialized
  * only in Dart, where the envelope service unmarshals it into the
  * session key.
+ *
+ * Beyond the auth round-trip, this channel also exposes:
+ *   * `probeAvailability` — structured platform capabilities so Dart
+ *     can decide whether to render the biometric button at all and
+ *     with which label.
+ *   * `openBiometricEnrollment` — opens the system biometric-enroll
+ *     settings so the user can configure a fingerprint/face without
+ *     leaving the app.
  */
 class BiometricChannel(
     engine: FlutterEngine,
-    private val onAuthenticate: (ciphertext: ByteArray, result: MethodChannel.Result) -> Unit
+    private val onAuthenticate: (ciphertext: ByteArray, result: MethodChannel.Result) -> Unit,
+    private val onProbe: () -> Map<String, Any>,
+    private val onOpenEnrollment: () -> Boolean,
 ) : MethodChannel.MethodCallHandler {
 
     private val channel: MethodChannel =
@@ -38,6 +48,28 @@ class BiometricChannel(
                     return
                 }
                 onAuthenticate(ciphertext, result)
+            }
+            "probeAvailability" -> {
+                try {
+                    result.success(onProbe())
+                } catch (e: Throwable) {
+                    result.error(
+                        BiometricErrorCode.UNAVAILABLE,
+                        e.message ?: e.javaClass.simpleName,
+                        null
+                    )
+                }
+            }
+            "openBiometricEnrollment" -> {
+                try {
+                    result.success(onOpenEnrollment())
+                } catch (e: Throwable) {
+                    result.error(
+                        BiometricErrorCode.UNAVAILABLE,
+                        e.message ?: e.javaClass.simpleName,
+                        null
+                    )
+                }
             }
             else -> result.notImplemented()
         }

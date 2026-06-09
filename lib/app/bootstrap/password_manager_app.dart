@@ -13,6 +13,7 @@ import '../../core/security/biometric_unlock_service.dart';
 import '../../core/security/flutter_secure_storage_service.dart';
 import '../../core/security/local_encrypted_vault_repository.dart';
 import '../../core/security/master_password_service.dart';
+import '../../core/security/native_biometric_auth_service.dart';
 import '../../core/security/vault_repository.dart';
 import '../../core/security/vault_security_controller.dart';
 import '../../core/sync/device_registration_repository.dart';
@@ -38,16 +39,22 @@ Future<void> runPasswordManagerApp() async {
   );
   final envelopeService = BiometricKeyEnvelopeService(storage: storage);
   final envelopeKeyProvider = _buildEnvelopeKeyProvider(storage: storage);
+  // The biometric auth service is platform-aware: on Android we use
+  // the native MethodChannel (the same one the KeyStore provider uses
+  // to open the BiometricPrompt) so the gate and the prompt can never
+  // disagree. On every other target we fall back to local_auth which
+  // does not have a hardware-backed variant yet.
+  final biometricAuthService = _buildBiometricAuthService();
   final biometricUnlockService = BiometricUnlockService(
     storage: storage,
-    biometricAuthService: LocalBiometricAuthService(),
+    biometricAuthService: biometricAuthService,
     envelopeService: envelopeService,
     envelopeKeyProvider: envelopeKeyProvider,
   );
   securityController = VaultSecurityController(
     storage: storage,
     masterPasswordService: MasterPasswordService(),
-    biometricAuthService: LocalBiometricAuthService(),
+    biometricAuthService: biometricAuthService,
     rekeyEntries: repository.rekeyEntries,
     biometricEnvelopeService: envelopeService,
     biometricUnlockService: biometricUnlockService,
@@ -94,6 +101,24 @@ BiometricEnvelopeKeyProvider _buildEnvelopeKeyProvider({
   // we pass null, so this branch is only here to make the intent
   // explicit in the source.
   return const _NullEnvelopeKeyProvider();
+}
+
+/// Picks the right [BiometricAuthService] for the current platform.
+///
+/// On Android we deliberately bypass `local_auth` and talk to the
+/// native `MethodChannel` directly so the gate (canAuthenticate) and
+/// the prompt (`BiometricPrompt.authenticate`) are guaranteed to be
+/// looking at the same `BiometricManager` state. Mixing the two was
+/// the root cause of the "the unlock button disappeared" bug on
+/// devices that only have weak biometrics enrolled.
+///
+/// On every other target we keep the `local_auth` path since the
+/// KeyStore-backed provider is Android-only.
+BiometricAuthService _buildBiometricAuthService() {
+  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+    return NativeBiometricAuthService();
+  }
+  return LocalBiometricAuthService();
 }
 
 class _NullEnvelopeKeyProvider implements BiometricEnvelopeKeyProvider {

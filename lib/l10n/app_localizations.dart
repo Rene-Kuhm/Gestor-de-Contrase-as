@@ -1198,6 +1198,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Biometric verification accepted.'**
   String get biometricUnlockSuccess;
+
+  /// No description provided for @biometricEnrollCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Set up biometrics on this device'**
+  String get biometricEnrollCta;
+
+  /// No description provided for @biometricEnrollSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your device has no biometric enrolled (fingerprint, Face ID, or face unlock). Open the system settings to enable it.'**
+  String get biometricEnrollSubtitle;
+
+  /// No description provided for @biometricEnrollAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Open settings'**
+  String get biometricEnrollAction;
+
+  /// No description provided for @biometricEnrollUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Biometrics are not available on this device. Use the master password to unlock.'**
+  String get biometricEnrollUnavailable;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

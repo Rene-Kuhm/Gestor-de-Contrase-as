@@ -9,6 +9,7 @@ import 'biometric_key_envelope_service.dart';
 import 'biometric_unlock_service.dart';
 import 'master_password_record.dart';
 import 'master_password_service.dart';
+import 'native_biometric_auth_service.dart';
 import 'secure_storage_service.dart';
 import 'vault_session.dart';
 
@@ -140,6 +141,30 @@ class VaultSecurityController extends ChangeNotifier {
     }
     return 'Todavia no preparamos el desbloqueo biometrico. '
         'Desbloquea una vez con la master password y la huella quedara lista.';
+  }
+
+  /// Returns the raw native platform capability, when the active
+  /// [BiometricAuthService] is a [NativeBiometricAuthService].
+  /// Falls back to [NativeBiometricCapability.empty] on other
+  /// targets so the UI never has to special-case platforms.
+  Future<NativeBiometricCapability> probeBiometricCapability() async {
+    final service = _biometricAuthService;
+    if (service is NativeBiometricAuthService) {
+      return service.probeCapability();
+    }
+    return NativeBiometricCapability.empty;
+  }
+
+  /// Opens the system biometric-enrollment settings. Returns true
+  /// if the intent was launched, false otherwise. The settings
+  /// screen uses this to deep-link the user into the platform setup
+  /// when [NativeBiometricCapability.needsEnrollment] is true.
+  Future<bool> openBiometricEnrollment() async {
+    final service = _biometricAuthService;
+    if (service is NativeBiometricAuthService) {
+      return service.openBiometricEnrollment();
+    }
+    return false;
   }
 
   Future<void> initialize() async {

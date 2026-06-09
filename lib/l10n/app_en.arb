@@ -249,5 +249,9 @@
   "syncConflictKindDelete": "Delete conflict",
 
   "biometricSlotExpired": "Biometric vault-key unlock is not enabled in this release. Enter your master password.",
-  "biometricUnlockSuccess": "Biometric verification accepted."
+  "biometricUnlockSuccess": "Biometric verification accepted.",
+  "biometricEnrollCta": "Set up biometrics on this device",
+  "biometricEnrollSubtitle": "Your device has no biometric enrolled (fingerprint, Face ID, or face unlock). Open the system settings to enable it.",
+  "biometricEnrollAction": "Open settings",
+  "biometricEnrollUnavailable": "Biometrics are not available on this device. Use the master password to unlock."
 }

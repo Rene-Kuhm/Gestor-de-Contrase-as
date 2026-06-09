@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -7,6 +9,7 @@ import '../../../app/localization/l10n.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../core/security/local_encrypted_vault_repository.dart';
+import '../../../core/security/native_biometric_auth_service.dart';
 import '../../../core/security/vault_security_controller.dart';
 import '../../../core/sync/device_registration_repository.dart';
 import '../../../core/sync/sync_conflict.dart';
@@ -37,12 +40,51 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late Future<List<DeviceSessionView>> _devicesFuture;
   bool _revocationInProgress = false;
   bool _currentDeviceRevocationHandled = false;
+  NativeBiometricCapability _biometricCapability =
+      NativeBiometricCapability.empty;
+  bool _enrollingBiometric = false;
 
   @override
   void initState() {
     super.initState();
     _conflictsFuture = _loadConflicts();
     _devicesFuture = _loadDevices();
+    unawaited(_refreshBiometricCapability());
+  }
+
+  Future<void> _refreshBiometricCapability() async {
+    final cap = await widget.securityController.probeBiometricCapability();
+    if (!mounted) return;
+    if (cap.canUseStrongOrCredential !=
+            _biometricCapability.canUseStrongOrCredential ||
+        cap.needsEnrollment != _biometricCapability.needsEnrollment) {
+      setState(() => _biometricCapability = cap);
+    } else if (!_biometricCapability.canUseStrong &&
+        !_biometricCapability.canUseWeak &&
+        (cap.canUseStrong || cap.canUseWeak)) {
+      setState(() => _biometricCapability = cap);
+    }
+  }
+
+  Future<void> _openBiometricEnrollment() async {
+    if (_enrollingBiometric) return;
+    setState(() => _enrollingBiometric = true);
+    try {
+      final ok = await widget.securityController.openBiometricEnrollment();
+      if (!ok && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.l10n.biometricEnrollUnavailable)),
+        );
+      }
+      // Re-probe a few seconds later in case the user came back from
+      // the system settings with a fresh biometric enrolled.
+      await Future<void>.delayed(const Duration(seconds: 1));
+      await _refreshBiometricCapability();
+    } finally {
+      if (mounted) {
+        setState(() => _enrollingBiometric = false);
+      }
+    }
   }
 
   Future<void> _openChangeMasterPasswordDialog(BuildContext context) async {
@@ -406,6 +448,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                       ),
                     ),
+                    if (_biometricCapability.needsEnrollment) ...[
+                      const SizedBox(height: AppSpacing.sm),
+                      _BiometricEnrollBanner(
+                        title: l10n.biometricEnrollCta,
+                        subtitle: l10n.biometricEnrollSubtitle,
+                        actionLabel: l10n.biometricEnrollAction,
+                        busy: _enrollingBiometric,
+                        onAction: _openBiometricEnrollment,
+                      ),
+                    ],
                     const SizedBox(height: AppSpacing.sm),
                     Material(
                       type: MaterialType.transparency,
@@ -1244,5 +1296,75 @@ class _ChangeMasterPasswordDialogState
           widget.controller.message ??
           context.l10n.changeMasterPasswordErrorFallback;
     });
+  }
+}
+
+class _BiometricEnrollBanner extends StatelessWidget {
+  const _BiometricEnrollBanner({
+    required this.title,
+    required this.subtitle,
+    required this.actionLabel,
+    required this.busy,
+    required this.onAction,
+  });
+
+  final String title;
+  final String subtitle;
+  final String actionLabel;
+  final bool busy;
+  final VoidCallback onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.cloud,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.fingerprint_rounded, color: AppColors.warning),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  title,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            subtitle,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: FilledButton.icon(
+              onPressed: busy ? null : onAction,
+              icon: busy
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.open_in_new_rounded),
+              label: Text(actionLabel),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

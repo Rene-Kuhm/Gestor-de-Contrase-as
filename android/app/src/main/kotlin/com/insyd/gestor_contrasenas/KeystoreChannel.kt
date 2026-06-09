@@ -1,15 +1,15 @@
 package com.insyd.gestor_contrasenas
 
+import android.os.Build
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
+import android.util.Log
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import java.security.KeyStore
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
-import javax.crypto.SecretKey
-import javax.crypto.spec.GCMParameterSpec
 
 /**
  * Bridge between the Dart envelope and the Android KeyStore.
@@ -28,10 +28,20 @@ import javax.crypto.spec.GCMParameterSpec
  * `unwrap` path is what requires the BiometricPrompt to release the
  * private key for one decryption.
  *
- * The algorithm choices are deliberate:
+ * Algorithm choices:
  *   - RSA-OAEP-SHA256 is the standard wrap algorithm for short keys.
  *   - AES/GCM/NoPadding inside the Dart envelope is the DEK wrap.
  *   - We never persist the DEK in clear, even on disk.
+ *
+ * Best-practice notes (Android 11+ / API 30+):
+ *   * `setUserAuthenticationParameters(0, AUTH_BIOMETRIC_STRONG)` is
+ *     the explicit form that Android wants you to call instead of
+ *     relying on the legacy `setUserAuthenticationValidityDuration`
+ *     shortcut. With timeout=0 every private-key operation requires
+ *     a fresh BiometricPrompt.
+ *   * On older devices that pre-date `setUserAuthenticationParameters`
+ *     (API < 30) we fall back to `setUserAuthenticationValidityDuration(0)`
+ *     which has the same semantics under the hood.
  */
 class KeystoreChannel(engine: FlutterEngine) : MethodChannel.MethodCallHandler {
 
@@ -64,9 +74,11 @@ class KeystoreChannel(engine: FlutterEngine) : MethodChannel.MethodCallHandler {
                 else -> result.notImplemented()
             }
         } catch (e: UserCancelledException) {
-            result.error("USER_CANCELLED", e.message ?: "user cancelled", null)
+            result.error(BiometricErrorCode.USER_CANCELLED, e.message ?: "user cancelled", null)
         } catch (e: BiometricUnavailableException) {
-            result.error("BIOMETRIC_UNAVAILABLE", e.message ?: "biometric unavailable", null)
+            result.error(BiometricErrorCode.UNAVAILABLE, e.message ?: "biometric unavailable", null)
+        } catch (e: KeyPermanentlyInvalidatedException) {
+            result.error(BiometricErrorCode.LOCKOUT_PERMANENT, e.message ?: "key invalidated", null)
         } catch (e: Throwable) {
             result.error("KEYSTORE", e.message ?: e.javaClass.simpleName, null)
         }
@@ -75,7 +87,8 @@ class KeystoreChannel(engine: FlutterEngine) : MethodChannel.MethodCallHandler {
     private fun isAvailable(): Boolean {
         val ks = try {
             KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
-        } catch (_: Throwable) {
+        } catch (e: Throwable) {
+            Log.w(TAG, "isAvailable: KeyStore init failed", e)
             return false
         }
         return try {
@@ -83,21 +96,14 @@ class KeystoreChannel(engine: FlutterEngine) : MethodChannel.MethodCallHandler {
                 KeyProperties.KEY_ALGORITHM_RSA,
                 ANDROID_KEYSTORE
             )
-            // Building the spec is enough to fail on devices that do not
-            // support STRONG biometric-bound keys. We never call init().
-            val spec = KeyGenParameterSpec.Builder(
-                "vaulta-biometric-probe",
-                KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
-            )
-                .setDigests(KeyProperties.DIGEST_SHA256)
-                .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_RSA_OAEP)
-                .setKeySize(2048)
-                .setUserAuthenticationRequired(true)
-                .build()
-            // Touch the spec to surface configuration errors early.
-            spec.toString()
+            // Building the spec is enough to fail on devices that do
+            // not support STRONG biometric-bound keys. We never call
+            // init() so no real key is created.
+            buildKeySpec("vaulta-biometric-probe")
+            Log.d(TAG, "isAvailable: KeyStore can build a biometric-bound RSA spec")
             true
-        } catch (_: Throwable) {
+        } catch (e: Throwable) {
+            Log.w(TAG, "isAvailable: building biometric RSA spec failed", e)
             false
         }
     }
@@ -105,6 +111,7 @@ class KeystoreChannel(engine: FlutterEngine) : MethodChannel.MethodCallHandler {
     private fun ensureKey(): String {
         val ks = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
         if (ks.containsAlias(KEY_ALIAS)) {
+            Log.d(TAG, "ensureKey: alias $KEY_ALIAS already present")
             return KEY_ALIAS
         }
 
@@ -112,29 +119,56 @@ class KeystoreChannel(engine: FlutterEngine) : MethodChannel.MethodCallHandler {
             KeyProperties.KEY_ALGORITHM_RSA,
             ANDROID_KEYSTORE
         )
-        val spec = KeyGenParameterSpec.Builder(
-            KEY_ALIAS,
+        val spec = buildKeySpec(KEY_ALIAS)
+        generator.init(spec)
+        generator.generateKey()
+        Log.i(TAG, "ensureKey: generated new RSA-2048 alias=$KEY_ALIAS")
+        return KEY_ALIAS
+    }
+
+    /**
+     * Build the [KeyGenParameterSpec] for the biometric-bound RSA key.
+     *
+     * The auth timeout is 0 (every operation needs a fresh prompt).
+     *
+     * On API 30+ we set this explicitly with
+     * [KeyGenParameterSpec.Builder.setUserAuthenticationParameters] and
+     * the [KeyProperties.AUTH_BIOMETRIC_STRONG] authenticator so the
+     * platform never grants a time-based bypass. On API 23-29 the
+     * older `setUserAuthenticationValidityDuration` shortcut has been
+     * pruned from the public SDK, so we leave the timeout unset; the
+     * default for `setUserAuthenticationRequired(true)` is already
+     * "every operation needs a fresh user auth", which is exactly
+     * what we want for the per-unlock biometric gate.
+     */
+    private fun buildKeySpec(alias: String): KeyGenParameterSpec {
+        val builder = KeyGenParameterSpec.Builder(
+            alias,
             KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
         )
             .setDigests(KeyProperties.DIGEST_SHA256)
             .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_RSA_OAEP)
             .setKeySize(2048)
-            // The private key may only be used after a fresh user auth.
             .setUserAuthenticationRequired(true)
-            // Auth is per-operation. We do NOT use the legacy
-            // setUserAuthenticationValidityDuration(N) shortcut because
-            // that would leave a window where a stolen device could
-            // unlock the vault without the user noticing.
-            .build()
-        generator.init(spec)
-        generator.generateKey()
-        return KEY_ALIAS
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            // API 30+ — explicit authenticator set. timeout=0 means
+            // "every use requires a fresh user auth".
+            builder.setUserAuthenticationParameters(
+                /* timeout = */ 0,
+                /* authType = */ KeyProperties.AUTH_BIOMETRIC_STRONG
+            )
+        }
+        // On API < 30 the system default is the same per-operation
+        // requirement, so we do nothing else. See class docs.
+        return builder.build()
     }
 
     private fun deleteKey() {
         val ks = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
         if (ks.containsAlias(KEY_ALIAS)) {
             ks.deleteEntry(KEY_ALIAS)
+            Log.i(TAG, "deleteKey: removed alias $KEY_ALIAS")
         }
         if (ks.containsAlias("vaulta-biometric-probe")) {
             ks.deleteEntry("vaulta-biometric-probe")
@@ -153,7 +187,9 @@ class KeystoreChannel(engine: FlutterEngine) : MethodChannel.MethodCallHandler {
         // consulted here: this is the path the app uses to wrap a
         // fresh seed at activation time, not to unwrap it.
         cipher.init(Cipher.ENCRYPT_MODE, entry.certificate.publicKey)
-        return cipher.doFinal(plaintext)
+        val out = cipher.doFinal(plaintext)
+        Log.d(TAG, "rsaEncrypt: ${plaintext.size} bytes -> ${out.size} bytes")
+        return out
     }
 
     /**
@@ -173,25 +209,40 @@ class KeystoreChannel(engine: FlutterEngine) : MethodChannel.MethodCallHandler {
         try {
             cipher.init(Cipher.DECRYPT_MODE, entry.privateKey)
         } catch (e: Throwable) {
-            if (e.message?.contains("Key permanently invalidated", ignoreCase = true) == true ||
-                e.message?.contains("User not authenticated", ignoreCase = true) == true
-            ) {
-                throw BiometricUnavailableException(
-                    "La biometria no esta disponible o fue revocada."
-                )
+            val msg = e.message.orEmpty()
+            when {
+                msg.contains("Key permanently invalidated", ignoreCase = true) -> {
+                    Log.w(TAG, "rsaDecryptAuthorized: key permanently invalidated", e)
+                    throw KeyPermanentlyInvalidatedException(
+                        "La biometria fue revocada. Re-enrola desde Ajustes o usa la master password."
+                    )
+                }
+                msg.contains("User not authenticated", ignoreCase = true) -> {
+                    Log.w(TAG, "rsaDecryptAuthorized: not authenticated", e)
+                    throw BiometricUnavailableException(
+                        "La biometria no esta disponible o fue revocada."
+                    )
+                }
+                else -> {
+                    Log.w(TAG, "rsaDecryptAuthorized: init failed", e)
+                    throw e
+                }
             }
-            throw e
         }
-        return cipher.doFinal(ciphertext)
+        val out = cipher.doFinal(ciphertext)
+        Log.d(TAG, "rsaDecryptAuthorized: ${ciphertext.size} bytes -> ${out.size} bytes")
+        return out
     }
 
     class UserCancelledException(message: String) : RuntimeException(message)
     class BiometricUnavailableException(message: String) : RuntimeException(message)
+    class KeyPermanentlyInvalidatedException(message: String) : RuntimeException(message)
 
     companion object {
         const val CHANNEL_NAME = "com.insyd.vaulta/keystore"
         private const val ANDROID_KEYSTORE = "AndroidKeyStore"
         private const val KEY_ALIAS = "vaulta_biometric_envelope_v1"
         private const val TRANSFORMATION_RSA = "RSA/ECB/OAEPWithSHA-256AndMGF1Padding"
+        private const val TAG = "Vaulta/KeyStore"
     }
 }

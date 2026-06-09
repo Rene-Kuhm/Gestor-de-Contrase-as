@@ -249,5 +249,9 @@
   "syncConflictKindDelete": "Conflicto de borrado",
 
   "biometricSlotExpired": "El desbloqueo biometrico con clave del vault no esta habilitado en esta release. Ingresa tu master password.",
-  "biometricUnlockSuccess": "Verificacion biometrica aceptada."
+  "biometricUnlockSuccess": "Verificacion biometrica aceptada.",
+  "biometricEnrollCta": "Configurar biometria en el dispositivo",
+  "biometricEnrollSubtitle": "Tu dispositivo no tiene biometria registrada (huella, Face ID o reconocimiento facial). Abri los ajustes del sistema para activarla.",
+  "biometricEnrollAction": "Abrir ajustes",
+  "biometricEnrollUnavailable": "La biometria no esta disponible en este dispositivo. Usa la master password para desbloquear."
 }

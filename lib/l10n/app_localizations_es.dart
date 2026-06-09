@@ -589,4 +589,16 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get biometricUnlockSuccess => 'Verificacion biometrica aceptada.';
+
+  @override
+  String get biometricEnrollCta => 'Configurar biometria en el dispositivo';
+
+  @override
+  String get biometricEnrollSubtitle => 'Tu dispositivo no tiene biometria registrada (huella, Face ID o reconocimiento facial). Abri los ajustes del sistema para activarla.';
+
+  @override
+  String get biometricEnrollAction => 'Abrir ajustes';
+
+  @override
+  String get biometricEnrollUnavailable => 'La biometria no esta disponible en este dispositivo. Usa la master password para desbloquear.';
 }
