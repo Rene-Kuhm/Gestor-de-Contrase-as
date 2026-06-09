@@ -2,6 +2,8 @@ package com.insyd.gestor_contrasenas
 
 import android.content.Context
 import android.content.Intent
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import androidx.core.content.FileProvider
 import io.flutter.embedding.engine.FlutterEngine
@@ -12,6 +14,8 @@ import java.io.File
 import java.io.FileOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 
 /**
  * Over-the-air update bridge.
@@ -39,6 +43,9 @@ class UpdateChannel(
     private val appContext: Context,
 ) : MethodChannel.MethodCallHandler {
 
+    private val mainHandler: Handler = Handler(Looper.getMainLooper())
+    private val networkExecutor: ExecutorService = Executors.newSingleThreadExecutor()
+
     private val channel: MethodChannel =
         MethodChannel(engine.dartExecutor.binaryMessenger, CHANNEL_NAME).also {
             it.setMethodCallHandler(this)
@@ -55,7 +62,9 @@ class UpdateChannel(
                         result.error("ARG", "owner and repo are required", null)
                         return
                     }
-                    result.success(checkForUpdate(owner, repo, currentVersion))
+                    runInBackground(call.method, result) {
+                        checkForUpdate(owner, repo, currentVersion)
+                    }
                 }
                 "downloadApk" -> {
                     val apkUrl = call.argument<String>("apkUrl")
@@ -63,7 +72,9 @@ class UpdateChannel(
                         result.error("ARG", "apkUrl is required", null)
                         return
                     }
-                    result.success(downloadApk(apkUrl))
+                    runInBackground(call.method, result) {
+                        downloadApk(apkUrl)
+                    }
                 }
                 "openInstallPrompt" -> {
                     val filePath = call.argument<String>("filePath")
@@ -82,6 +93,28 @@ class UpdateChannel(
                 e.message ?: e.javaClass.simpleName,
                 null
             )
+        }
+    }
+
+    private fun runInBackground(
+        methodName: String,
+        result: MethodChannel.Result,
+        block: () -> Any?,
+    ) {
+        networkExecutor.execute {
+            try {
+                val value = block()
+                mainHandler.post { result.success(value) }
+            } catch (e: Throwable) {
+                Log.w(TAG, "Method $methodName failed", e)
+                mainHandler.post {
+                    result.error(
+                        "UPDATE_FAILED",
+                        e.message ?: e.javaClass.simpleName,
+                        null
+                    )
+                }
+            }
         }
     }
 

@@ -4,6 +4,7 @@ Run this matrix before promoting any APK/App Store/TestFlight/public build.
 
 ## Android signed OTA
 
+- [ ] Confirm the installed APK and the OTA APK use the same signing key. Android will reject an in-place update when moving from a debug-signed install to the release upload key.
 - [ ] Install a clean signed APK.
 - [ ] Create a master password and confirm the vault opens.
 - [ ] Lock and unlock with the master password.

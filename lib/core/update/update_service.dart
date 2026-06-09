@@ -217,7 +217,10 @@ class UpdateService {
         '[Vaulta/Update] check failed: ${error.code} '
         '${error.message}\n$stack',
       );
-      return UpdateInfo.notAvailable(currentVersion: current);
+      throw StateError(
+        'No pudimos comprobar actualizaciones '
+        '(${error.code}: ${error.message ?? 'sin detalle'}).',
+      );
     }
   }
 

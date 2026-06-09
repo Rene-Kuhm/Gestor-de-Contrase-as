@@ -82,6 +82,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Fixed
 
+- **OTA update checks no longer run network on Android's main
+  thread.** `UpdateChannel` now performs GitHub release queries and
+  APK downloads on a background executor, then posts the result back
+  to Flutter. This fixes the `NetworkOnMainThreadException` that made
+  the Settings screen report "up to date" even when the check had
+  actually failed.
+- **OTA errors are no longer disguised as "up to date".** Platform
+  failures now surface to the update UI as an error banner, while the
+  silent dashboard check still logs and stays quiet.
 - `unlockWithBiometrics` no longer returns a hard-coded `false`. When
   no envelope is enrolled the controller explains why and points the
   user at the master password path; when an envelope is present and

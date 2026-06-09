@@ -27,7 +27,7 @@ void main() {
       final service = DeviceRegistrationService(
         repository: repository,
         identityService: _FakeDeviceIdentityService(),
-        appVersionProvider: const _FakeAppVersionProvider('1.0.2+3'),
+        appVersionProvider: const _FakeAppVersionProvider('1.0.3+4'),
         now: clock.now,
       );
       final lifecycle = DeviceSyncLifecycle(
@@ -64,7 +64,7 @@ void main() {
         final service = DeviceRegistrationService(
           repository: repository,
           identityService: _FakeDeviceIdentityService(),
-          appVersionProvider: const _FakeAppVersionProvider('1.0.2+3'),
+          appVersionProvider: const _FakeAppVersionProvider('1.0.3+4'),
         );
         final lifecycle = DeviceSyncLifecycle(
           service: service,
@@ -89,7 +89,7 @@ void main() {
       final service = DeviceRegistrationService(
         repository: repository,
         identityService: _FakeDeviceIdentityService(),
-        appVersionProvider: const _FakeAppVersionProvider('1.0.2+3'),
+        appVersionProvider: const _FakeAppVersionProvider('1.0.3+4'),
       );
       final lifecycle = DeviceSyncLifecycle(
         service: service,
@@ -120,7 +120,7 @@ void main() {
       final service = DeviceRegistrationService(
         repository: repository,
         identityService: _FakeDeviceIdentityService(),
-        appVersionProvider: const _FakeAppVersionProvider('1.0.2+3'),
+        appVersionProvider: const _FakeAppVersionProvider('1.0.3+4'),
         now: clock.now,
       );
 

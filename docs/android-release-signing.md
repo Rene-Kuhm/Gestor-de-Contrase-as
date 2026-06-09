@@ -29,6 +29,12 @@ Set these in CI or your shell:
 
 If none are present, Gradle leaves `release` unsigned instead of falling back to debug signing. That is intentional.
 
+Android only accepts in-place updates when the installed app and the
+incoming APK are signed with the same key. A debug-signed development
+install cannot be updated to the release upload key via OTA; migrate by
+installing a matching debug build for development, or by uninstalling
+and installing the release-signed APK for store/OTA validation.
+
 ## GitHub Actions OTA secrets
 
 The rolling `dev-latest` OTA workflow builds `app-release.apk`, so GitHub must also have:
