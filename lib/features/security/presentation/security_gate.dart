@@ -349,6 +349,13 @@ class _UnlockScreenState extends State<_UnlockScreen> {
       NativeBiometricCapability.empty;
   bool _enrollingBiometric = false;
   bool _settingUpBiometric = false;
+  // Cached view of [VaultSecurityController.isBiometricEnvelopeEnrolled].
+  // Refreshed by [_refreshBiometricUnlockAvailability] so the
+  // "Activar desbloqueo biometrico" CTA renders in the right
+  // place: the CTA must appear whenever the device has biometrics
+  // available AND the user has the preference on (or the device
+  // does) but the wrapped-DEK envelope is not on disk yet.
+  bool _envelopeEnrolled = false;
 
   @override
   void initState() {
@@ -372,6 +379,7 @@ class _UnlockScreenState extends State<_UnlockScreen> {
     final nextOffer = widget.controller.canOfferBiometricUnlockButton;
     final nextMessage = await widget.controller.biometricUnlockStatusMessage();
     final nextCap = await widget.controller.probeBiometricCapability();
+    final nextEnvelopeEnrolled = widget.controller.isBiometricEnvelopeEnrolled;
     if (!mounted) return;
     final capChanged =
         nextCap.canUseStrongOrCredential !=
@@ -381,10 +389,12 @@ class _UnlockScreenState extends State<_UnlockScreen> {
             nextCap.needsEnrollment != _biometricCapability.needsEnrollment;
     if (nextOffer != _canOfferBiometricButton ||
         nextMessage != _biometricStatusMessage ||
-        capChanged) {
+        capChanged ||
+        nextEnvelopeEnrolled != _envelopeEnrolled) {
       setState(() {
         _canOfferBiometricButton = nextOffer;
         _biometricStatusMessage = nextMessage;
+        _envelopeEnrolled = nextEnvelopeEnrolled;
         _biometricCapability = nextCap;
       });
     }
@@ -538,13 +548,18 @@ class _UnlockScreenState extends State<_UnlockScreen> {
                     const SizedBox(height: AppSpacing.md),
                     _StatusBanner(message: message),
                   ],
-                  // The device has biometrics enrolled and the user
-                  // has not turned biometric unlock on yet. Surface a
-                  // one-tap setup CTA that opens a password dialog,
-                  // verifies the master password, and writes the
-                  // wrapped-DEK envelope without unlocking the vault.
-                  if (!widget.controller.biometricEnabled &&
-                      controller.canOfferBiometricToggle) ...[
+                  // The device has biometrics enrolled and either
+                  // (a) the user has not turned biometric unlock on
+                  // yet, or (b) the user has the preference on but
+                  // the wrapped-DEK envelope is missing on disk.
+                  // In both cases the right action is the same:
+                  // surface the one-tap setup CTA that opens a
+                  // password dialog, verifies the master password,
+                  // and writes the envelope without unlocking the
+                  // vault.
+                  if (controller.canOfferBiometricToggle &&
+                      (!widget.controller.biometricEnabled ||
+                          !_envelopeEnrolled)) ...[
                     const SizedBox(height: AppSpacing.md),
                     _SetupBiometricButton(
                       label: l10n.securitySetupBiometricCta,

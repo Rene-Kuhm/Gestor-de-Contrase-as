@@ -66,12 +66,25 @@ class VaultSecurityController extends ChangeNotifier {
   int _idleTimeoutSeconds = defaultIdleTimeoutSeconds;
   Timer? _idleTimer;
   DateTime? _lastInteractionAt;
+  /// Cached state of the wrapped-DEK envelope on disk. Refreshed on
+  /// initialize, after every successful enrollment, and after every
+  /// successful biometric unlock. The unlock screen uses this to
+  /// decide whether to render the "Activate biometric unlock" CTA
+  /// without having to hit the secure storage on every build.
+  bool _envelopeEnrolled = false;
 
   VaultSecurityStage get stage => _stage;
 
   BiometricAvailability get biometricAvailability => _biometricAvailability;
 
   bool get biometricEnabled => _biometricEnabled;
+
+  /// True when the wrapped-DEK envelope is currently persisted. The
+  /// unlock screen renders the one-tap biometric-setup CTA when
+  /// the user has the preference on (or the device has biometrics
+  /// enrolled and the user has not turned it on yet) but this
+  /// envelope is missing — the two conditions are not the same.
+  bool get isBiometricEnvelopeEnrolled => _envelopeEnrolled;
 
   bool get busy => _busy;
 
@@ -198,6 +211,7 @@ class VaultSecurityController extends ChangeNotifier {
           defaultIdleTimeoutSeconds;
 
       final record = await _readRecord();
+      _envelopeEnrolled = await _biometricEnvelopeService.isEnrolled();
       _stage = record == null
           ? VaultSecurityStage.onboarding
           : VaultSecurityStage.locked;
@@ -340,6 +354,7 @@ class VaultSecurityController extends ChangeNotifier {
         debugPrint('[Vaulta] envelope missing, retrying enrollment');
         await _enrollBiometricEnvelopeIfNeeded(activeRecord);
       }
+      _envelopeEnrolled = await _biometricEnvelopeService.isEnrolled();
 
       _message = activeRecord == record
           ? 'Vaulta desbloqueada.'
@@ -372,6 +387,7 @@ class VaultSecurityController extends ChangeNotifier {
         case BiometricUnlockSuccess(:final session):
           _vaultSession = session;
           _stage = VaultSecurityStage.unlocked;
+          _envelopeEnrolled = true;
           _message = 'Vaulta desbloqueada con biometria.';
           _restartIdleTimer();
           return true;
@@ -790,6 +806,7 @@ class VaultSecurityController extends ChangeNotifier {
       }
 
       await _persistBiometricPreference(true);
+      _envelopeEnrolled = true;
       _message = 'Listo. La proxima vez podras desbloquear Vaulta con tu huella.';
       // Drop the throwaway session — we are NOT unlocking the vault.
       return true;
