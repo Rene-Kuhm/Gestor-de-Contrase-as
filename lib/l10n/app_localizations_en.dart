@@ -588,7 +588,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get biometricEnrollCta => 'Set up biometrics on this device';
 
   @override
-  String get biometricEnrollSubtitle => 'Your device has no biometric enrolled (fingerprint, Face ID, or face unlock). Open the system settings to enable it.';
+  String get biometricEnrollSubtitle => 'Your device has no biometric enrolled (fingerprint or face unlock). Open the system settings to enable it.';
 
   @override
   String get biometricEnrollAction => 'Open settings';

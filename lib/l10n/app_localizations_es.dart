@@ -594,7 +594,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get biometricEnrollCta => 'Configurar biometria en el dispositivo';
 
   @override
-  String get biometricEnrollSubtitle => 'Tu dispositivo no tiene biometria registrada (huella, Face ID o reconocimiento facial). Abri los ajustes del sistema para activarla.';
+  String get biometricEnrollSubtitle => 'Tu dispositivo no tiene biometria registrada (huella o reconocimiento facial). Abri los ajustes del sistema para activarla.';
 
   @override
   String get biometricEnrollAction => 'Abrir ajustes';

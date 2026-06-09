@@ -194,10 +194,11 @@ class VaultSecurityController extends ChangeNotifier {
           : VaultSecurityStage.locked;
 
       // If the user previously turned biometrics on but the platform
-      // enrollment is gone (e.g. they removed Face ID from the device
-      // or wiped the keystore), drop the preference so the UI does not
-      // lie about what's available. The wrapped envelope is also wiped
-      // because without the platform-protected key it is useless.
+      // enrollment is gone (e.g. they removed their fingerprint from
+      // the device or wiped the keystore), drop the preference so the
+      // UI does not lie about what's available. The wrapped envelope
+      // is also wiped because without the platform-protected key it
+      // is useless.
       if (_biometricEnabled && !canOfferBiometricToggle) {
         _biometricEnabled = false;
         await _storage.save(biometricEnabledKey, 'false');

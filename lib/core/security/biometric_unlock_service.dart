@@ -104,7 +104,7 @@ class BiometricUnlockService {
     }
     if (!availability.hasEnrolledBiometrics) {
       return const BiometricUnlockUnavailable(
-        'No hay biometria registrada. Configura Face ID, Touch ID o huella y reintenta.',
+        'No hay biometria registrada. Configura la huella o el reconocimiento facial del dispositivo y reintenta.',
       );
     }
 

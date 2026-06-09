@@ -1208,7 +1208,7 @@ abstract class AppLocalizations {
   /// No description provided for @biometricEnrollSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Your device has no biometric enrolled (fingerprint, Face ID, or face unlock). Open the system settings to enable it.'**
+  /// **'Your device has no biometric enrolled (fingerprint or face unlock). Open the system settings to enable it.'**
   String get biometricEnrollSubtitle;
 
   /// No description provided for @biometricEnrollAction.

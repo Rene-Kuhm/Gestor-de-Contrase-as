@@ -19,7 +19,7 @@ class BiometricAvailability {
 
   String get label {
     if (availableBiometrics.contains(BiometricType.face)) {
-      return 'Face ID / reconocimiento facial';
+      return 'reconocimiento facial';
     }
 
     if (availableBiometrics.contains(BiometricType.fingerprint) ||
