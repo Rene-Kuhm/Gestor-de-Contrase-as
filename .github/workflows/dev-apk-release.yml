@@ -19,6 +19,9 @@ on:
 permissions:
   contents: write
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build-and-release:
     name: Build APK + publish to dev-latest
@@ -103,11 +106,11 @@ jobs:
           fail_on_unmatched_files: true
           files: |
             ${{ steps.apk.outputs.apk_path }}
-          # `overwrite: true` lets the action delete the previous asset
-          # and upload a fresh one with the same name. We keep the
-          # tag name `dev-latest` stable so the native side always
-          # knows where to look.
-          overwrite: true
+          # `overwrite_files: true` lets the action replace the previous
+          # asset with a fresh APK using the same name. We keep the tag
+          # name `dev-latest` stable so the native side always knows
+          # where to look.
+          overwrite_files: true
           # Pruning the existing release's other assets is a no-op for
           # us — we only ever ship the one APK.
           prerelease: false
