@@ -130,6 +130,15 @@ class VaultSecurityController extends ChangeNotifier {
     return _biometricUnlockService != null;
   }
 
+  /// Single source of truth for the "you have to unlock with the
+  /// master password once before biometrics will work" hint. The
+  /// proactive unlock-screen banner and the post-failure message
+  /// both reference this constant so the user only sees the line
+  /// once, no matter which path surfaced it.
+  static const biometricNeedsPasswordFirstMessage =
+      'Para activar la huella por primera vez, desbloquea una vez con la '
+      'master password. Las proximas veces podras usar la huella directamente.';
+
   /// Latest human-readable status of the biometric unlock path, for
   /// the unlock screen to surface when the button is offered but the
   /// underlying envelope is not yet on disk. Returns null when there
@@ -139,8 +148,7 @@ class VaultSecurityController extends ChangeNotifier {
     if (await _biometricEnvelopeService.isEnrolled()) {
       return null;
     }
-    return 'Todavia no preparamos el desbloqueo biometrico. '
-        'Desbloquea una vez con la master password y la huella quedara lista.';
+    return biometricNeedsPasswordFirstMessage;
   }
 
   /// Returns the raw native platform capability, when the active
@@ -366,6 +374,18 @@ class VaultSecurityController extends ChangeNotifier {
           _message = 'Vaulta desbloqueada con biometria.';
           _restartIdleTimer();
           return true;
+        case BiometricUnlockNeedsPasswordFirst(:final reason):
+          // The unlock screen already shows
+          // [biometricNeedsPasswordFirstMessage] as the proactive
+          // banner. Repeating it in [message] would render two
+          // identical banners stacked on top of each other, which
+          // is exactly the layout the user reported in the bug
+          // capture. We leave [message] null so the unlock screen
+          // renders only the proactive banner.
+          _message = null;
+          debugPrint('[Vaulta] biometric unlock needs password-first '
+              'enrollment: $reason');
+          return false;
         case BiometricUnlockRejected(:final reason):
           _message = reason;
           // A rejection that looks like a stale envelope should be

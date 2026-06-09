@@ -30,6 +30,17 @@ class BiometricUnlockUnavailable extends BiometricUnlockOutcome {
   final String reason;
 }
 
+/// Specialization of [BiometricUnlockUnavailable] for the first-run
+/// case: biometrics are enabled and the device has them enrolled, but
+/// the wrapped-DEK envelope has not been written to disk yet. The
+/// user has to unlock with the master password once so we can derive
+/// the DEK and wrap it. The unlock screen surfaces this with a
+/// single, non-redundant hint instead of a generic "biometrics
+/// unavailable" message.
+class BiometricUnlockNeedsPasswordFirst extends BiometricUnlockUnavailable {
+  const BiometricUnlockNeedsPasswordFirst(super.reason);
+}
+
 /// Orchestrates the biometric unlock path. The flow is:
 ///   1. Confirm the platform says biometrics are available and enrolled.
 ///   2. Confirm a wrapped DEK envelope exists in secure storage.
@@ -109,8 +120,16 @@ class BiometricUnlockService {
     }
 
     if (!await _envelopeService.isEnrolled()) {
-      return const BiometricUnlockUnavailable(
-        'Todavia no activaste el desbloqueo biometrico para este vault.',
+      // The button is offered because the device has biometrics
+      // enrolled and the user has the preference on, but the
+      // wrapped-DEK envelope has not been written to disk yet. The
+      // only way to create the envelope is to first unlock with the
+      // master password so we have the DEK to wrap. Surface this as
+      // its own outcome so the controller can show a single, clear
+      // hint instead of a generic "biometrics unavailable" message.
+      return const BiometricUnlockNeedsPasswordFirst(
+        'Para activar la huella por primera vez, desbloquea una vez con la '
+        'master password. Las proximas veces podras usar la huella directamente.',
       );
     }
 
