@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:cryptography/cryptography.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
@@ -696,10 +695,18 @@ class VaultSecurityController extends ChangeNotifier {
       return;
     }
 
-    await _enrollEnvelopeWithDek(
+    // This is the silent (post-password-unlock) enrollment path.
+    // Failures here are not user-facing — the user just unlocked
+    // with their password and the next unlock attempt will
+    // re-attempt the enrollment, so we just log the reason for
+    // diagnosis.
+    final result = await _enrollEnvelopeWithDek(
       unlocker: unlocker,
       dekBytes: dekBytes,
     );
+    if (!result.ok) {
+      debugPrint('[Vaulta] silent enroll failed: ${result.reason}');
+    }
   }
 
   /// Shared enrollment implementation that takes the DEK as a
@@ -707,32 +714,46 @@ class VaultSecurityController extends ChangeNotifier {
   /// reads the DEK out of the active session) and by
   /// [setupBiometricFromPassword] (which derives a one-shot DEK
   /// without unlocking the vault).
-  Future<bool> _enrollEnvelopeWithDek({
+  ///
+  /// Returns a `({bool ok, String? reason})` so callers can surface
+  /// the *actual* failure reason in the unlock-screen banner. The
+  /// previous version swallowed every null and reported a single
+  /// generic "could not prepare fingerprint" string, which made
+  /// platform-specific bugs impossible to diagnose from the UI.
+  Future<({bool ok, String? reason})> _enrollEnvelopeWithDek({
     required BiometricUnlockService unlocker,
     required Uint8List dekBytes,
   }) async {
-    SecretKey? envelopeKey;
+    BiometricEnvelopeKeyResult acquireResult;
     try {
-      envelopeKey = await unlocker.envelopeKeyProvider.acquireEnvelopeKey();
+      acquireResult =
+          await unlocker.envelopeKeyProvider.acquireEnvelopeKey();
     } catch (error, stack) {
       debugPrint('[Vaulta] enroll: provider threw $error\n$stack');
-      envelopeKey = null;
+      return (
+        ok: false,
+        reason: 'provider_threw:${error.runtimeType}',
+      );
     }
-    if (envelopeKey == null) {
-      debugPrint('[Vaulta] enroll: provider returned null key '
-          '(platform cannot back the envelope on this device)');
-      return false;
+    if (!acquireResult.isSuccess) {
+      debugPrint('[Vaulta] enroll: provider returned failure '
+          '${acquireResult.failureReason}');
+      return (ok: false, reason: acquireResult.failureReason);
     }
+    final envelopeKey = acquireResult.key!;
     try {
       await _biometricEnvelopeService.enroll(
         dekBytes: dekBytes,
         envelopeKey: envelopeKey,
       );
       debugPrint('[Vaulta] enroll: envelope persisted');
-      return true;
+      return (ok: true, reason: null);
     } catch (error, stack) {
       debugPrint('[Vaulta] enroll: enroll() failed $error\n$stack');
-      return false;
+      return (
+        ok: false,
+        reason: 'enroll_threw:${error.runtimeType}',
+      );
     }
   }
 
@@ -795,13 +816,18 @@ class VaultSecurityController extends ChangeNotifier {
       );
       final dekBytes = Uint8List.fromList(await session.secretKey.extractBytes());
 
-      final enrolled = await _enrollEnvelopeWithDek(
+      final enrollResult = await _enrollEnvelopeWithDek(
         unlocker: unlocker,
         dekBytes: dekBytes,
       );
-      if (!enrolled) {
+      if (!enrollResult.ok) {
+        // Surface the *real* reason in the banner so the user can
+        // tell us exactly what their device reported. The technical
+        // code (e.g. `ensure_key_failed:KEYSTORE_ERROR`) is in
+        // brackets; the leading sentence stays user-friendly.
         _message = 'No pudimos preparar la huella en este dispositivo. '
-            'Reintenta o usa la master password.';
+            'Reintenta o usa la master password. '
+            '[${enrollResult.reason ?? "unknown"}]';
         return false;
       }
 

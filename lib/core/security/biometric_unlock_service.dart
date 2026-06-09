@@ -8,6 +8,80 @@ import 'master_password_record.dart';
 import 'secure_storage_service.dart';
 import 'vault_session.dart';
 
+/// Result of asking the platform for an envelope key. Carries
+/// either the [SecretKey] we wanted or a human-readable
+/// [failureReason] explaining why the platform could not produce
+/// one right now. The controller surfaces that reason in the unlock
+/// screen so the user can tell us *what* went wrong, not just that
+/// something did.
+class BiometricEnvelopeKeyResult {
+  const BiometricEnvelopeKeyResult.success(SecretKey this.key)
+      : failureReason = null;
+
+  const BiometricEnvelopeKeyResult.unavailable(String this.failureReason)
+      : key = null;
+
+  /// True when [key] is non-null and safe to use.
+  bool get isSuccess => key != null;
+
+  /// The AES-256 envelope key as a usable [SecretKey]. Null on
+  /// failure.
+  final SecretKey? key;
+
+  /// Stable, human-readable cause of the failure. Null on success.
+  /// Examples:
+  ///   * `"platform_no_hardware_backed_biometric"`
+  ///   * `"ensure_key_failed:KEYSTORE_ERROR"`
+  ///   * `"rsa_encrypt_returned_null"`
+  final String? failureReason;
+
+  @override
+  String toString() => isSuccess
+      ? 'BiometricEnvelopeKeyResult.success'
+      : 'BiometricEnvelopeKeyResult.unavailable($failureReason)';
+}
+
+/// Abstract source for the platform-protected key that wraps the DEK.
+///
+/// Implementations must return a [BiometricEnvelopeKeyResult]
+/// containing a [SecretKey] that can be used directly with
+/// `package:cryptography` (i.e. extractable bytes), or a structured
+/// failure when the platform cannot produce one. The envelope
+/// service treats the returned key as opaque: it feeds it into
+/// HKDF-SHA256 and uses the result to AES-256-GCM encrypt the DEK.
+///
+/// On Android the provider is expected to:
+///   1. Generate or load the hardware-backed RSA-2048 keypair.
+///   2. Generate a fresh random AES-256 seed (the actual envelope
+///      key).
+///   3. RSA-OAEP-encrypt the seed with the public key and store the
+///      ciphertext in secure storage (so it survives app restarts).
+///   4. Return the *plaintext seed* to the envelope service.
+///
+/// On unlock, the provider's mirror [releaseEnvelopeKey] is given
+/// the same ciphertext to RSA-decrypt with the private key (which
+/// requires a fresh BiometricPrompt), yielding the same seed bytes.
+/// The two halves of the round-trip are intentionally separate so
+/// that enrollment can happen silently (no prompt) while unlock
+/// always prompts.
+abstract interface class BiometricEnvelopeKeyProvider {
+  /// Returns the AES-256 envelope key as a usable [SecretKey], or a
+  /// [BiometricEnvelopeKeyResult.unavailable] describing why the
+  /// platform cannot back the envelope on this device (no hardware,
+  /// user has not enrolled biometrics, KeyStore generation failed,
+  /// etc.). The unlock screen surfaces that reason verbatim so the
+  /// user can give us an actionable bug report.
+  Future<BiometricEnvelopeKeyResult> acquireEnvelopeKey();
+
+  /// Returns the AES-256 envelope key after a fresh biometric
+  /// authorization has been collected. Implementations are expected
+  /// to block on the BiometricPrompt and only resolve once the user
+  /// has authenticated. The failure reason is the same shape as
+  /// [acquireEnvelopeKey] so the unlock screen can render both
+  /// paths with the same template.
+  Future<BiometricEnvelopeKeyResult> releaseEnvelopeKey();
+}
+
 /// Outcome of a biometric unlock attempt. Distinguishes "user canceled",
 /// "biometrics not enrolled", "no envelope on disk", and "platform
 /// rejected the auth" from "we recovered the DEK and built a session".
@@ -140,15 +214,18 @@ class BiometricUnlockService {
       );
     }
 
-    final envelopeKey = await _envelopeKeyProvider.releaseEnvelopeKey();
-    if (envelopeKey == null) {
-      return const BiometricUnlockRejected(
-        'La plataforma rechazo la clave biometrica. Re-enrola biometria o usa la master password.',
+    final envelopeKeyResult = await _envelopeKeyProvider.releaseEnvelopeKey();
+    if (!envelopeKeyResult.isSuccess) {
+      return BiometricUnlockRejected(
+        'La plataforma rechazo la clave biometrica '
+        '(${envelopeKeyResult.failureReason ?? "unknown"}). '
+        'Re-enrola biometria o usa la master password.',
       );
     }
 
     try {
-      final dekBytes = await _envelopeService.unwrap(envelopeKey: envelopeKey);
+      final dekBytes =
+          await _envelopeService.unwrap(envelopeKey: envelopeKeyResult.key!);
       final session = VaultSession.v2(
         keyId: record.keyId,
         secretKey: SecretKey(dekBytes),
@@ -192,45 +269,19 @@ class BiometricUnlockService {
 }
 
 class _NoopEnvelopeKeyProvider implements BiometricEnvelopeKeyProvider {
-  @override
-  Future<SecretKey?> acquireEnvelopeKey() async => null;
+  const _NoopEnvelopeKeyProvider();
 
   @override
-  Future<SecretKey?> releaseEnvelopeKey() async => null;
-}
+  Future<BiometricEnvelopeKeyResult> acquireEnvelopeKey() async {
+    return const BiometricEnvelopeKeyResult.unavailable(
+      'platform_not_supported',
+    );
+  }
 
-/// Abstract source for the platform-protected key that wraps the DEK.
-///
-/// Implementations must return a [SecretKey] that can be used
-/// directly with `package:cryptography` (i.e. extractable bytes) or
-/// null if the platform does not have a usable key slot. The
-/// envelope service treats the returned key as opaque: it feeds it
-/// into HKDF-SHA256 and uses the result to AES-256-GCM encrypt the
-/// DEK.
-///
-/// On Android the provider is expected to:
-///   1. Generate or load the hardware-backed RSA-2048 keypair.
-///   2. Generate a fresh random AES-256 seed (the actual envelope
-///      key).
-///   3. RSA-OAEP-encrypt the seed with the public key and store the
-///      ciphertext in secure storage (so it survives app restarts).
-///   4. Return the *plaintext seed* to the envelope service.
-///
-/// On unlock, the provider's mirror [releaseKey] is given the same
-/// ciphertext to RSA-decrypt with the private key (which requires a
-/// fresh BiometricPrompt), yielding the same seed bytes. The two
-/// halves of the round-trip are intentionally separate so that
-/// enrollment can happen silently (no prompt) while unlock always
-/// prompts.
-abstract interface class BiometricEnvelopeKeyProvider {
-  /// Returns the AES-256 envelope key as a usable [SecretKey], or
-  /// null when the platform cannot provide one (no hardware backing,
-  /// user has not enrolled biometrics, etc.).
-  Future<SecretKey?> acquireEnvelopeKey();
-
-  /// Returns the AES-256 envelope key after a fresh biometric
-  /// authorization has been collected. Implementations are expected
-  /// to block on the BiometricPrompt and only resolve once the user
-  /// has authenticated.
-  Future<SecretKey?> releaseEnvelopeKey();
+  @override
+  Future<BiometricEnvelopeKeyResult> releaseEnvelopeKey() async {
+    return const BiometricEnvelopeKeyResult.unavailable(
+      'platform_not_supported',
+    );
+  }
 }

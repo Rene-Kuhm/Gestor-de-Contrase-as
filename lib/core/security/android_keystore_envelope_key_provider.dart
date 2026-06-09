@@ -49,15 +49,19 @@ class AndroidKeystoreEnvelopeKeyProvider
   final Random _random;
 
   @override
-  Future<SecretKey?> acquireEnvelopeKey() async {
+  Future<BiometricEnvelopeKeyResult> acquireEnvelopeKey() async {
     if (!Platform.isAndroid) {
       debugPrint('[Vaulta/KeyStore] acquire skipped: not Android');
-      return null;
+      return const BiometricEnvelopeKeyResult.unavailable(
+        'platform_not_android',
+      );
     }
     if (!await isHardwareBackedBiometricAvailable()) {
       debugPrint('[Vaulta/KeyStore] acquire skipped: hardware-backed '
           'biometric not available on this device');
-      return null;
+      return const BiometricEnvelopeKeyResult.unavailable(
+        'platform_no_hardware_backed_biometric',
+      );
     }
 
     try {
@@ -65,57 +69,94 @@ class AndroidKeystoreEnvelopeKeyProvider
     } on PlatformException catch (error) {
       debugPrint('[Vaulta/KeyStore] ensureKey failed: ${error.code} '
           '${error.message}');
-      return null;
+      return BiometricEnvelopeKeyResult.unavailable(
+        'ensure_key_failed:${error.code}',
+      );
     } catch (error, stack) {
       debugPrint('[Vaulta/KeyStore] ensureKey unexpected: $error\n$stack');
-      return null;
+      return BiometricEnvelopeKeyResult.unavailable(
+        'ensure_key_unexpected:${error.runtimeType}',
+      );
     }
 
     final seed = _randomBytes(32);
     final rsaEncrypted = await rsaEncryptSeed(seed);
     if (rsaEncrypted == null) {
       debugPrint('[Vaulta/KeyStore] rsaEncrypt returned null');
-      return null;
+      return const BiometricEnvelopeKeyResult.unavailable(
+        'rsa_encrypt_returned_null',
+      );
     }
 
     // Persist the RSA-encrypted seed for the unlock path. We never
     // persist the plaintext seed.
-    await _storage.save(
-      _encryptedSeedKey,
-      String.fromCharCodes(rsaEncrypted),
-    );
+    try {
+      await _storage.save(
+        _encryptedSeedKey,
+        String.fromCharCodes(rsaEncrypted),
+      );
+    } catch (error, stack) {
+      debugPrint('[Vaulta/KeyStore] persist encrypted seed failed: '
+          '$error\n$stack');
+      return BiometricEnvelopeKeyResult.unavailable(
+        'persist_encrypted_seed_failed:${error.runtimeType}',
+      );
+    }
 
     debugPrint('[Vaulta/KeyStore] acquire OK: '
         'envelope seed encrypted and persisted (${rsaEncrypted.length} bytes)');
-    return SecretKey(seed);
+    return BiometricEnvelopeKeyResult.success(SecretKey(seed));
   }
 
   @override
-  Future<SecretKey?> releaseEnvelopeKey() async {
-    if (!Platform.isAndroid) return null;
+  Future<BiometricEnvelopeKeyResult> releaseEnvelopeKey() async {
+    if (!Platform.isAndroid) {
+      return const BiometricEnvelopeKeyResult.unavailable(
+        'platform_not_android',
+      );
+    }
     if (!await isHardwareBackedBiometricAvailable()) {
       debugPrint('[Vaulta/KeyStore] release skipped: hardware not available');
-      return null;
+      return const BiometricEnvelopeKeyResult.unavailable(
+        'platform_no_hardware_backed_biometric',
+      );
     }
 
     final stored = await _storage.read(_encryptedSeedKey);
     if (stored == null || stored.isEmpty) {
       debugPrint('[Vaulta/KeyStore] release skipped: no encrypted seed on disk');
-      return null;
+      return const BiometricEnvelopeKeyResult.unavailable(
+        'no_encrypted_seed_on_disk',
+      );
     }
     final ciphertext = Uint8List.fromList(
       stored.codeUnits,
     );
 
-    final seed = await rsaDecryptSeedAuthorized(ciphertext);
-    if (seed == null) {
-      debugPrint('[Vaulta/KeyStore] release: rsaDecrypt returned null '
-          '(user cancelled or platform rejected the private key)');
-      return null;
+    try {
+      final seed = await rsaDecryptSeedAuthorized(ciphertext);
+      if (seed == null) {
+        debugPrint('[Vaulta/KeyStore] release: rsaDecrypt returned null '
+            '(user cancelled or platform rejected the private key)');
+        return const BiometricEnvelopeKeyResult.unavailable(
+          'rsa_decrypt_returned_null',
+        );
+      }
+      debugPrint('[Vaulta/KeyStore] release OK: seed recovered '
+          '(${seed.length} bytes)');
+      return BiometricEnvelopeKeyResult.success(SecretKey(seed));
+    } on PlatformException catch (error) {
+      debugPrint('[Vaulta/KeyStore] release: rsaDecrypt threw '
+          '${error.code} ${error.message}');
+      return BiometricEnvelopeKeyResult.unavailable(
+        'rsa_decrypt_failed:${error.code}',
+      );
+    } catch (error, stack) {
+      debugPrint('[Vaulta/KeyStore] release unexpected: $error\n$stack');
+      return BiometricEnvelopeKeyResult.unavailable(
+        'rsa_decrypt_unexpected:${error.runtimeType}',
+      );
     }
-    debugPrint('[Vaulta/KeyStore] release OK: seed recovered '
-        '(${seed.length} bytes)');
-    return SecretKey(seed);
   }
 
   /// True if the platform reports the biometric-bound RSA key is
@@ -153,11 +194,17 @@ class AndroidKeystoreEnvelopeKeyProvider
 
   Future<Uint8List?> rsaEncryptSeed(Uint8List plaintext) async {
     if (!Platform.isAndroid) return null;
-    final result = await _keystoreChannel.invokeMethod<Uint8List>(
-      'rsaEncrypt',
-      {'plaintext': plaintext},
-    );
-    return result;
+    try {
+      final result = await _keystoreChannel.invokeMethod<Uint8List>(
+        'rsaEncrypt',
+        {'plaintext': plaintext},
+      );
+      return result;
+    } on PlatformException catch (error) {
+      debugPrint('[Vaulta/KeyStore] rsaEncrypt threw ${error.code} '
+          '${error.message}');
+      return null;
+    }
   }
 
   /// Drives a full biometric unlock round-trip:

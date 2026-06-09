@@ -1,4 +1,3 @@
-import 'package:cryptography/cryptography.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -125,10 +124,18 @@ class _NullEnvelopeKeyProvider implements BiometricEnvelopeKeyProvider {
   const _NullEnvelopeKeyProvider();
 
   @override
-  Future<SecretKey?> acquireEnvelopeKey() async => null;
+  Future<BiometricEnvelopeKeyResult> acquireEnvelopeKey() async {
+    return const BiometricEnvelopeKeyResult.unavailable(
+      'platform_not_android',
+    );
+  }
 
   @override
-  Future<SecretKey?> releaseEnvelopeKey() async => null;
+  Future<BiometricEnvelopeKeyResult> releaseEnvelopeKey() async {
+    return const BiometricEnvelopeKeyResult.unavailable(
+      'platform_not_android',
+    );
+  }
 }
 
 class PasswordManagerApp extends StatelessWidget {

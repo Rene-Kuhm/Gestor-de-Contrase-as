@@ -36,8 +36,12 @@ void main() {
         final provider = AndroidKeystoreEnvelopeKeyProvider(
           storage: _InMemoryStorage(),
         );
-        expect(await provider.acquireEnvelopeKey(), isNull);
-        expect(await provider.releaseEnvelopeKey(), isNull);
+        final acquire = await provider.acquireEnvelopeKey();
+        expect(acquire.isSuccess, isFalse);
+        expect(acquire.failureReason, 'platform_not_android');
+        final release = await provider.releaseEnvelopeKey();
+        expect(release.isSuccess, isFalse);
+        expect(release.failureReason, 'platform_not_android');
         expect(
           await provider.isHardwareBackedBiometricAvailable(),
           isFalse,
@@ -98,8 +102,9 @@ void main() {
         final provider = AndroidKeystoreEnvelopeKeyProvider(
           storage: storage,
         );
-        final envelopeKey = await provider.acquireEnvelopeKey();
-        expect(envelopeKey, isNotNull);
+        final acquireResult = await provider.acquireEnvelopeKey();
+        expect(acquireResult.isSuccess, isTrue);
+        expect(acquireResult.key, isNotNull);
 
         // The RSA-encrypted seed must have been persisted under the
         // documented storage key.
@@ -135,7 +140,9 @@ void main() {
       final provider = AndroidKeystoreEnvelopeKeyProvider(
         storage: storage,
       );
-      expect(await provider.releaseEnvelopeKey(), isNull);
+      final releaseResult = await provider.releaseEnvelopeKey();
+      expect(releaseResult.isSuccess, isFalse);
+      expect(releaseResult.failureReason, isNotNull);
     });
 
     test('end-to-end envelope + provider round-trip is symmetric', () async {
@@ -191,14 +198,16 @@ void main() {
       final dek = Uint8List.fromList(List<int>.generate(32, (i) => i + 1));
 
       final acquired = await provider.acquireEnvelopeKey();
-      expect(acquired, isNotNull);
-      await envelopeService.enroll(dekBytes: dek, envelopeKey: acquired!);
+      expect(acquired.isSuccess, isTrue);
+      expect(acquired.key, isNotNull);
+      await envelopeService.enroll(dekBytes: dek, envelopeKey: acquired.key!);
 
       final released = await provider.releaseEnvelopeKey();
-      expect(released, isNotNull);
+      expect(released.isSuccess, isTrue);
+      expect(released.key, isNotNull);
 
       final recoveredDek = await envelopeService.unwrap(
-        envelopeKey: released!,
+        envelopeKey: released.key!,
       );
       expect(recoveredDek, dek);
 

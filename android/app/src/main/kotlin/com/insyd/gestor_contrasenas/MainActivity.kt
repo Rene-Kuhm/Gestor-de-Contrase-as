@@ -52,6 +52,7 @@ class MainActivity : FlutterFragmentActivity() {
             this::probeAvailability,
             this::openBiometricEnrollment,
         )
+        UpdateChannel(flutterEngine, applicationContext)
     }
 
     // ---- Public helpers exposed to the BiometricChannel ----
