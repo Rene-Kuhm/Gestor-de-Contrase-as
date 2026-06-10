@@ -8,6 +8,7 @@ import '../../../app/design_system/app_panel.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../core/security/vault_repository.dart';
+import '../application/vault_duplicate_detector.dart';
 import '../application/vault_import_models.dart';
 import '../application/vault_import_parser.dart';
 import '../domain/vault_item.dart';
@@ -18,22 +19,32 @@ class VaultImportScreen extends StatefulWidget {
     required this.repository,
     required this.existingItems,
     VaultImportParser? parser,
+    this.initialPreview,
   }) : parser = parser ?? const _DefaultVaultImportParser._();
 
   final VaultRepository repository;
   final List<VaultItem> existingItems;
   final VaultImportParser parser;
+  final VaultImportPreview? initialPreview;
 
   @override
   State<VaultImportScreen> createState() => _VaultImportScreenState();
 }
 
 class _VaultImportScreenState extends State<VaultImportScreen> {
+  static const _duplicates = VaultDuplicateDetector();
+
   VaultImportPreview? _preview;
   String? _fileName;
   String? _error;
   bool _isPicking = false;
   bool _isImporting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _preview = widget.initialPreview;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -184,16 +195,33 @@ class _VaultImportScreenState extends State<VaultImportScreen> {
     final preview = _preview;
     if (preview == null) return;
 
-    setState(() => _isImporting = true);
+    setState(() {
+      _isImporting = true;
+      _error = null;
+    });
     var imported = 0;
+    var skippedDuplicates = 0;
     try {
+      final existingItems = await widget.repository.fetchItems();
+      final knownItems = List<VaultItem>.of(existingItems);
       for (final candidate in preview.candidates) {
         if (!candidate.canImport) continue;
+        final duplicate = _duplicates.findDuplicate(candidate.item, knownItems);
+        if (duplicate != null) {
+          skippedDuplicates++;
+          continue;
+        }
         await widget.repository.saveItem(candidate.item);
+        knownItems.add(candidate.item);
         imported++;
       }
       if (!mounted) return;
-      Navigator.of(context).pop(imported);
+      Navigator.of(context).pop(
+        VaultImportResult(
+          imported: imported,
+          skippedDuplicates: skippedDuplicates,
+        ),
+      );
     } catch (error) {
       if (!mounted) return;
       setState(() {
@@ -349,6 +377,15 @@ class _ImportCandidateTile extends StatelessWidget {
                   const SizedBox(height: AppSpacing.xs),
                   Text(
                     candidate.issues.map((issue) => issue.message).join(' '),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: AppColors.warning,
+                    ),
+                  ),
+                ],
+                if (candidate.duplicateReason != null) ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    candidate.duplicateReason!,
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: AppColors.warning,
                     ),

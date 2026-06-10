@@ -75,6 +75,46 @@ void main() {
       expect(preview.importableCount, 0);
     });
 
+    test('detects duplicated passwords with matching account details', () {
+      const existing = VaultItem(
+        id: 'existing',
+        title: 'GitHub',
+        username: 'leo@example.com',
+        secret: 'StrongPass!2026',
+        category: VaultCategory.work,
+        strengthScore: 80,
+        lastUpdatedLabel: 'Updated now',
+        website: 'https://github.com',
+      );
+
+      final preview = VaultImportParser().parse(
+        fileName: 'passwords.csv',
+        content:
+            'title,username,password,url\nGitHub Backup,leo@example.com,StrongPass!2026,https://github.com',
+        existingItems: const [existing],
+      );
+
+      expect(preview.candidates.single.isDuplicate, isTrue);
+      expect(preview.candidates.single.duplicateReason, contains('password'));
+      expect(preview.importableCount, 0);
+    });
+
+    test('detects duplicates repeated inside the same import file', () {
+      final preview = VaultImportParser().parse(
+        fileName: 'passwords.csv',
+        content: [
+          'title,username,password,url',
+          'GitHub,leo@example.com,StrongPass!2026,https://github.com',
+          'GitHub,leo@example.com,StrongPass!2026,https://github.com',
+        ].join('\n'),
+        existingItems: const [],
+      );
+
+      expect(preview.importableCount, 1);
+      expect(preview.duplicateCount, 1);
+      expect(preview.candidates.last.isDuplicate, isTrue);
+    });
+
     test('maps Bitwarden-style JSON exports', () {
       final preview = VaultImportParser().parse(
         fileName: 'bitwarden_export.json',

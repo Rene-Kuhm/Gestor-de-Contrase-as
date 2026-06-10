@@ -10,6 +10,7 @@ import '../../../app/theme/app_spacing.dart';
 import '../../../core/security/vault_repository.dart';
 import '../../../core/sync/sync_conflict_resolver.dart';
 import '../../sync/presentation/sync_conflicts_sheet.dart';
+import '../application/vault_import_models.dart';
 import '../domain/vault_item.dart';
 import '../domain/vault_summary.dart';
 import 'vault_entry_detail_screen.dart';
@@ -241,7 +242,7 @@ class _VaultDashboardScreenState extends State<VaultDashboardScreen> {
   }
 
   Future<void> _importEntries({required List<VaultItem> existingItems}) async {
-    final imported = await Navigator.of(context).push<int>(
+    final result = await Navigator.of(context).push<VaultImportResult>(
       MaterialPageRoute(
         builder: (_) => VaultImportScreen(
           repository: widget.repository,
@@ -250,11 +251,18 @@ class _VaultDashboardScreenState extends State<VaultDashboardScreen> {
       ),
     );
 
-    if (imported == null || !mounted) {
+    if (result == null || !mounted) {
       return;
     }
+    final duplicateText = result.skippedDuplicates > 0
+        ? ' ${result.skippedDuplicates} duplicadas omitidas.'
+        : '';
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Importacion completa: $imported entradas.')),
+      SnackBar(
+        content: Text(
+          'Importacion completa: ${result.imported} entradas.$duplicateText',
+        ),
+      ),
     );
     _refresh();
   }

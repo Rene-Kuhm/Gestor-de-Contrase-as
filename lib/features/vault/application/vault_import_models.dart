@@ -37,6 +37,7 @@ class VaultImportCandidate {
     required this.row,
     this.issues = const [],
     this.isDuplicate = false,
+    this.duplicateReason,
   });
 
   final VaultItem item;
@@ -44,6 +45,7 @@ class VaultImportCandidate {
   final int row;
   final List<VaultImportIssue> issues;
   final bool isDuplicate;
+  final String? duplicateReason;
 
   bool get canImport =>
       !isDuplicate &&
@@ -55,6 +57,7 @@ class VaultImportCandidate {
     int? row,
     List<VaultImportIssue>? issues,
     bool? isDuplicate,
+    String? duplicateReason,
   }) {
     return VaultImportCandidate(
       item: item ?? this.item,
@@ -62,6 +65,7 @@ class VaultImportCandidate {
       row: row ?? this.row,
       issues: issues ?? this.issues,
       isDuplicate: isDuplicate ?? this.isDuplicate,
+      duplicateReason: duplicateReason ?? this.duplicateReason,
     );
   }
 }
@@ -84,4 +88,14 @@ class VaultImportPreview {
       candidates.where((candidate) => candidate.isDuplicate).length;
 
   int get rejectedCount => rejected.length;
+}
+
+class VaultImportResult {
+  const VaultImportResult({
+    required this.imported,
+    required this.skippedDuplicates,
+  });
+
+  final int imported;
+  final int skippedDuplicates;
 }

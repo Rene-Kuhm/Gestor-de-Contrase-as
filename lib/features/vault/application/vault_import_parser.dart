@@ -3,12 +3,16 @@ import 'dart:convert';
 import 'package:uuid/uuid.dart';
 
 import '../domain/vault_item.dart';
+import 'vault_duplicate_detector.dart';
 import 'vault_import_models.dart';
 
 class VaultImportParser {
-  const VaultImportParser({Uuid? uuid}) : _uuid = uuid ?? const Uuid();
+  const VaultImportParser({Uuid? uuid, VaultDuplicateDetector? duplicates})
+    : _uuid = uuid ?? const Uuid(),
+      _duplicates = duplicates ?? const VaultDuplicateDetector();
 
   final Uuid _uuid;
+  final VaultDuplicateDetector _duplicates;
 
   VaultImportPreview parse({
     required String fileName,
@@ -23,14 +27,20 @@ class VaultImportParser {
         ? _parseJson(trimmed, source)
         : _parseCsv(content, source);
 
-    final duplicateKeys = existingItems.map(_duplicateKey).toSet();
-    final candidates = parsed.candidates
-        .map((candidate) {
-          return candidate.copyWith(
-            isDuplicate: duplicateKeys.contains(_duplicateKey(candidate.item)),
-          );
-        })
-        .toList(growable: false);
+    final candidates = <VaultImportCandidate>[];
+    final knownItems = List<VaultItem>.of(existingItems);
+
+    for (final candidate in parsed.candidates) {
+      final match = _duplicates.findDuplicate(candidate.item, knownItems);
+      if (match == null) {
+        candidates.add(candidate);
+        knownItems.add(candidate.item);
+      } else {
+        candidates.add(
+          candidate.copyWith(isDuplicate: true, duplicateReason: match.reason),
+        );
+      }
+    }
 
     return VaultImportPreview(
       source: parsed.source,
@@ -317,14 +327,6 @@ class VaultImportParser {
       if (value != null && value.isNotEmpty) return value;
     }
     return '';
-  }
-
-  String _duplicateKey(VaultItem item) {
-    return [
-      item.title.trim().toLowerCase(),
-      item.username.trim().toLowerCase(),
-      (item.website ?? '').trim().toLowerCase(),
-    ].join('|');
   }
 
   String _normalizeHeader(String value) {
