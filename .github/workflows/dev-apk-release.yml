@@ -72,8 +72,10 @@ jobs:
         id: apk
         run: |
           APK=$(ls -1 build/app/outputs/flutter-apk/app-release.apk | head -n 1)
-          echo "apk_path=$APK" >> "$GITHUB_OUTPUT"
-          echo "apk_size=$(stat -c %s "$APK")" >> "$GITHUB_OUTPUT"
+          PUBLISH_APK=build/app/outputs/flutter-apk/vaulta.apk
+          cp "$APK" "$PUBLISH_APK"
+          echo "apk_path=$PUBLISH_APK" >> "$GITHUB_OUTPUT"
+          echo "apk_size=$(stat -c %s "$PUBLISH_APK")" >> "$GITHUB_OUTPUT"
 
       - name: Compute changelog
         id: changelog
@@ -92,13 +94,15 @@ jobs:
           test -n "$VERSION" || (echo "Could not read pubspec version" && exit 1)
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
-      - name: Remove legacy debug APK asset
+      - name: Remove legacy APK assets
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release delete-asset dev-latest app-debug.apk \
-            --repo "$GITHUB_REPOSITORY" \
-            --yes || true
+          for asset in app-debug.apk app-release.apk; do
+            gh release delete-asset dev-latest "$asset" \
+              --repo "$GITHUB_REPOSITORY" \
+              --yes || true
+          done
 
       - name: Publish to dev-latest release
         uses: softprops/action-gh-release@v2
@@ -116,7 +120,7 @@ jobs:
 
             Install with:
             ```
-            adb install -r app-release.apk
+            adb install -r vaulta.apk
             ```
             or open the Settings screen in the running app and tap
             "Buscar actualizaciones".
@@ -124,9 +128,9 @@ jobs:
           files: |
             ${{ steps.apk.outputs.apk_path }}
           # `overwrite_files: true` lets the action replace the previous
-          # asset with a fresh APK using the same name. We keep the tag
-          # name `dev-latest` stable so the native side always knows
-          # where to look.
+          # vaulta.apk asset with a fresh APK. We keep the tag name
+          # `dev-latest` stable so the native side always knows where
+          # to look.
           overwrite_files: true
           # Pruning the existing release's other assets is a no-op for
           # us — we only ever ship the one APK.

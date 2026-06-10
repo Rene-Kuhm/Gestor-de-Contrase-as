@@ -37,7 +37,9 @@ and installing the release-signed APK for store/OTA validation.
 
 ## GitHub Actions OTA secrets
 
-The rolling `dev-latest` OTA workflow builds `app-release.apk`, so GitHub must also have:
+The rolling `dev-latest` OTA workflow builds Flutter's internal
+`app-release.apk`, then publishes the release asset as `vaulta.apk`, so
+GitHub must also have:
 
 - `VAULTA_UPLOAD_KEYSTORE_BASE64`
 - `VAULTA_UPLOAD_STORE_PASSWORD`
