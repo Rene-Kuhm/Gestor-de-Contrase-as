@@ -7,7 +7,7 @@ This checklist tracks the external assets, secrets, accounts, and policy decisio
 - App name/label: `Vaulta` on Android, iOS, macOS, and web.
 - Android package/application ID: `com.insyd.gestor_contrasenas`.
 - iOS/macOS bundle ID: `com.insyd.gestorContrasenas`.
-- Flutter version source: `pubspec.yaml` `version: 1.0.3+4`.
+- Flutter version source: `pubspec.yaml` `version: 1.0.4+5`.
 - Android release signing does not fall back to debug signing; see `docs/android-release-signing.md`.
 - Android backup/data extraction is disabled for local vault data.
 - Android cleartext traffic is disabled.

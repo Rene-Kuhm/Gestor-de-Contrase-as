@@ -16,6 +16,7 @@ class UpdateInfo {
     required this.publishedAt,
     required this.releaseId,
     required this.currentVersion,
+    this.remoteVersion = '',
     this.buildFingerprint = '',
   });
 
@@ -30,6 +31,7 @@ class UpdateInfo {
   /// tell a brand-new build apart from one the user has already
   /// dismissed the SnackBar for.
   final int releaseId;
+  final String remoteVersion;
   final String currentVersion;
   final String buildFingerprint;
 
@@ -43,6 +45,7 @@ class UpdateInfo {
     this.changelog = '',
     this.publishedAt = '',
     this.releaseId = 0,
+    this.remoteVersion = '',
     this.buildFingerprint = '',
   }) : available = false;
 }
@@ -94,9 +97,10 @@ class UpdateService {
     return int.tryParse(raw) ?? 0;
   }
 
-  /// Persists the latest `releaseId` so the next `checkForUpdate`
-  /// call treats it as already installed. Called from
-  /// [markInstalled] after a successful APK install.
+  /// Persists the latest `releaseId` for diagnostics. We don't use
+  /// this as an install signal because opening Android's installer
+  /// does not guarantee the user accepted or that Android installed
+  /// the APK.
   Future<void> markInstalled(int releaseId) async {
     final storage = _storage;
     if (storage == null) return;
@@ -117,7 +121,6 @@ class UpdateService {
     if (fingerprint.isNotEmpty) {
       await storage.save(_lastSeenBuildFingerprintKey, fingerprint);
     }
-    await markInstalled(info.releaseId);
   }
 
   /// Reads the running app's version (CFBundleShortVersionString on
@@ -157,23 +160,19 @@ class UpdateService {
       }
       final available = raw['available'] == true;
       final releaseId = (raw['releaseId'] as num?)?.toInt() ?? 0;
+      final remoteVersion = (raw['remoteVersion'] as String?) ?? '';
       if (!available) {
         return UpdateInfo.notAvailable(
           currentVersion: current,
           tagName: (raw['tagName'] as String?) ?? '',
           publishedAt: (raw['publishedAt'] as String?) ?? '',
           releaseId: releaseId,
+          remoteVersion: remoteVersion,
         );
       }
-      // Idempotent gate: if the user has already installed (or
-      // dismissed) this exact build id, do not nag.
       final buildFingerprint = (raw['buildFingerprint'] as String?) ?? '';
-      final lastSeenBuild = await lastSeenBuildFingerprint();
-      if (buildFingerprint.isNotEmpty && lastSeenBuild == buildFingerprint) {
-        debugPrint(
-          '[Vaulta/Update] check: build=$buildFingerprint already '
-          'seen; treating as up-to-date',
-        );
+      if (remoteVersion.isNotEmpty &&
+          !_isRemoteVersionNewer(remoteVersion, current)) {
         return UpdateInfo(
           available: false,
           tagName: (raw['tagName'] as String?) ?? '',
@@ -181,23 +180,7 @@ class UpdateService {
           changelog: (raw['changelog'] as String?) ?? '',
           publishedAt: (raw['publishedAt'] as String?) ?? '',
           releaseId: releaseId,
-          currentVersion: current,
-          buildFingerprint: buildFingerprint,
-        );
-      }
-      final lastSeen = await lastSeenReleaseId();
-      if (buildFingerprint.isEmpty && releaseId != 0 && lastSeen == releaseId) {
-        debugPrint(
-          '[Vaulta/Update] check: releaseId=$releaseId already '
-          'seen; treating as up-to-date',
-        );
-        return UpdateInfo(
-          available: false,
-          tagName: (raw['tagName'] as String?) ?? '',
-          apkUrl: (raw['apkUrl'] as String?) ?? '',
-          changelog: (raw['changelog'] as String?) ?? '',
-          publishedAt: (raw['publishedAt'] as String?) ?? '',
-          releaseId: releaseId,
+          remoteVersion: remoteVersion,
           currentVersion: current,
           buildFingerprint: buildFingerprint,
         );
@@ -209,6 +192,7 @@ class UpdateService {
         changelog: (raw['changelog'] as String?) ?? '',
         publishedAt: (raw['publishedAt'] as String?) ?? '',
         releaseId: releaseId,
+        remoteVersion: remoteVersion,
         currentVersion: current,
         buildFingerprint: buildFingerprint,
       );
@@ -222,6 +206,31 @@ class UpdateService {
         '(${error.code}: ${error.message ?? 'sin detalle'}).',
       );
     }
+  }
+
+  bool _isRemoteVersionNewer(String remote, String current) {
+    final remoteParts = _parseVersion(remote);
+    final currentParts = _parseVersion(current);
+    if (remoteParts == null || currentParts == null) {
+      return remote != current;
+    }
+    for (var i = 0; i < 3; i++) {
+      final diff = remoteParts.nameParts[i] - currentParts.nameParts[i];
+      if (diff != 0) return diff > 0;
+    }
+    return remoteParts.buildNumber > currentParts.buildNumber;
+  }
+
+  ({List<int> nameParts, int buildNumber})? _parseVersion(String value) {
+    final pieces = value.trim().split('+');
+    if (pieces.isEmpty) return null;
+    final nameParts = pieces.first.split('.').map(int.tryParse).toList();
+    if (nameParts.length != 3 || nameParts.any((part) => part == null)) {
+      return null;
+    }
+    final buildNumber = pieces.length > 1 ? int.tryParse(pieces[1]) : 0;
+    if (buildNumber == null) return null;
+    return (nameParts: nameParts.cast<int>(), buildNumber: buildNumber);
   }
 
   /// Streams the APK to the platform's private files directory.

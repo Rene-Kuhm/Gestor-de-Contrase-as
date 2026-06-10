@@ -85,6 +85,13 @@ jobs:
           echo "$CHANGELOG" >> "$GITHUB_OUTPUT"
           echo "EOF" >> "$GITHUB_OUTPUT"
 
+      - name: Read app version
+        id: app_version
+        run: |
+          VERSION=$(grep '^version:' pubspec.yaml | awk '{print $2}')
+          test -n "$VERSION" || (echo "Could not read pubspec version" && exit 1)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
       - name: Remove legacy debug APK asset
         env:
           GH_TOKEN: ${{ github.token }}
@@ -101,6 +108,8 @@ jobs:
           body: |
             Rolling signed release APK of Vaulta. Updated automatically on
             every push to `master`.
+
+            Vaulta version: ${{ steps.app_version.outputs.version }}
 
             Recent commits in this build:
             ${{ steps.changelog.outputs.changelog }}

@@ -253,20 +253,6 @@ class MainActivity : FlutterFragmentActivity() {
             .setAllowedAuthenticators(authenticators)
             .setConfirmationRequired(false)
 
-        // The brand lock-V logo is only available on API 30+
-        // (Android 11). On earlier versions the prompt falls back
-        // to the app icon so the user still sees a recognizable
-        // glyph, just not the crimson mark. The `RequiresApi`
-        // annotation tells Kotlin that we already gated the call
-        // above, so the compiler doesn't drop the reference.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            @androidx.annotation.RequiresApi(Build.VERSION_CODES.R)
-            fun setBrandLogo() {
-                infoBuilder.setLogoRes(R.drawable.vaulta_logo_lock)
-            }
-            setBrandLogo()
-        }
-
         val info = infoBuilder.build()
 
         val cipher = try {

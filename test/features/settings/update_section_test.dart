@@ -19,9 +19,7 @@ void main() {
     final service = _StubUpdateService(checkResult: pending.future);
 
     await tester.pumpWidget(
-      _testApp(
-        SingleChildScrollView(child: UpdateSection(service: service)),
-      ),
+      _testApp(SingleChildScrollView(child: UpdateSection(service: service))),
     );
 
     // Initial state: the button label must be exactly the action we
@@ -49,7 +47,7 @@ void main() {
         changelog: 'test changelog',
         publishedAt: '2026-06-09T18:00:00Z',
         releaseId: 12345,
-        currentVersion: '1.0.3+4',
+        currentVersion: '1.0.4+5',
         buildFingerprint: '12345:99:2026-06-09T18:00:00Z:123456',
       ),
     );
@@ -65,14 +63,12 @@ void main() {
       'available=false', (tester) async {
     final service = _StubUpdateService(
       checkResult: Future.value(
-        UpdateInfo.notAvailable(currentVersion: '1.0.3+4'),
+        UpdateInfo.notAvailable(currentVersion: '1.0.4+5'),
       ),
     );
 
     await tester.pumpWidget(
-      _testApp(
-        SingleChildScrollView(child: UpdateSection(service: service)),
-      ),
+      _testApp(SingleChildScrollView(child: UpdateSection(service: service))),
     );
 
     await tester.tap(find.text('Check for updates'));
@@ -91,9 +87,7 @@ void main() {
     );
 
     await tester.pumpWidget(
-      _testApp(
-        SingleChildScrollView(child: UpdateSection(service: service)),
-      ),
+      _testApp(SingleChildScrollView(child: UpdateSection(service: service))),
     );
 
     await tester.tap(find.text('Check for updates'));
@@ -118,7 +112,7 @@ void main() {
             changelog: 'test changelog',
             publishedAt: '2026-06-09T18:00:00Z',
             releaseId: 12345,
-            currentVersion: '1.0.3+4',
+            currentVersion: '1.0.4+5',
             buildFingerprint: '12345:99:2026-06-09T18:00:00Z:123456',
           ),
         ),
@@ -126,9 +120,7 @@ void main() {
       );
 
       await tester.pumpWidget(
-        _testApp(
-          SingleChildScrollView(child: UpdateSection(service: service)),
-        ),
+        _testApp(SingleChildScrollView(child: UpdateSection(service: service))),
       );
 
       await tester.tap(find.text('Check for updates'));
@@ -182,7 +174,7 @@ class _StubUpdateService implements UpdateService {
   }
 
   @override
-  Future<String> currentVersion() async => '1.0.3+4';
+  Future<String> currentVersion() async => '1.0.4+5';
 
   @override
   Future<String> downloadApk(UpdateInfo info) async {
@@ -228,7 +220,7 @@ class _ThrowingUpdateService implements UpdateService {
   }
 
   @override
-  Future<String> currentVersion() async => '1.0.3+4';
+  Future<String> currentVersion() async => '1.0.4+5';
 
   @override
   Future<String> downloadApk(UpdateInfo info) async => '/tmp/app-release.apk';

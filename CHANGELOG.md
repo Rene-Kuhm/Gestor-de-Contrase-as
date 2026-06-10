@@ -82,6 +82,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Fixed
 
+- **Biometric unlock no longer calls the privileged AndroidX
+  biometric-logo API.** The prompt now relies on the app icon that
+  AndroidX shows automatically, avoiding the
+  `SET_BIOMETRIC_DIALOG_ADVANCED` permission path reserved for
+  privileged apps.
+- **OTA checks now compare the installed app version against the
+  version published in the GitHub Release body.** Opening Android's
+  installer is no longer treated as proof that the APK was installed,
+  so cancelled or rejected installs won't make the app claim it is
+  up to date.
 - **OTA update checks no longer run network on Android's main
   thread.** `UpdateChannel` now performs GitHub release queries and
   APK downloads on a background executor, then posts the result back

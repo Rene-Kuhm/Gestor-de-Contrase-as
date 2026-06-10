@@ -171,6 +171,11 @@ class UpdateChannel(
         val publishedAt = root.optString("published_at", "")
         val releaseId = root.optLong("id", 0L)
         val body = root.optString("body", "")
+        val remoteVersion = Regex("""Vaulta version:\s*([0-9A-Za-z.+-]+)""")
+            .find(body)
+            ?.groupValues
+            ?.getOrNull(1)
+            .orEmpty()
 
         // GitHub returns assets as a JSONArray. The APK is the only
         // file with .apk in the name we care about.
@@ -219,6 +224,7 @@ class UpdateChannel(
             "changelog" to body,
             "publishedAt" to publishedAt,
             "releaseId" to releaseId,
+            "remoteVersion" to remoteVersion,
             "assetId" to apkAssetId,
             "assetName" to apkAssetName,
             "assetUpdatedAt" to apkAssetUpdatedAt,

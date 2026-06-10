@@ -119,10 +119,7 @@ void main() {
         find.widgetWithText(AlertDialog, 'Change master password'),
         findsOneWidget,
       );
-      expect(
-        find.textContaining('master password actual'),
-        findsWidgets,
-      );
+      expect(find.textContaining('master password actual'), findsWidgets);
     });
 
     testWidgets('updates idle timeout preset from settings', (tester) async {
@@ -170,7 +167,7 @@ void main() {
             deviceId: 'test-device-id',
             deviceName: 'Pixel 8',
             platform: 'android',
-            appVersion: '1.0.3+4',
+            appVersion: '1.0.4+5',
             status: DeviceSessionStatus.active,
             accessAllowed: true,
           ),
@@ -178,7 +175,7 @@ void main() {
             deviceId: 'old-laptop',
             deviceName: 'Old Laptop',
             platform: 'windows',
-            appVersion: '1.0.3+4',
+            appVersion: '1.0.4+5',
             status: DeviceSessionStatus.revokedAll,
             accessAllowed: false,
           ),
@@ -226,7 +223,7 @@ void main() {
             deviceId: 'current-device',
             deviceName: 'Pixel 8',
             platform: 'android',
-            appVersion: '1.0.3+4',
+            appVersion: '1.0.4+5',
             status: DeviceSessionStatus.active,
             accessAllowed: true,
           ),
@@ -275,7 +272,7 @@ void main() {
             deviceId: 'current-device',
             deviceName: 'Pixel 8',
             platform: 'android',
-            appVersion: '1.0.3+4',
+            appVersion: '1.0.4+5',
             status: DeviceSessionStatus.active,
             accessAllowed: true,
           ),
