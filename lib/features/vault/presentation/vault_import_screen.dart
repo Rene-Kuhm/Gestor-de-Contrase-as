@@ -318,10 +318,32 @@ class _VaultImportScreenState extends State<VaultImportScreen> {
       );
     } catch (error) {
       if (!mounted) return;
+      final errorText = error.toString();
+      final isSessionLocked =
+          errorText.contains('Vault encryption key unavailable') ||
+          errorText.contains('Unlock with the master password');
       setState(() {
-        _error = 'La importacion se interrumpio: $error';
+        if (isSessionLocked) {
+          _error =
+              'Tu sesion de Vaulta esta bloqueada. Desbloquea con la master '
+              'password para poder importar.';
+        } else {
+          _error = 'La importacion se interrumpio: $error';
+        }
         _isImporting = false;
       });
+      debugPrint(
+        '[Vaulta/Import] aborted error=$error isSessionLocked=$isSessionLocked',
+      );
+      if (isSessionLocked && mounted) {
+        // Pop back to the dashboard so the security gate can take over
+        // and prompt the user to unlock with the master password. The
+        // selected preview is discarded on purpose: the user's
+        // decision to import has to be retaken after unlock, with a
+        // fresh session in memory.
+        final navigator = Navigator.of(context);
+        navigator.pop<VaultImportResult>(null);
+      }
     }
   }
 }

@@ -4,6 +4,25 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project aims to follow [Semantic Versioning](https://semver.org/).
 
+## [1.0.19] - 2026-06-10
+
+### Fixed
+
+- **Import failed with a cryptic error when the vault session was
+  locked.** If the user opened the import screen while the vault was
+  locked (auto-lock by inactivity, fresh install, or backgrounded
+  the app long enough for the DEK to drop from memory), tapping
+  "Importar N entradas" surfaced the raw
+  `Bad state: Vault encryption key unavailable. Unlock with the
+  master password first.` from the repository. The screen now
+  detects that specific error, replaces it with the actionable
+  "Tu sesion de Vaulta esta bloqueada. Desbloquea con la master
+  password para poder importar." message, and pops back to the
+  dashboard so the SecurityGate can take over and prompt the user
+  to unlock. The selected preview is discarded on purpose; after
+  unlocking, the user picks the file again and the import runs with
+  a fresh session in memory.
+
 ## [1.0.18] - 2026-06-10
 
 ### Fixed
