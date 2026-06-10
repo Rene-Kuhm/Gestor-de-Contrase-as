@@ -120,7 +120,7 @@ jobs:
           cat > release-notes.md <<'EOF'
           Aplicacion oficial de Vaulta para Android.
 
-          Version: ${{ steps.app_version.outputs.version }}
+          Vaulta version: ${{ steps.app_version.outputs.version }}
           Archivo de instalacion: `vaulta.apk`
 
           Esta APK esta firmada para recibir actualizaciones desde la app.

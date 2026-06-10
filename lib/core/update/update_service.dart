@@ -160,7 +160,11 @@ class UpdateService {
       }
       final available = raw['available'] == true;
       final releaseId = (raw['releaseId'] as num?)?.toInt() ?? 0;
-      final remoteVersion = (raw['remoteVersion'] as String?) ?? '';
+      final changelog = (raw['changelog'] as String?) ?? '';
+      final remoteVersion =
+          ((raw['remoteVersion'] as String?) ?? '').trim().isNotEmpty
+          ? ((raw['remoteVersion'] as String?) ?? '').trim()
+          : _remoteVersionFromChangelog(changelog);
       if (!available) {
         return UpdateInfo.notAvailable(
           currentVersion: current,
@@ -177,7 +181,7 @@ class UpdateService {
           available: false,
           tagName: (raw['tagName'] as String?) ?? '',
           apkUrl: (raw['apkUrl'] as String?) ?? '',
-          changelog: (raw['changelog'] as String?) ?? '',
+          changelog: changelog,
           publishedAt: (raw['publishedAt'] as String?) ?? '',
           releaseId: releaseId,
           remoteVersion: remoteVersion,
@@ -189,7 +193,7 @@ class UpdateService {
         available: true,
         tagName: (raw['tagName'] as String?) ?? '',
         apkUrl: (raw['apkUrl'] as String?) ?? '',
-        changelog: (raw['changelog'] as String?) ?? '',
+        changelog: changelog,
         publishedAt: (raw['publishedAt'] as String?) ?? '',
         releaseId: releaseId,
         remoteVersion: remoteVersion,
@@ -208,29 +212,12 @@ class UpdateService {
     }
   }
 
-  bool _isRemoteVersionNewer(String remote, String current) {
-    final remoteParts = _parseVersion(remote);
-    final currentParts = _parseVersion(current);
-    if (remoteParts == null || currentParts == null) {
-      return remote != current;
-    }
-    for (var i = 0; i < 3; i++) {
-      final diff = remoteParts.nameParts[i] - currentParts.nameParts[i];
-      if (diff != 0) return diff > 0;
-    }
-    return remoteParts.buildNumber > currentParts.buildNumber;
+  String _remoteVersionFromChangelog(String changelog) {
+    return remoteVersionFromChangelogForTest(changelog);
   }
 
-  ({List<int> nameParts, int buildNumber})? _parseVersion(String value) {
-    final pieces = value.trim().split('+');
-    if (pieces.isEmpty) return null;
-    final nameParts = pieces.first.split('.').map(int.tryParse).toList();
-    if (nameParts.length != 3 || nameParts.any((part) => part == null)) {
-      return null;
-    }
-    final buildNumber = pieces.length > 1 ? int.tryParse(pieces[1]) : 0;
-    if (buildNumber == null) return null;
-    return (nameParts: nameParts.cast<int>(), buildNumber: buildNumber);
+  bool _isRemoteVersionNewer(String remote, String current) {
+    return isRemoteVersionNewerForTest(remote, current);
   }
 
   /// Streams the APK to the platform's private files directory.
@@ -260,4 +247,40 @@ class UpdateService {
     });
     return ok ?? false;
   }
+}
+
+@visibleForTesting
+String remoteVersionFromChangelogForTest(String changelog) {
+  final match = RegExp(
+    r'(?:Vaulta\s+version|Version):\s*([0-9A-Za-z.+-]+)',
+    caseSensitive: false,
+  ).firstMatch(changelog);
+  return match?.group(1)?.trim() ?? '';
+}
+
+@visibleForTesting
+bool isRemoteVersionNewerForTest(String remote, String current) {
+  final remoteParts = parseVersionForTest(remote);
+  final currentParts = parseVersionForTest(current);
+  if (remoteParts == null || currentParts == null) {
+    return remote != current;
+  }
+  for (var i = 0; i < 3; i++) {
+    final diff = remoteParts.nameParts[i] - currentParts.nameParts[i];
+    if (diff != 0) return diff > 0;
+  }
+  return remoteParts.buildNumber > currentParts.buildNumber;
+}
+
+@visibleForTesting
+({List<int> nameParts, int buildNumber})? parseVersionForTest(String value) {
+  final pieces = value.trim().split('+');
+  if (pieces.isEmpty) return null;
+  final nameParts = pieces.first.split('.').map(int.tryParse).toList();
+  if (nameParts.length != 3 || nameParts.any((part) => part == null)) {
+    return null;
+  }
+  final buildNumber = pieces.length > 1 ? int.tryParse(pieces[1]) : 0;
+  if (buildNumber == null) return null;
+  return (nameParts: nameParts.cast<int>(), buildNumber: buildNumber);
 }

@@ -59,6 +59,11 @@ class _AppShellState extends State<AppShell> {
     try {
       final info = await _updateService.checkForUpdate();
       if (!info.available) return;
+      final promptedBuild = await _updateService.lastSeenBuildFingerprint();
+      if (info.buildFingerprint.isNotEmpty &&
+          promptedBuild == info.buildFingerprint) {
+        return;
+      }
       if (!mounted) return;
       final l10n = context.l10n;
       final messenger = _scaffoldMessengerKey.currentState;
@@ -73,6 +78,7 @@ class _AppShellState extends State<AppShell> {
           ),
         ),
       );
+      await _updateService.markBuildPrompted(info);
     } catch (error, stack) {
       debugPrint('[Vaulta/Update] silent check failed: $error\n$stack');
     }
@@ -144,10 +150,8 @@ class _AppShellState extends State<AppShell> {
           duration: AppMotion.medium,
           switchInCurve: AppMotion.enter,
           switchOutCurve: AppMotion.exit,
-          transitionBuilder: (child, animation) => FadeTransition(
-            opacity: animation,
-            child: child,
-          ),
+          transitionBuilder: (child, animation) =>
+              FadeTransition(opacity: animation, child: child),
           child: KeyedSubtree(
             key: ValueKey('shell.tab.$_currentIndex'),
             child: IndexedStack(index: _currentIndex, children: screens),
@@ -325,8 +329,7 @@ class FeaturePlaceholderScreen extends StatelessWidget {
                             height: 28,
                             alignment: Alignment.center,
                             decoration: BoxDecoration(
-                              color: AppColors.crimson
-                                  .withValues(alpha: 0.18),
+                              color: AppColors.crimson.withValues(alpha: 0.18),
                               borderRadius: BorderRadius.circular(
                                 AppSpacing.radiusSm,
                               ),

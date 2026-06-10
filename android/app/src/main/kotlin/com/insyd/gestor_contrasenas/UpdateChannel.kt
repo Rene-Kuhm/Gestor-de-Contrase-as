@@ -171,7 +171,10 @@ class UpdateChannel(
         val publishedAt = root.optString("published_at", "")
         val releaseId = root.optLong("id", 0L)
         val body = root.optString("body", "")
-        val remoteVersion = Regex("""Vaulta version:\s*([0-9A-Za-z.+-]+)""")
+        val remoteVersion = Regex(
+            """(?:Vaulta\s+version|Version):\s*([0-9A-Za-z.+-]+)""",
+            RegexOption.IGNORE_CASE,
+        )
             .find(body)
             ?.groupValues
             ?.getOrNull(1)
