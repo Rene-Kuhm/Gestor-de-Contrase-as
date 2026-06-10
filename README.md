@@ -33,6 +33,7 @@ El objetivo es ofrecer un vault local para guardar, buscar y gestionar credencia
 - Desbloqueo con master password.
 - Desbloqueo biometrico real en Android mediante Android KeyStore y `BiometricPrompt`.
 - CRUD de credenciales con busqueda interna.
+- Importacion local desde CSV y JSON con vista previa antes de guardar.
 - Dashboard con metricas de seguridad del vault.
 - Estados de carga, error, vacio y resultados.
 - Bloqueo automatico por inactividad o cambio de estado de la app.

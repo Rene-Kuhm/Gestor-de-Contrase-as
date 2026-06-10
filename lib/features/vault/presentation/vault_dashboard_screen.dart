@@ -14,6 +14,7 @@ import '../domain/vault_item.dart';
 import '../domain/vault_summary.dart';
 import 'vault_entry_detail_screen.dart';
 import 'vault_entry_editor_screen.dart';
+import 'vault_import_screen.dart';
 
 class VaultDashboardScreen extends StatefulWidget {
   const VaultDashboardScreen({
@@ -144,6 +145,8 @@ class _VaultDashboardScreenState extends State<VaultDashboardScreen> {
                           _QuickActions(
                             summary: data.summary,
                             onCreateEntry: _createEntry,
+                            onImportEntries: () =>
+                                _importEntries(existingItems: data.items),
                           ),
                           const SizedBox(height: AppSpacing.lg),
                           _VaultSection(
@@ -234,6 +237,25 @@ class _VaultDashboardScreenState extends State<VaultDashboardScreen> {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(context.l10n.entryCreatedMessage)));
+    _refresh();
+  }
+
+  Future<void> _importEntries({required List<VaultItem> existingItems}) async {
+    final imported = await Navigator.of(context).push<int>(
+      MaterialPageRoute(
+        builder: (_) => VaultImportScreen(
+          repository: widget.repository,
+          existingItems: existingItems,
+        ),
+      ),
+    );
+
+    if (imported == null || !mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Importacion completa: $imported entradas.')),
+    );
     _refresh();
   }
 
@@ -505,9 +527,14 @@ class _MetricsGrid extends StatelessWidget {
 }
 
 class _QuickActions extends StatelessWidget {
-  const _QuickActions({required this.summary, required this.onCreateEntry});
+  const _QuickActions({
+    required this.summary,
+    required this.onCreateEntry,
+    required this.onImportEntries,
+  });
   final VaultSummary summary;
   final Future<void> Function() onCreateEntry;
+  final Future<void> Function() onImportEntries;
 
   @override
   Widget build(BuildContext context) {
@@ -529,6 +556,15 @@ class _QuickActions extends StatelessWidget {
             title: l10n.createEncryptedEntry,
             subtitle: l10n.createEncryptedEntrySubtitle,
             onTap: onCreateEntry,
+          ),
+          const Divider(height: AppSpacing.lg),
+          _QuickActionRow(
+            icon: Icons.upload_file_rounded,
+            tint: AppColors.success,
+            title: 'Importar desde CSV o JSON',
+            subtitle:
+                'Adapta exportaciones de Notion, Chrome, Bitwarden, 1Password, LastPass, KeePass, Excel y Sheets.',
+            onTap: onImportEntries,
           ),
           const Divider(height: AppSpacing.lg),
           _QuickActionRow(
