@@ -105,34 +105,35 @@ jobs:
           done
 
       - name: Publish to dev-latest release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: dev-latest
-          name: Dev latest
-          body: |
-            Rolling signed release APK of Vaulta. Updated automatically on
-            every push to `master`.
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cat > release-notes.md <<'EOF'
+          Aplicacion oficial de Vaulta para Android.
 
-            Vaulta version: ${{ steps.app_version.outputs.version }}
+          Version: ${{ steps.app_version.outputs.version }}
+          Archivo de instalacion: `vaulta.apk`
 
-            Recent commits in this build:
-            ${{ steps.changelog.outputs.changelog }}
+          Esta APK esta firmada para recibir actualizaciones desde la app.
+          Tambien se puede instalar manualmente con:
 
-            Install with:
-            ```
-            adb install -r vaulta.apk
-            ```
-            or open the Settings screen in the running app and tap
-            "Buscar actualizaciones".
-          fail_on_unmatched_files: true
-          files: |
-            ${{ steps.apk.outputs.apk_path }}
-          # `overwrite_files: true` lets the action replace the previous
-          # vaulta.apk asset with a fresh APK. We keep the tag name
-          # `dev-latest` stable so the native side always knows where
-          # to look.
-          overwrite_files: true
-          # Pruning the existing release's other assets is a no-op for
-          # us — we only ever ship the one APK.
-          prerelease: false
-          draft: false
+          ```
+          adb install -r vaulta.apk
+          ```
+
+          Desde la app: Ajustes > Buscar actualizaciones.
+
+          Cambios incluidos:
+          ${{ steps.changelog.outputs.changelog }}
+          EOF
+
+          gh release upload dev-latest "${{ steps.apk.outputs.apk_path }}" \
+            --repo "$GITHUB_REPOSITORY" \
+            --clobber
+
+          gh release edit dev-latest \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Vaulta para Android" \
+            --notes-file release-notes.md \
+            --draft=false \
+            --prerelease=false
