@@ -96,7 +96,8 @@ jobs:
 
       - name: Remove legacy APK assets
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           for asset in app-debug.apk app-release.apk; do
             gh release delete-asset dev-latest "$asset" \
@@ -104,9 +105,15 @@ jobs:
               --yes || true
           done
 
+      - name: Move dev-latest tag to this build
+        run: |
+          git tag --force dev-latest "$GITHUB_SHA"
+          git push --force origin refs/tags/dev-latest
+
       - name: Publish to dev-latest release
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           cat > release-notes.md <<'EOF'
           Aplicacion oficial de Vaulta para Android.
