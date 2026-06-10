@@ -145,6 +145,25 @@ void main() {
       expect(item.category, VaultCategory.infrastructure);
     });
 
+    test('maps Bitwarden CSV login_* columns into Vaulta items', () {
+      final preview = VaultImportParser().parse(
+        fileName: 'bitwarden_export.csv',
+        content: [
+          'folder,favorite,type,name,notes,login_uri,login_username,login_password,login_totp',
+          'Infrastructure,0,login,GitLab,Deploy key,https://gitlab.com,deploy@vaulta.app,Deploy!2026,',
+        ].join('\n'),
+        existingItems: const [],
+      );
+
+      expect(preview.importableCount, 1);
+      final item = preview.candidates.single.item;
+      expect(item.title, 'GitLab');
+      expect(item.username, 'deploy@vaulta.app');
+      expect(item.secret, 'Deploy!2026');
+      expect(item.website, 'https://gitlab.com');
+      expect(item.category, VaultCategory.infrastructure);
+    });
+
     test('rejects rows without recognizable credentials', () {
       final preview = VaultImportParser().parse(
         fileName: 'bad.csv',

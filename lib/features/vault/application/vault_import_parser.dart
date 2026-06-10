@@ -220,6 +220,11 @@ class VaultImportParser {
     ]);
     final secret = _first(row, const [
       'password',
+      'login_password',
+      'login.password',
+      'loginpassword',
+      'password_value',
+      'passwordvalue',
       'secret',
       'contrasena',
       'contraseña',
@@ -228,6 +233,13 @@ class VaultImportParser {
     ]);
     final username = _first(row, const [
       'username',
+      'login_username',
+      'login.username',
+      'loginusername',
+      'login_user',
+      'login.user',
+      'login_email',
+      'login.email',
       'user',
       'email',
       'login',
@@ -240,11 +252,22 @@ class VaultImportParser {
       'website',
       'uri',
       'login_uri',
+      'login.uri',
       'loginurl',
+      'login_url',
+      'login.url',
       'sitio',
       'web',
     ]);
-    final notes = _first(row, const ['notes', 'note', 'notas', 'nota']);
+    final notes = _first(row, const [
+      'notes',
+      'note',
+      'notas',
+      'nota',
+      'extra',
+      'comments',
+      'comentarios',
+    ]);
     final categoryValue = _first(row, const [
       'category',
       'folder',

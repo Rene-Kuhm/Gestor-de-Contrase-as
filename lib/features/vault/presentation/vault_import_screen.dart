@@ -178,6 +178,12 @@ class _VaultImportScreenState extends State<VaultImportScreen> {
         content: content,
         existingItems: widget.existingItems,
       );
+      debugPrint(
+        '[Vaulta/Import] preview file=${file.name} bytes=${bytes.length} '
+        'source=${preview.source.name} candidates=${preview.candidates.length} '
+        'importable=${preview.importableCount} duplicates=${preview.duplicateCount} '
+        'rejected=${preview.rejectedCount}',
+      );
 
       setState(() {
         _fileName = file.name;
@@ -230,6 +236,10 @@ class _VaultImportScreenState extends State<VaultImportScreen> {
     try {
       final existingItems = await widget.repository.fetchItems();
       final knownItems = List<VaultItem>.of(existingItems);
+      debugPrint(
+        '[Vaulta/Import] confirm candidates=${preview.candidates.length} '
+        'existing=${existingItems.length}',
+      );
       for (final candidate in preview.candidates) {
         if (!candidate.canImport) continue;
         final duplicate = _duplicates.findDuplicate(candidate.item, knownItems);
@@ -249,8 +259,15 @@ class _VaultImportScreenState extends State<VaultImportScreen> {
               ? 'No se importaron entradas nuevas: todas ya existen en Vaulta.'
               : 'No se importaron entradas. Revisa que el archivo tenga titulo, usuario y password reconocibles.';
         });
+        debugPrint(
+          '[Vaulta/Import] finished imported=0 skippedDuplicates=$skippedDuplicates',
+        );
         return;
       }
+      debugPrint(
+        '[Vaulta/Import] finished imported=$imported '
+        'skippedDuplicates=$skippedDuplicates',
+      );
       Navigator.of(context).pop(
         VaultImportResult(
           imported: imported,
