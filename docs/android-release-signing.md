@@ -26,6 +26,7 @@ Set these in CI or your shell:
 - `VAULTA_UPLOAD_STORE_PASSWORD`
 - `VAULTA_UPLOAD_KEY_ALIAS`
 - `VAULTA_UPLOAD_KEY_PASSWORD`
+- `VAULTA_RELEASE_TOKEN` (optional fallback for publishing GitHub Release assets when the built-in Actions token is rejected by the Releases API)
 
 If none are present, Gradle leaves `release` unsigned instead of falling back to debug signing. That is intentional.
 

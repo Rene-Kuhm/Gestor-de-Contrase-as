@@ -10,6 +10,10 @@ name: Build signed dev APK and publish to GitHub Releases
 # will reject in-place updates. This workflow therefore requires the
 # VAULTA_UPLOAD_* secrets below and publishes a release APK instead
 # of an ephemeral debug-signed APK.
+#
+# VAULTA_RELEASE_TOKEN is optional for normal repositories, but this
+# project uses it when the built-in GitHub Actions token cannot upload
+# release assets through the Releases API.
 
 on:
   push:
@@ -96,8 +100,7 @@ jobs:
 
       - name: Remove legacy APK assets
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.VAULTA_RELEASE_TOKEN || github.token }}
         run: |
           for asset in app-debug.apk app-release.apk; do
             gh release delete-asset dev-latest "$asset" \
@@ -112,8 +115,7 @@ jobs:
 
       - name: Publish to dev-latest release
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.VAULTA_RELEASE_TOKEN || github.token }}
         run: |
           cat > release-notes.md <<'EOF'
           Aplicacion oficial de Vaulta para Android.
