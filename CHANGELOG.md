@@ -4,6 +4,30 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project aims to follow [Semantic Versioning](https://semver.org/).
 
+## [1.0.18] - 2026-06-10
+
+### Fixed
+
+- **Vault import button was effectively invisible.** The "Importar N
+  entradas" button lived at the bottom of a scrollable list, so on
+  short devices or with a long preview it scrolled below the
+  viewport and looked unresponsive. The button now lives in the
+  Scaffold's `bottomNavigationBar`, stays anchored to the bottom of
+  the screen, and the AppBar shows the live "Importar (N)" count so
+  the user always knows the picker has parsed their file.
+- **File picker failures were silent.** Cancelling the picker, an
+  empty selection, and an unreadable file all used to return without
+  feedback. The screen now shows a SnackBar on cancel and a
+  descriptive error banner when the file cannot be read.
+- **Android import path was over-asking the platform.** The picker
+  no longer requests `withReadStream` alongside `withData`; the
+  stream path was redundant with the in-memory bytes + filesystem
+  fallback and occasionally produced empty reads on Android.
+- **No feedback when a file parsed to zero importable entries.** If
+  the parser rejected every row, the screen now surfaces a SnackBar
+  explaining that no valid entries were detected, in addition to
+  the existing rejected-rows banner inside the preview.
+
 ## [Unreleased]
 
 ### Security

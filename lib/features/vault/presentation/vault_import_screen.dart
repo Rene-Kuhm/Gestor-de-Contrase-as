@@ -51,12 +51,22 @@ class _VaultImportScreenState extends State<VaultImportScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
+    final preview = _preview;
+    final canImport = preview != null && preview.importableCount > 0;
+
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(title: const Text('Importar credenciales')),
+      appBar: AppBar(
+        title: Text(
+          preview == null
+              ? 'Importar credenciales'
+              : 'Importar (${preview.importableCount})',
+        ),
+      ),
       body: AppHeroBackground(
         intensity: 0.55,
         child: SafeArea(
+          bottom: canImport,
           child: ListView(
             padding: const EdgeInsets.all(AppSpacing.lg),
             children: [
@@ -119,14 +129,26 @@ class _VaultImportScreenState extends State<VaultImportScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: AppSpacing.lg),
-              if (_preview != null) _ImportPreviewPanel(preview: _preview!),
-              if (_preview != null) const SizedBox(height: AppSpacing.lg),
-              if (_preview != null)
-                FilledButton.icon(
-                  onPressed: _preview!.importableCount == 0 || _isImporting
-                      ? null
-                      : _confirmImport,
+              if (preview != null) ...[
+                const SizedBox(height: AppSpacing.lg),
+                _ImportPreviewPanel(preview: preview),
+              ],
+            ],
+          ),
+        ),
+      ),
+      bottomNavigationBar: canImport
+          ? SafeArea(
+              minimum: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.sm,
+                AppSpacing.lg,
+                AppSpacing.md,
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: FilledButton.icon(
+                  onPressed: _isImporting ? null : _confirmImport,
                   icon: _isImporting
                       ? const SizedBox(
                           width: 18,
@@ -137,13 +159,12 @@ class _VaultImportScreenState extends State<VaultImportScreen> {
                   label: Text(
                     _isImporting
                         ? 'Importando...'
-                        : 'Importar ${_preview!.importableCount} entradas',
+                        : 'Importar ${preview.importableCount} entradas',
                   ),
                 ),
-            ],
-          ),
-        ),
-      ),
+              ),
+            )
+          : null,
     );
   }
 
@@ -153,50 +174,75 @@ class _VaultImportScreenState extends State<VaultImportScreen> {
       _error = null;
     });
 
+    FilePickerResult? result;
     try {
-      final result = await FilePicker.pickFiles(
+      result = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: const ['csv', 'json'],
         withData: true,
-        withReadStream: true,
       );
-      if (result == null || result.files.isEmpty) return;
-
-      final file = result.files.single;
-      final bytes = await _readPickedFileBytes(file);
-      if (bytes.isEmpty) {
-        setState(
-          () =>
-              _error = 'El archivo seleccionado esta vacio o no se pudo leer.',
-        );
-        return;
-      }
-
-      final content = utf8.decode(bytes, allowMalformed: true);
-      final preview = widget.parser.parse(
-        fileName: file.name,
-        content: content,
-        existingItems: widget.existingItems,
-      );
-      debugPrint(
-        '[Vaulta/Import] preview file=${file.name} bytes=${bytes.length} '
-        'source=${preview.source.name} candidates=${preview.candidates.length} '
-        'importable=${preview.importableCount} duplicates=${preview.duplicateCount} '
-        'rejected=${preview.rejectedCount}',
-      );
-
-      setState(() {
-        _fileName = file.name;
-        _preview = preview;
-      });
     } catch (error) {
+      if (!mounted) return;
       setState(() {
-        _error = 'No pudimos preparar la importacion: $error';
+        _isPicking = false;
+        _error = 'No pudimos abrir el selector de archivos: $error';
       });
-    } finally {
-      if (mounted) {
-        setState(() => _isPicking = false);
-      }
+      return;
+    }
+
+    if (!mounted) return;
+
+    if (result == null || result.files.isEmpty) {
+      setState(() {
+        _isPicking = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Seleccion cancelada.')),
+      );
+      return;
+    }
+
+    final file = result.files.single;
+    final bytes = await _readPickedFileBytes(file);
+    if (!mounted) return;
+
+    if (bytes.isEmpty) {
+      setState(() {
+        _isPicking = false;
+        _error = 'El archivo seleccionado esta vacio o no se pudo leer. '
+            'Proba con otro archivo o reinicia la app.';
+      });
+      return;
+    }
+
+    final content = utf8.decode(bytes, allowMalformed: true);
+    final preview = widget.parser.parse(
+      fileName: file.name,
+      content: content,
+      existingItems: widget.existingItems,
+    );
+    debugPrint(
+      '[Vaulta/Import] preview file=${file.name} bytes=${bytes.length} '
+      'source=${preview.source.name} candidates=${preview.candidates.length} '
+      'importable=${preview.importableCount} duplicates=${preview.duplicateCount} '
+      'rejected=${preview.rejectedCount}',
+    );
+
+    setState(() {
+      _fileName = file.name;
+      _preview = preview;
+      _isPicking = false;
+    });
+
+    if (preview.importableCount == 0 && preview.rejected.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'No se detectaron entradas validas. '
+            'Revisa que el archivo tenga titulo y password reconocibles.',
+          ),
+        ),
+      );
     }
   }
 
@@ -206,18 +252,13 @@ class _VaultImportScreenState extends State<VaultImportScreen> {
       return inMemoryBytes;
     }
 
-    final stream = file.readStream;
-    if (stream != null) {
-      final chunks = <int>[];
-      await for (final chunk in stream) {
-        chunks.addAll(chunk);
-      }
-      if (chunks.isNotEmpty) return chunks;
-    }
-
     final path = file.path;
     if (path != null && path.isNotEmpty) {
-      return File(path).readAsBytes();
+      try {
+        return await File(path).readAsBytes();
+      } catch (error) {
+        debugPrint('[Vaulta/Import] readAsBytes failed: $error');
+      }
     }
 
     return const [];
@@ -252,6 +293,7 @@ class _VaultImportScreenState extends State<VaultImportScreen> {
         imported++;
       }
       if (!mounted) return;
+
       if (imported == 0) {
         setState(() {
           _isImporting = false;
