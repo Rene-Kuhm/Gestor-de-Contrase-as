@@ -115,8 +115,13 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(repository.savedItems, isEmpty);
-    expect(result?.imported, 0);
-    expect(result?.skippedDuplicates, 1);
+    expect(result, isNull);
+    expect(
+      find.text(
+        'No se importaron entradas nuevas: todas ya existen en Vaulta.',
+      ),
+      findsOneWidget,
+    );
   });
 }
 

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -157,15 +158,17 @@ class _VaultImportScreenState extends State<VaultImportScreen> {
         type: FileType.custom,
         allowedExtensions: const ['csv', 'json'],
         withData: true,
+        withReadStream: true,
       );
       if (result == null || result.files.isEmpty) return;
 
       final file = result.files.single;
-      final bytes = file.bytes;
-      if (bytes == null) {
-        setState(() {
-          _error = 'No pudimos leer el archivo seleccionado.';
-        });
+      final bytes = await _readPickedFileBytes(file);
+      if (bytes.isEmpty) {
+        setState(
+          () =>
+              _error = 'El archivo seleccionado esta vacio o no se pudo leer.',
+        );
         return;
       }
 
@@ -189,6 +192,29 @@ class _VaultImportScreenState extends State<VaultImportScreen> {
         setState(() => _isPicking = false);
       }
     }
+  }
+
+  Future<List<int>> _readPickedFileBytes(PlatformFile file) async {
+    final inMemoryBytes = file.bytes;
+    if (inMemoryBytes != null && inMemoryBytes.isNotEmpty) {
+      return inMemoryBytes;
+    }
+
+    final stream = file.readStream;
+    if (stream != null) {
+      final chunks = <int>[];
+      await for (final chunk in stream) {
+        chunks.addAll(chunk);
+      }
+      if (chunks.isNotEmpty) return chunks;
+    }
+
+    final path = file.path;
+    if (path != null && path.isNotEmpty) {
+      return File(path).readAsBytes();
+    }
+
+    return const [];
   }
 
   Future<void> _confirmImport() async {
@@ -216,6 +242,15 @@ class _VaultImportScreenState extends State<VaultImportScreen> {
         imported++;
       }
       if (!mounted) return;
+      if (imported == 0) {
+        setState(() {
+          _isImporting = false;
+          _error = skippedDuplicates > 0
+              ? 'No se importaron entradas nuevas: todas ya existen en Vaulta.'
+              : 'No se importaron entradas. Revisa que el archivo tenga titulo, usuario y password reconocibles.';
+        });
+        return;
+      }
       Navigator.of(context).pop(
         VaultImportResult(
           imported: imported,
