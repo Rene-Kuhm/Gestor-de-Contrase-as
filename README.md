@@ -1,89 +1,158 @@
 # Vaulta
 
-Vaulta es un gestor de contraseñas offline-first en Flutter orientado a un MVP release-ready: cifrado local real, identidad visual propia y UX honesta sobre lo que está implementado.
+**Gestor de contrasenas cifrado, offline-first y multiplataforma.**
 
-## Estado actual
+Vaulta es una aplicacion desarrollada por [TecnoDespegue](https://www.tecnodespegue.com/) para proteger credenciales sensibles con una experiencia moderna, rapida y preparada para Android. El proyecto combina Flutter, Material 3, cifrado local real, desbloqueo biometrico en Android y un canal de actualizaciones firmado desde GitHub Releases.
 
-- MVP offline-first para Android, iOS, web, desktop y desarrollo local. El desbloqueo biométrico real del vault está implementado y probado en Android; iOS/macOS/web/desktop conservan el camino de master password hasta tener un binding equivalente.
-- App principal renombrada visualmente como `Vaulta`.
-- Shell de navegacion con secciones iniciales para vault, access y settings.
-- Dashboard del vault con CRUD local cifrado, metricas de seguridad y estados de sync.
-- Cifrado local real con ADR-001 v2: Argon2id para KEK, DEK aleatoria por vault, DEK envuelta con AES-256-GCM y payloads AES-256-GCM.
-- Migracion de blobs legacy v1 al desbloquear/re-cifrar con master password.
-- Supabase sync queda fuera del MVP público por defecto: es opcional/experimental, requiere variables de entorno, sesión autenticada y QA operativo completo antes de prometer confiabilidad.
-- Smoke test y tests de seguridad/sync alineados al estado actual.
+[Descargar APK](https://github.com/Rene-Kuhm/Gestor-de-Contrase-as/releases/download/dev-latest/vaulta.apk) · [Ver release](https://github.com/Rene-Kuhm/Gestor-de-Contrase-as/releases/tag/dev-latest) · [TecnoDespegue](https://www.tecnodespegue.com/)
 
-Nota de seguridad: Vaulta ya cifra datos locales, pero no tuvo auditoría externa. En Android, la biometría desbloquea el vault usando un envelope protegido por Android KeyStore y `BiometricPrompt` con `BIOMETRIC_STRONG`; la master password sigue siendo el camino de recuperación y el requisito para activar o re-enrolar biometría. En iOS, macOS, web y desktop, el vault bloqueado todavía requiere la master password hasta implementar un binding equivalente por plataforma.
+## Vision
 
-## Stack
+Vaulta nace como una solucion de seguridad personal construida con el enfoque de TecnoDespegue: codigo real, arquitectura limpia, automatizacion confiable y decisiones tecnicas transparentes.
+
+El objetivo es ofrecer un vault local para guardar, buscar y gestionar credenciales sin depender de una conexion permanente, manteniendo una base preparada para evolucionar hacia sincronizacion segura, auditorias de seguridad y distribucion publica.
+
+## Funcionalidades principales
+
+- Vault offline-first con persistencia local cifrada.
+- Cifrado AES-256-GCM para payloads del vault.
+- Derivacion de claves con Argon2id.
+- DEK aleatoria por vault y envelope protegido.
+- Desbloqueo con master password.
+- Desbloqueo biometrico real en Android mediante Android KeyStore y `BiometricPrompt`.
+- CRUD de credenciales con busqueda interna.
+- Dashboard con metricas de seguridad del vault.
+- Estados de carga, error, vacio y resultados.
+- Bloqueo automatico por inactividad o cambio de estado de la app.
+- Soporte inicial para autofill en Android.
+- Canal de actualizaciones Android desde GitHub Releases.
+- Publicacion automatica de APK firmada como `vaulta.apk`.
+
+## Estado del producto
+
+Vaulta esta en etapa MVP release-ready para Android. La app ya cuenta con cifrado local, biometria Android, actualizaciones firmadas, iconos Android personalizados y auditoria funcional reciente del buscador interno y las pantallas principales.
+
+El desbloqueo biometrico completo esta implementado para Android. En iOS, macOS, web y desktop se conserva el camino de master password hasta implementar bindings equivalentes por plataforma.
+
+> Nota de seguridad: Vaulta cifra datos locales, pero todavia no cuenta con auditoria criptografica externa. No se debe presentar como producto de seguridad certificado hasta completar una revision independiente.
+
+## Stack tecnico
 
 - Flutter
 - Dart `^3.11.3`
 - Material 3
-- `google_fonts`
 - `flutter_secure_storage`
 - `local_auth`
 - `cryptography`
 - `supabase_flutter`
-- `flutter_test` + `flutter_lints`
+- Android KeyStore
+- GitHub Actions
+- GitHub Releases
 
-## Estructura relevante
+## Arquitectura
 
-- `lib/main.dart`: entrada minima de la app.
-- `lib/app/bootstrap/`: arranque y configuracion principal.
-- `lib/app/theme/`: tema visual y tokens base.
-- `lib/app/design_system/`: componentes reutilizables.
-- `lib/features/`: pantallas y modulos funcionales.
-- `lib/core/security/`: master password, sesiones, cifrado AES-GCM v2, almacenamiento seguro y repositorio local cifrado.
-- `lib/core/sync/`: push/pull incremental, snapshots remotos, conflictos y bootstrap Supabase opcional.
-- `test/widget_test.dart`: smoke test principal actual.
+```text
+lib/
+  app/
+    bootstrap/        Arranque y configuracion principal
+    design_system/   Componentes visuales reutilizables
+    theme/           Tokens, colores y tema Material
+  core/
+    security/        Master password, cifrado, biometria y storage seguro
+    sync/            Contratos y servicios de sincronizacion opcional
+    update/          Verificacion de actualizaciones
+  features/
+    home/            Shell principal y navegacion
+    security/        Gate de bloqueo y desbloqueo
+    vault/           Dashboard, busqueda, detalle y editor de credenciales
+    settings/        Configuracion, biometria, sync y actualizaciones
+    access/          Integracion de autofill Android
+```
 
-## Cómo ejecutar en desarrollo
+## Seguridad
 
-1. Instalar Flutter y validar el entorno con `flutter doctor`.
-2. Obtener dependencias con `flutter pub get`.
-3. Ejecutar la app con `flutter run`.
+Vaulta implementa una postura de seguridad local basada en:
 
-## Cómo verificar sin hacer build final
+- Master password como factor principal de recuperacion.
+- Argon2id para derivacion de clave.
+- AES-256-GCM para cifrado autenticado.
+- Clave DEK independiente del password del usuario.
+- Envelope protegido para desbloqueo biometrico en Android.
+- Bloqueo automatico al salir de primer plano o por inactividad.
+- Manejo explicito de estados de error y sesiones revocadas.
 
-Usa estas validaciones locales durante desarrollo:
+La sincronizacion remota con Supabase existe como base tecnica opcional/experimental y no esta habilitada como promesa publica por defecto.
+
+## Instalacion Android
+
+Descargar el APK firmado desde el release actual:
+
+[vaulta.apk](https://github.com/Rene-Kuhm/Gestor-de-Contrase-as/releases/download/dev-latest/vaulta.apk)
+
+Instalacion manual por ADB:
 
 ```bash
+adb install -r vaulta.apk
+```
+
+Tambien se puede actualizar desde la app:
+
+```text
+Ajustes > Buscar actualizaciones
+```
+
+## Desarrollo local
+
+Requisitos:
+
+- Flutter estable
+- Dart compatible con el SDK del proyecto
+- Android Studio o toolchain Android para builds Android
+
+Comandos principales:
+
+```bash
+flutter pub get
 flutter analyze
 flutter test
+flutter run
 ```
 
-## Release Android
-
-La variante release ya no usa debug signing. Para firmar, configura secretos fuera del repo con `android/key.properties` o variables `VAULTA_UPLOAD_*`. Ver `docs/android-release-signing.md`.
-
-Para checklist de Google Play / App Store y plantilla de privacidad, ver:
-
-- `docs/store-release-checklist.md`
-- `docs/privacy-policy-template.md`
-
-Si querés correr en un target específico:
+Build Android release:
 
 ```bash
-flutter run -d chrome
-flutter run -d windows
-flutter run -d android
+flutter build apk --release
 ```
 
-## Próximos pasos
+La firma Android release requiere secretos fuera del repositorio. Ver [docs/android-release-signing.md](docs/android-release-signing.md).
 
-- Auditar criptografía y manejo de memoria antes de declarar producción.
-- Implementar binding biométrico equivalente en iOS/macOS si se quiere desbloqueo biométrico sin master password fuera de Android.
-- Mantener Supabase sync desactivado por defecto para MVP público hasta completar QA operativo: sesión, conflictos, revocación, restore, offline/online y privacidad.
-- Expandir tests de UI, dominio y estado.
+## Validacion
 
-## Verificación reciente
+Validaciones esperadas antes de publicar cambios:
 
-- `flutter analyze`
-- `flutter test`
+```bash
+flutter pub get
+flutter analyze
+flutter test
+flutter build apk --release
+```
 
-## Notas para contributors
+El pipeline de GitHub Actions compila, analiza, firma y publica automaticamente el APK en `dev-latest` con el nombre profesional `vaulta.apk`.
 
-- No asumir que los datos demo representan seguridad real.
-- Evitar mezclar UI con decisiones de criptografía o almacenamiento seguro.
-- Mantener la separación entre contratos de dominio y adaptadores concretos.
+## Documentacion relacionada
+
+- [Firma y release Android](docs/android-release-signing.md)
+- [Checklist de publicacion en stores](docs/store-release-checklist.md)
+- [Plantilla de politica de privacidad](docs/privacy-policy-template.md)
+
+## TecnoDespegue
+
+TecnoDespegue desarrolla software fullstack, apps moviles multiplataforma y automatizaciones con IA para negocios que necesitan sistemas reales, escalables y mantenibles.
+
+- Web: [tecnodespegue.com](https://www.tecnodespegue.com/)
+- Especialidades: Flutter, Dart, Next.js, TypeScript, Python, automatizaciones con IA, APIs, integraciones y optimizacion de procesos.
+- Enfoque: foco tecnico, codigo limpio, comunicacion transparente y entregas medibles.
+
+## Licencia
+
+Proyecto privado/publico de portafolio tecnico de TecnoDespegue. Definir una licencia formal antes de aceptar contribuciones externas o distribuir el codigo como open source.
