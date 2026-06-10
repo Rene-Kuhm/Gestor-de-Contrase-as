@@ -4,6 +4,7 @@
   "navVault": "Vault",
   "navAccess": "Access",
   "navSettings": "Settings",
+
   "languageSectionTitle": "Language",
   "languageSelectorLabel": "App language",
   "languageEnglish": "English",
@@ -48,12 +49,32 @@
   "settingsDeviceNeverSeen": "No activity recorded",
   "settingsDeviceRevokedMessage": "Device revoked successfully.",
   "settingsRevokeOthersDone": "Other active sessions were revoked.",
+  "settingsRevokeOthersFailed": "We could not revoke other sessions. Please retry in a few seconds.",
   "settingsRoadmapTitle": "Platform security roadmap",
   "settingsRoadmapNotes": "Vault items use ADR-001 v2: Argon2id derives a KEK from the master password, and a random DEK encrypts entries with AES-256-GCM. Android now uses KeyStore for biometric unlock; iOS/macOS bindings remain pending.",
   "settingsSecureStorage": "Secure storage",
   "settingsBiometricUnlock": "Biometric key recovery",
   "settingsHardwareBackedKeys": "Hardware-backed keys",
   "settingsVaultEncryptionReady": "Vault item encryption wired end-to-end",
+  "settingsConflictsTitle": "Sync conflicts",
+  "settingsConflictsEmpty": "No pending conflicts. Sync queue is clean.",
+  "settingsConflictsRefresh": "Refresh",
+  "settingsConflictsKindConflict": "Conflict",
+  "settingsConflictsReasonFallback": "CAS conflict detected while pushing mutation.",
+  "settingsConflictsVersionRow": "Local base v{expected} · Remote v{remote}",
+  "@settingsConflictsVersionRow": {
+    "placeholders": {
+      "expected": {},
+      "remote": {}
+    }
+  },
+  "settingsDeviceStatusLabel": "status: {code}",
+  "@settingsDeviceStatusLabel": {
+    "placeholders": {
+      "code": {}
+    }
+  },
+  "settingsDeviceRevokeHint": "If you revoke this device, Vaulta will lock immediately.",
   "idleNever": "Never",
   "idleDisabled": "Disabled",
   "idleOneMinute": "1 minute",
@@ -77,6 +98,9 @@
   "securityOnboardingSubtitle": "The master password validates local access and derives the key that encrypts vault items.",
   "securityMasterPasswordTitle": "Master password",
   "securityMasterPasswordDescription": "Use 12+ characters with real variety. Never store this key in plaintext.",
+  "securityMasterPasswordRequired": "A master password is required.",
+  "securityMasterPasswordMinLength": "Use at least 12 characters.",
+  "securityMasterPasswordMismatch": "The confirmation does not match the master password.",
   "securityCreateMasterPassword": "Create master password",
   "securityConfirmMasterPassword": "Confirm master password",
   "securityChecklistHash": "Argon2id verifies the master password.",
@@ -100,6 +124,8 @@
     }
   },
   "securityUnlockPasswordSubtitle": "Use your master password to recover access.",
+  "securityUnlockBiometricHint": "Type your master password or tap the fingerprint button to unlock.",
+  "securityUnlockPasswordHint": "Type your master password to unlock the vault.",
   "securityProtectedAccess": "Protected access",
   "securityUnlockVault": "Unlock vault",
   "securityBiometricButton": "Biometric",
@@ -148,6 +174,7 @@
       }
     }
   },
+  "dashboardQuickActionsEyebrow": "Action",
   "securityScore": "Security score",
   "vaultEntries": "Vault entries",
   "weakPasswords": "Weak passwords",
@@ -260,5 +287,71 @@
   "securitySetupBiometricDialogAction": "Enable",
   "securitySetupBiometricDialogCancel": "Cancel",
   "securitySetupBiometricSuccess": "Done. Next time you can unlock Vaulta with your fingerprint.",
-  "securitySetupBiometricError": "We could not enable the fingerprint. Verify your master password and try again."
+  "securitySetupBiometricError": "We could not enable the fingerprint. Verify your master password and try again.",
+
+  "updateTitle": "Updates",
+  "updateInstalled": "Installed",
+  "updateRemote": "Remote",
+  "updateDescription": "New versions are published automatically when there is a push to master. Tap below to check for a newer build without uninstalling the app.",
+  "updateCheck": "Check for updates",
+  "updateChecking": "Checking...",
+  "updateDownload": "Download and install",
+  "updateDownloading": "Downloading APK...",
+  "updateInstalling": "Opening installer...",
+  "updateRetry": "Retry",
+  "updateUpToDateTitle": "Up to date",
+  "updateUpToDateBody": "The installed build matches the latest release on master.",
+  "updateErrorTitle": "We could not check for updates",
+  "updateInstallerFailed": "We could not open the system installer. Verify that \"Unknown sources\" is enabled.",
+  "updateAvailableVersion": "New version {tag}",
+  "@updateAvailableVersion": {
+    "placeholders": {
+      "tag": {}
+    }
+  },
+  "updateReleaseId": "release #{id}",
+  "@updateReleaseId": {
+    "placeholders": {
+      "id": {}
+    }
+  },
+  "updateAvailableBanner": "New version {tag} is available",
+  "@updateAvailableBanner": {
+    "placeholders": {
+      "tag": {}
+    }
+  },
+  "updateActionUpdate": "Update",
+  "updateInstallPrompt": "Confirm the installation on the system screen.",
+  "updateInstallFailed": "We could not open the installer. Enable \"Unknown sources\" in Settings and try again.",
+  "updateGenericError": "Update failed: {error}",
+  "@updateGenericError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+
+  "accessEyebrow": "Autofill & access",
+  "accessTitle": "Vault on every input",
+  "accessSubtitle": "Set Vaulta as the system autofill provider and unlock your entries the moment a password field needs them.",
+  "accessHeroTitle": "One-tap autofill",
+  "accessHeroBody": "Hardware-backed. Offline-first. No data leaves the device.",
+  "accessPlatformAndroid": "Android 11+",
+  "accessPlatformBiometrics": "Biometric unlock",
+  "accessPlatformOffline": "Offline by default",
+  "accessSetupTitle": "Setup in three steps",
+  "accessSetupSubtitle": "On Android 11 and above the platform exposes an Autofill service that Vaulta can plug into.",
+  "accessSetupStep1Title": "Open Android settings",
+  "accessSetupStep1Body": "Go to System → Languages & input → Autofill service.",
+  "accessSetupStep2Title": "Pick Vaulta",
+  "accessSetupStep2Body": "Select Vaulta as the active service. Android will ask for confirmation.",
+  "accessSetupStep3Title": "Unlock and approve",
+  "accessSetupStep3Body": "Next time you tap a password field, Vaulta prompts for biometrics or master password and fills the right entry.",
+  "accessUnlockPostureTitle": "Unlock posture",
+  "accessUnlockPostureBody": "Autofill requests are gated by the same unlock state as the rest of the app.",
+  "accessUnlocked": "Vault is unlocked",
+  "accessLocked": "Vault is locked",
+  "accessLockNow": "Lock vault now",
+  "accessRoadmapTitle": "What's next",
+  "accessRoadmapBody": "iOS and desktop autofill ship after the biometric platform bindings (iOS/macOS) are in place."
 }

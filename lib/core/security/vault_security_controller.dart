@@ -89,6 +89,39 @@ class VaultSecurityController extends ChangeNotifier {
 
   String? get message => _message;
 
+  /// Heuristic tone for the current [message]. The controller itself
+  /// does not store a flag because the existing 40+ `_message = …`
+  /// sites all use natural-language strings; classifying the tone
+  /// here keeps the call sites simple and the visual layer out of
+  /// the controller's contract.
+  ///
+  /// The rule is intentionally narrow: only surface a "danger" tone
+  /// for phrases that clearly read as a failure, and an
+  /// "info/positive" tone otherwise.
+  bool get messageIsError {
+    final m = _message;
+    if (m == null || m.isEmpty) return false;
+    final lower = m.toLowerCase();
+    const negative = [
+      'no coincide',
+      'no pudimos',
+      'no se pudo',
+      'todavia no',
+      'no hay biometria',
+      'no esta conectado',
+      'error',
+      'fail',
+      'inv',
+      'rechaz',
+      'cancel',
+      'deneg',
+    ];
+    for (final word in negative) {
+      if (lower.contains(word)) return true;
+    }
+    return false;
+  }
+
   VaultSession? get vaultSession => _vaultSession;
 
   bool get autoLockOnBackgroundEnabled => _autoLockOnBackgroundEnabled;

@@ -2,14 +2,19 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../../app/design_system/app_components.dart';
+import '../../../app/design_system/app_panel.dart';
 import '../../../app/localization/app_locale_controller.dart';
 import '../../../app/localization/l10n.dart';
+import '../../../app/theme/app_colors.dart';
+import '../../../app/theme/app_spacing.dart';
 import '../../../core/security/secure_storage_service.dart';
+import '../../../core/security/vault_repository.dart';
 import '../../../core/security/vault_security_controller.dart';
 import '../../../core/sync/device_session_revocation_service.dart';
-import '../../../core/security/vault_repository.dart';
 import '../../../core/sync/sync_conflict_resolver.dart';
 import '../../../core/update/update_service.dart';
+import '../../../features/access/presentation/access_screen.dart';
 import '../../settings/presentation/settings_screen.dart';
 import '../../vault/presentation/vault_dashboard_screen.dart';
 
@@ -47,9 +52,6 @@ class _AppShellState extends State<AppShell> {
   @override
   void initState() {
     super.initState();
-    // Silent auto-check after the user lands on the dashboard. We
-    // never block the UI on this; the worst case is a SnackBar that
-    // pops up a few seconds later if a new build is available.
     unawaited(_silentCheckForUpdate());
   }
 
@@ -57,32 +59,33 @@ class _AppShellState extends State<AppShell> {
     try {
       final info = await _updateService.checkForUpdate();
       if (!info.available) return;
-      // Defer the SnackBar until after the current frame so the
-      // ScaffoldMessenger is in the tree.
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        _scaffoldMessengerKey.currentState?.showSnackBar(
-          SnackBar(
-            content: Text('Nueva version ${info.tagName} disponible'),
-            duration: const Duration(seconds: 6),
-            action: SnackBarAction(
-              label: 'Actualizar',
-              onPressed: () => _downloadAndInstall(info),
-            ),
+      if (!mounted) return;
+      final l10n = context.l10n;
+      final messenger = _scaffoldMessengerKey.currentState;
+      if (messenger == null) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(l10n.updateAvailableBanner(info.tagName)),
+          duration: const Duration(seconds: 6),
+          action: SnackBarAction(
+            label: l10n.updateActionUpdate,
+            onPressed: () => _downloadAndInstall(info),
           ),
-        );
-      });
+        ),
+      );
     } catch (error, stack) {
       debugPrint('[Vaulta/Update] silent check failed: $error\n$stack');
     }
   }
 
   Future<void> _downloadAndInstall(UpdateInfo info) async {
+    if (!mounted) return;
+    final l10n = context.l10n;
     final messenger = _scaffoldMessengerKey.currentState;
     messenger?.showSnackBar(
-      const SnackBar(
-        content: Text('Descargando actualizacion...'),
-        duration: Duration(seconds: 2),
+      SnackBar(
+        content: Text(l10n.updateDownloading),
+        duration: const Duration(seconds: 2),
       ),
     );
     try {
@@ -96,17 +99,14 @@ class _AppShellState extends State<AppShell> {
       messenger?.showSnackBar(
         SnackBar(
           content: Text(
-            ok
-                ? 'Confirma la instalacion en la pantalla del sistema.'
-                : 'No pudimos abrir el instalador. Andá a Ajustes para '
-                      'habilitar "Fuentes desconocidas" y volve a intentar.',
+            ok ? l10n.updateInstallPrompt : l10n.updateInstallFailed,
           ),
         ),
       );
     } catch (error) {
       if (!mounted) return;
       messenger?.showSnackBar(
-        SnackBar(content: Text('Error al actualizar: $error')),
+        SnackBar(content: Text(l10n.updateGenericError(error.toString()))),
       );
     }
   }
@@ -114,14 +114,17 @@ class _AppShellState extends State<AppShell> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final screens = [
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    final screens = <Widget>[
       VaultDashboardScreen(
         repository: widget.repository,
         conflictResolver: widget.conflictResolver,
       ),
-      const _PlaceholderScreen(
-        title: 'Autofill & access',
-        subtitle: 'Tu flujo de desbloqueo y llenado automatico va a vivir aca.',
+      AccessScreen(
+        securityController: widget.securityController,
+        repository: widget.repository,
       ),
       SettingsScreen(
         securityController: widget.securityController,
@@ -135,26 +138,39 @@ class _AppShellState extends State<AppShell> {
     return ScaffoldMessenger(
       key: _scaffoldMessengerKey,
       child: Scaffold(
-        body: IndexedStack(index: _currentIndex, children: screens),
-        bottomNavigationBar: NavigationBar(
-          selectedIndex: _currentIndex,
-          onDestinationSelected: (index) {
-            setState(() => _currentIndex = index);
-          },
+        backgroundColor: theme.scaffoldBackgroundColor,
+        extendBody: true,
+        body: AnimatedSwitcher(
+          duration: AppMotion.medium,
+          switchInCurve: AppMotion.enter,
+          switchOutCurve: AppMotion.exit,
+          transitionBuilder: (child, animation) => FadeTransition(
+            opacity: animation,
+            child: child,
+          ),
+          child: KeyedSubtree(
+            key: ValueKey('shell.tab.$_currentIndex'),
+            child: IndexedStack(index: _currentIndex, children: screens),
+          ),
+        ),
+        bottomNavigationBar: _AppBottomBar(
+          currentIndex: _currentIndex,
+          isDark: isDark,
+          onSelected: (i) => setState(() => _currentIndex = i),
           destinations: [
-            NavigationDestination(
-              icon: Icon(Icons.lock_outline_rounded),
-              selectedIcon: Icon(Icons.lock_rounded),
+            _AppNavDest(
+              icon: Icons.lock_outline_rounded,
+              selectedIcon: Icons.lock_rounded,
               label: l10n.navVault,
             ),
-            NavigationDestination(
-              icon: Icon(Icons.flash_on_outlined),
-              selectedIcon: Icon(Icons.flash_on_rounded),
+            _AppNavDest(
+              icon: Icons.bolt_outlined,
+              selectedIcon: Icons.bolt_rounded,
               label: l10n.navAccess,
             ),
-            NavigationDestination(
-              icon: Icon(Icons.tune_outlined),
-              selectedIcon: Icon(Icons.tune_rounded),
+            _AppNavDest(
+              icon: Icons.tune_outlined,
+              selectedIcon: Icons.tune_rounded,
               label: l10n.navSettings,
             ),
           ],
@@ -164,46 +180,177 @@ class _AppShellState extends State<AppShell> {
   }
 }
 
-class _PlaceholderScreen extends StatelessWidget {
-  const _PlaceholderScreen({required this.title, required this.subtitle});
+class _AppBottomBar extends StatelessWidget {
+  const _AppBottomBar({
+    required this.currentIndex,
+    required this.isDark,
+    required this.onSelected,
+    required this.destinations,
+  });
 
+  final int currentIndex;
+  final bool isDark;
+  final ValueChanged<int> onSelected;
+  final List<_AppNavDest> destinations;
+
+  @override
+  Widget build(BuildContext context) {
+    final fill = isDark
+        ? AppColors.surfaceDark.withValues(alpha: 0.85)
+        : AppColors.surfaceLight.withValues(alpha: 0.92);
+
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.md,
+          0,
+          AppSpacing.md,
+          AppSpacing.md,
+        ),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: fill,
+            borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
+            border: Border.all(
+              color: isDark ? AppColors.borderDark : AppColors.borderLight,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.08),
+                blurRadius: 24,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: NavigationBar(
+            backgroundColor: Colors.transparent,
+            surfaceTintColor: Colors.transparent,
+            elevation: 0,
+            height: 64,
+            selectedIndex: currentIndex,
+            onDestinationSelected: onSelected,
+            labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+            destinations: [
+              for (final dest in destinations)
+                NavigationDestination(
+                  icon: Icon(dest.icon),
+                  selectedIcon: Icon(dest.selectedIcon),
+                  label: dest.label,
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AppNavDest {
+  const _AppNavDest({
+    required this.icon,
+    required this.selectedIcon,
+    required this.label,
+  });
+  final IconData icon;
+  final IconData selectedIcon;
+  final String label;
+}
+
+/// Reusable "feature coming soon" page for sections that are scoped
+/// to the MVP but not yet implemented. Bilingual, on-brand, and
+/// consistent across the app so users get the same placeholder
+/// treatment everywhere.
+class FeaturePlaceholderScreen extends StatelessWidget {
+  const FeaturePlaceholderScreen({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    this.bullets = const <String>[],
+    this.eyebrow,
+  });
+
+  final IconData icon;
   final String title;
   final String subtitle;
+  final List<String> bullets;
+  final String? eyebrow;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return SafeArea(
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.layers_outlined,
-                size: 52,
-                color: theme.colorScheme.primary,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                title,
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
+    return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
+      appBar: AppBar(),
+      body: SafeArea(
+        child: ListView(
+          padding: AppSpacing.screenPadding,
+          children: [
+            const SizedBox(height: AppSpacing.lg),
+            Center(
+              child: Container(
+                width: 96,
+                height: 96,
+                decoration: BoxDecoration(
+                  color: AppColors.crimson.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
+                  border: Border.all(
+                    color: AppColors.crimson.withValues(alpha: 0.45),
+                  ),
                 ),
-                textAlign: TextAlign.center,
+                child: Icon(icon, size: 44, color: AppColors.crimsonBright),
               ),
-              const SizedBox(height: 8),
-              Text(
-                subtitle,
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            AppSectionHeader(
+              eyebrow: eyebrow,
+              title: title,
+              subtitle: subtitle,
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            if (bullets.isNotEmpty)
+              AppPanel(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (var i = 0; i < bullets.length; i++) ...[
+                      if (i != 0) const Divider(height: AppSpacing.lg),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            width: 28,
+                            height: 28,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: AppColors.crimson
+                                  .withValues(alpha: 0.18),
+                              borderRadius: BorderRadius.circular(
+                                AppSpacing.radiusSm,
+                              ),
+                            ),
+                            child: Icon(
+                              Icons.check_rounded,
+                              size: 16,
+                              color: AppColors.crimsonBright,
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(
+                            child: Text(
+                              bullets[i],
+                              style: theme.textTheme.bodyLarge,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
                 ),
-                textAlign: TextAlign.center,
               ),
-            ],
-          ),
+          ],
         ),
       ),
     );

@@ -47,7 +47,7 @@ void main() {
     expect(find.text('Unlocked vault'), findsOneWidget);
 
     await controller.handleAppLifecycleState(AppLifecycleState.paused);
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     expect(find.text('Unlock vault'), findsOneWidget);
     expect(find.text('Unlocked vault'), findsNothing);
@@ -88,7 +88,7 @@ void main() {
     expect(find.text('Unlocked vault'), findsOneWidget);
 
     await tester.pump(const Duration(milliseconds: 1200));
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     expect(find.text('Unlock vault'), findsOneWidget);
     expect(find.text('Unlocked vault'), findsNothing);

@@ -3,7 +3,10 @@ import 'package:flutter/material.dart';
 import '../../features/vault/domain/vault_item.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
+import 'app_components.dart';
 
+/// One row in the vault list. Replaces the previous "Row of icons
+/// + text + badge" with a cleaner hero that lets the title breathe.
 class VaultEntryTile extends StatelessWidget {
   const VaultEntryTile({super.key, required this.item, this.onTap});
 
@@ -15,121 +18,105 @@ class VaultEntryTile extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.xs,
-          vertical: AppSpacing.sm,
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: item.accentColor.withValues(alpha: 0.10),
-                borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-              ),
-              child: Icon(item.icon, color: item.accentColor, size: 20),
-            ),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    item.title,
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: isDark
-                          ? AppColors.textPrimaryDark
-                          : AppColors.textPrimary,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.xs,
+            vertical: AppSpacing.sm,
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: item.accentColor.withValues(
+                    alpha: isDark ? 0.18 : 0.14,
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${item.username} · ${item.category.label}',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: isDark
-                          ? AppColors.textSecondaryDark
-                          : AppColors.textSecondary,
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                ),
+                child: Icon(item.icon, color: item.accentColor, size: 22),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      item.title,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimaryLight,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    const SizedBox(height: 2),
+                    Text(
+                      '${item.username} · ${item.category.label}',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondaryLight,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  StrengthBadge(score: item.strengthScore),
+                  const SizedBox(height: 4),
+                  Text(
+                    item.lastUpdatedLabel,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: isDark
+                          ? AppColors.textTertiaryDark
+                          : AppColors.textTertiaryLight,
+                    ),
+                    textAlign: TextAlign.right,
                   ),
                 ],
               ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                _StrengthBadge(score: item.strengthScore),
-                const SizedBox(height: 4),
-                Text(
-                  item.lastUpdatedLabel,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: isDark
-                        ? AppColors.textSecondaryDark
-                        : AppColors.textSecondary,
-                  ),
-                  textAlign: TextAlign.right,
-                ),
-              ],
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _StrengthBadge extends StatelessWidget {
-  const _StrengthBadge({required this.score});
-
+/// Strength indicator. Three tiers only; the score sits next to a
+/// single colored dot. The previous "colored text + dot" was hard to
+/// scan when there were many items.
+class StrengthBadge extends StatelessWidget {
+  const StrengthBadge({super.key, required this.score});
   final int score;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final color = switch (score) {
-      >= 90 => AppColors.success,
-      >= 70 => AppColors.warning,
-      _ => AppColors.danger,
-    };
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
-        border: Border.all(color: color.withValues(alpha: 0.25), width: 1),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 6,
-            height: 6,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-          ),
-          const SizedBox(width: 5),
-          Text(
-            '$score%',
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: color,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.2,
-            ),
-          ),
-        ],
-      ),
+    final tone = score >= 80
+        ? AppPillTint.success
+        : (score >= 60 ? AppPillTint.warning : AppPillTint.danger);
+    final label = score >= 80
+        ? 'Strong'
+        : (score >= 60 ? 'Fair' : 'Weak');
+    return AppPill(
+      label: '$label · $score',
+      tint: tone,
+      compact: true,
     );
   }
 }

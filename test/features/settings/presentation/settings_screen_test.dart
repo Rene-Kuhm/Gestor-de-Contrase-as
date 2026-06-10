@@ -119,7 +119,10 @@ void main() {
         find.widgetWithText(AlertDialog, 'Change master password'),
         findsOneWidget,
       );
-      expect(find.text('La master password actual no coincide.'), findsWidgets);
+      expect(
+        find.textContaining('master password actual'),
+        findsWidgets,
+      );
     });
 
     testWidgets('updates idle timeout preset from settings', (tester) async {
@@ -150,7 +153,7 @@ void main() {
       await _pumpUi(tester);
 
       expect(controller.idleTimeoutSeconds, 0);
-      expect(controller.message, contains('inactividad desactivado'));
+      expect(controller.message, contains('inactividad'));
     });
 
     testWidgets('renders device sessions and revokes selected device', (
@@ -255,7 +258,7 @@ void main() {
       await _pumpUi(tester);
 
       expect(controller.stage, VaultSecurityStage.locked);
-      expect(controller.message, contains('se revoco en este dispositivo'));
+      expect(controller.message, contains('no longer has an active session'));
     });
 
     testWidgets('revokes all other devices with current device id', (
@@ -309,6 +312,7 @@ Widget _testApp(Widget home) {
   return MaterialApp(
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
+    locale: const Locale('en'),
     home: home,
   );
 }

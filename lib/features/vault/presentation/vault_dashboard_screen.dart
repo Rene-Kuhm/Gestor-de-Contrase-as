@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../app/design_system/app_components.dart';
 import '../../../app/design_system/app_panel.dart';
 import '../../../app/design_system/metric_card.dart';
 import '../../../app/design_system/vault_entry_tile.dart';
@@ -61,41 +62,29 @@ class _VaultDashboardScreenState extends State<VaultDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final theme = Theme.of(context);
     return FutureBuilder<({VaultSummary summary, List<VaultItem> items})>(
       future: _future,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
+          return Scaffold(
+            backgroundColor: theme.scaffoldBackgroundColor,
+            body: const Center(
+              child: SizedBox(
+                width: 28,
+                height: 28,
+                child: CircularProgressIndicator(strokeWidth: 2.5),
+              ),
+            ),
           );
         }
 
         if (snapshot.hasError) {
-          return Scaffold(
-            body: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.lock_clock_rounded, size: 42),
-                    const SizedBox(height: 16),
-                    Text(
-                      l10n.dashboardDecryptError,
-                      style: Theme.of(context).textTheme.titleLarge,
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      l10n.dashboardDecryptErrorAdvice,
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 16),
-                    FilledButton(onPressed: _refresh, child: Text(l10n.retry)),
-                  ],
-                ),
-              ),
-            ),
+          return _DashboardError(
+            onRetry: _refresh,
+            title: l10n.dashboardDecryptError,
+            advice: l10n.dashboardDecryptErrorAdvice,
+            retryLabel: l10n.retry,
           );
         }
 
@@ -103,86 +92,74 @@ class _VaultDashboardScreenState extends State<VaultDashboardScreen> {
         final filteredItems = _applyFilters(data.items);
 
         return Scaffold(
+          backgroundColor: theme.scaffoldBackgroundColor,
           floatingActionButton: FloatingActionButton.extended(
             onPressed: _createEntry,
             icon: const Icon(Icons.add_rounded),
             label: Text(l10n.newEntry),
           ),
-          body: DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Theme.of(context).brightness == Brightness.dark
-                      ? const Color(0xFF102636)
-                      : const Color(0xFFDDF4F0),
-                  Theme.of(context).scaffoldBackgroundColor,
-                  Theme.of(context).scaffoldBackgroundColor,
-                ],
-              ),
-            ),
-            child: Stack(
-              children: [
-                const _AmbientOrbs(),
-                SafeArea(
-                  child: RefreshIndicator(
-                    onRefresh: () async => _refresh(),
-                    child: CustomScrollView(
-                      slivers: [
-                        SliverPadding(
-                          padding: const EdgeInsets.fromLTRB(20, 12, 20, 120),
-                          sliver: SliverList.list(
-                            children: [
-                              _DashboardHeader(summary: data.summary),
-                              const SizedBox(height: AppSpacing.lg),
-                              _HeroSecurityCard(summary: data.summary),
-                              const SizedBox(height: AppSpacing.lg),
-                              if (_pendingConflicts > 0 &&
-                                  widget.conflictResolver != null)
-                                _ConflictBanner(
-                                  count: _pendingConflicts,
-                                  onTap: () async {
-                                    await showSyncConflictsSheet(
-                                      context: context,
-                                      resolver: widget.conflictResolver!,
-                                    );
-                                    _loadConflictCount();
-                                  },
-                                ),
-                              if (_pendingConflicts > 0 &&
-                                  widget.conflictResolver != null)
-                                const SizedBox(height: AppSpacing.md),
-                              _MetricsGrid(summary: data.summary),
-                              const SizedBox(height: AppSpacing.lg),
-                              _QuickActions(
-                                summary: data.summary,
-                                onCreateEntry: _createEntry,
-                              ),
-                              const SizedBox(height: AppSpacing.lg),
-                              _VaultSection(
-                                items: filteredItems,
-                                totalItems: data.items.length,
-                                searchController: _searchController,
-                                activeFilter: _activeFilter,
-                                onSearchChanged: (value) {
-                                  setState(() => _searchQuery = value);
-                                },
-                                onFilterChanged: (value) {
-                                  setState(() => _activeFilter = value);
-                                },
-                                onClearFilters: _clearFilters,
-                                onCreateEntry: _createEntry,
-                                onOpenEntry: _openEntry,
-                              ),
-                            ],
+          body: AppHeroBackground(
+            intensity: 0.65,
+            child: SafeArea(
+              bottom: false,
+              child: RefreshIndicator(
+                onRefresh: () async => _refresh(),
+                child: CustomScrollView(
+                  slivers: [
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.lg,
+                        AppSpacing.lg,
+                        AppSpacing.lg,
+                        AppSpacing.xxxl + AppSpacing.lg,
+                      ),
+                      sliver: SliverList.list(
+                        children: [
+                          _DashboardHeader(summary: data.summary),
+                          const SizedBox(height: AppSpacing.lg),
+                          if (_pendingConflicts > 0 &&
+                              widget.conflictResolver != null)
+                            _ConflictBanner(
+                              count: _pendingConflicts,
+                              onTap: () async {
+                                await showSyncConflictsSheet(
+                                  context: context,
+                                  resolver: widget.conflictResolver!,
+                                );
+                                _loadConflictCount();
+                              },
+                            ),
+                          if (_pendingConflicts > 0 &&
+                              widget.conflictResolver != null)
+                            const SizedBox(height: AppSpacing.md),
+                          _MetricsGrid(summary: data.summary),
+                          const SizedBox(height: AppSpacing.lg),
+                          _QuickActions(
+                            summary: data.summary,
+                            onCreateEntry: _createEntry,
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: AppSpacing.lg),
+                          _VaultSection(
+                            items: filteredItems,
+                            totalItems: data.items.length,
+                            searchController: _searchController,
+                            activeFilter: _activeFilter,
+                            onSearchChanged: (value) {
+                              setState(() => _searchQuery = value);
+                            },
+                            onFilterChanged: (value) {
+                              setState(() => _activeFilter = value);
+                            },
+                            onClearFilters: _clearFilters,
+                            onOpenEntry: _openEntry,
+                            onCreateEntry: _createEntry,
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         );
@@ -284,6 +261,75 @@ class _VaultDashboardScreenState extends State<VaultDashboardScreen> {
   }
 }
 
+class _DashboardError extends StatelessWidget {
+  const _DashboardError({
+    required this.onRetry,
+    required this.title,
+    required this.advice,
+    required this.retryLabel,
+  });
+
+  final VoidCallback onRetry;
+  final String title;
+  final String advice;
+  final String retryLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: AppColors.danger.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
+                  ),
+                  child: Icon(
+                    Icons.lock_reset_rounded,
+                    size: 40,
+                    color: AppColors.danger,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                Text(
+                  title,
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  advice,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                FilledButton.icon(
+                  onPressed: onRetry,
+                  icon: const Icon(Icons.refresh_rounded),
+                  label: Text(retryLabel),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _ConflictBanner extends StatelessWidget {
   const _ConflictBanner({required this.count, required this.onTap});
 
@@ -293,55 +339,18 @@ class _ConflictBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: AppSpacing.sm,
+    return AppBanner(
+      message: l10n.syncConflictsBannerLabel(count),
+      icon: Icons.sync_problem_rounded,
+      tone: AppBannerTone.warning,
+      action: FilledButton(
+        onPressed: onTap,
+        style: FilledButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          minimumSize: const Size(0, 36),
         ),
-        decoration: BoxDecoration(
-          color: AppColors.warning.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-          border: Border.all(
-            color: AppColors.warning.withValues(alpha: 0.35),
-            width: 1,
-          ),
-        ),
-        child: Row(
-          children: [
-            const Icon(
-              Icons.sync_problem_rounded,
-              color: AppColors.warning,
-              size: 18,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                l10n.syncConflictsBannerLabel(count),
-                style: Theme.of(
-                  context,
-                ).textTheme.labelMedium?.copyWith(color: AppColors.warning),
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppColors.warning,
-                borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
-              ),
-              child: Text(
-                l10n.syncConflictsBannerAction,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: isDark ? AppColors.backgroundDark : Colors.white,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ],
-        ),
+        child: Text(l10n.syncConflictsBannerAction),
       ),
     );
   }
@@ -355,117 +364,87 @@ class _DashboardHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
 
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                context.l10n.appTitle,
-                style: theme.textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+              Row(
+                children: [
+                  const VaultaLogomark(size: 40),
+                  const SizedBox(width: AppSpacing.sm),
+                  Text(
+                    l10n.appTitle.toUpperCase(),
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 3.0,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: AppSpacing.md),
               Text(
-                context.l10n.dashboardSubtitle,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-          ),
-        ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          decoration: BoxDecoration(
-            color: AppColors.ink,
-            borderRadius: BorderRadius.circular(18),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '${summary.securityScore}%',
-                style: theme.textTheme.titleLarge?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              Text(
-                context.l10n.securityScore,
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: Colors.white70,
+                l10n.dashboardSubtitle,
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  height: 1.15,
                 ),
               ),
             ],
           ),
         ),
+        const SizedBox(width: AppSpacing.md),
+        _ScoreRing(score: summary.securityScore),
       ],
     );
   }
 }
 
-class _HeroSecurityCard extends StatelessWidget {
-  const _HeroSecurityCard({required this.summary});
-
-  final VaultSummary summary;
+class _ScoreRing extends StatelessWidget {
+  const _ScoreRing({required this.score});
+  final int score;
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final theme = Theme.of(context);
-
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppColors.ink, AppColors.ocean],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(32),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    final color = score >= 80
+        ? AppColors.success
+        : (score >= 60 ? AppColors.warning : AppColors.danger);
+    return SizedBox(
+      width: 88,
+      height: 88,
+      child: Stack(
+        alignment: Alignment.center,
         children: [
-          Row(
+          SizedBox.expand(
+            child: CircularProgressIndicator(
+              value: score / 100,
+              strokeWidth: 6,
+              backgroundColor: AppColors.surfaceDarkHigh
+                  .withValues(alpha: 0.4),
+              valueColor: AlwaysStoppedAnimation<Color>(color),
+            ),
+          ),
+          Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.shield_moon_rounded, color: Colors.white),
-              const SizedBox(width: 10),
               Text(
-                context.l10n.dashboardHeroTitle,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
+                '$score',
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  height: 1,
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Text(
-            context.l10n.dashboardHeroBody,
-            style: theme.textTheme.bodyLarge?.copyWith(color: Colors.white70),
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              _Pill(
-                label: context.l10n.dashboardPillTrustedDevices(
-                  summary.connectedDevices,
-                ),
-              ),
-              _Pill(
-                label: summary.syncEnabled
-                    ? context.l10n.dashboardPillSyncEnabled
-                    : context.l10n.dashboardPillSyncDisabled,
-              ),
-              _Pill(
-                label: context.l10n.dashboardPillWeakNeedRotation(
-                  summary.weakItems,
+              Text(
+                l10n.securityScore.toUpperCase(),
+                style: theme.textTheme.labelSmall?.copyWith(
+                  letterSpacing: 0.6,
+                  color: theme.colorScheme.onSurfaceVariant,
                 ),
               ),
             ],
@@ -476,32 +455,8 @@ class _HeroSecurityCard extends StatelessWidget {
   }
 }
 
-class _Pill extends StatelessWidget {
-  const _Pill({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        style: Theme.of(
-          context,
-        ).textTheme.labelLarge?.copyWith(color: Colors.white),
-      ),
-    );
-  }
-}
-
 class _MetricsGrid extends StatelessWidget {
   const _MetricsGrid({required this.summary});
-
   final VaultSummary summary;
 
   @override
@@ -512,13 +467,13 @@ class _MetricsGrid extends StatelessWidget {
       crossAxisSpacing: AppSpacing.md,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      childAspectRatio: 1.2,
+      childAspectRatio: 1.3,
       children: [
         MetricCard(
           label: context.l10n.vaultEntries,
           value: '${summary.totalItems}',
           icon: Icons.lock_open_rounded,
-          tint: AppColors.ocean,
+          tint: AppColors.crimsonBright,
         ),
         MetricCard(
           label: context.l10n.weakPasswords,
@@ -545,77 +500,114 @@ class _MetricsGrid extends StatelessWidget {
 
 class _QuickActions extends StatelessWidget {
   const _QuickActions({required this.summary, required this.onCreateEntry});
-
   final VaultSummary summary;
   final Future<void> Function() onCreateEntry;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final l10n = context.l10n;
 
     return AppPanel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            context.l10n.priorityActions,
-            style: theme.textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            context.l10n.dashboardQuickActionsSummary,
-            style: theme.textTheme.bodyLarge?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
+          AppSectionHeader(
+            eyebrow: l10n.dashboardQuickActionsEyebrow,
+            title: l10n.priorityActions,
+            subtitle: l10n.dashboardQuickActionsSummary,
           ),
           const SizedBox(height: AppSpacing.md),
-          Material(
-            type: MaterialType.transparency,
-            child: ListTile(
-              contentPadding: EdgeInsets.zero,
-              onTap: onCreateEntry,
-              leading: const CircleAvatar(
-                backgroundColor: Color(0x1A2D936C),
-                child: Icon(
-                  Icons.add_moderator_rounded,
-                  color: AppColors.success,
-                ),
-              ),
-              title: Text(context.l10n.createEncryptedEntry),
-              subtitle: Text(context.l10n.createEncryptedEntrySubtitle),
-              trailing: Icon(
-                Icons.chevron_right_rounded,
-                color: theme.colorScheme.primary,
-              ),
-            ),
+          _QuickActionRow(
+            icon: Icons.add_moderator_rounded,
+            tint: AppColors.crimsonBright,
+            title: l10n.createEncryptedEntry,
+            subtitle: l10n.createEncryptedEntrySubtitle,
+            onTap: onCreateEntry,
           ),
-          const Divider(),
-          Material(
-            type: MaterialType.transparency,
-            child: ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const CircleAvatar(
-                backgroundColor: Color(0x1AF2C14E),
-                child: Icon(
-                  Icons.manage_search_rounded,
-                  color: AppColors.warning,
-                ),
-              ),
-              title: Text(context.l10n.planNextHardeningStep),
-              subtitle: Text(
-                summary.syncEnabled
-                    ? context.l10n.dashboardRoadmapSyncEnabled
-                    : context.l10n.dashboardRoadmapSyncDisabled,
-              ),
-              trailing: Icon(
-                Icons.chevron_right_rounded,
-                color: theme.colorScheme.primary,
-              ),
-            ),
+          const Divider(height: AppSpacing.lg),
+          _QuickActionRow(
+            icon: Icons.manage_search_rounded,
+            tint: AppColors.warning,
+            title: l10n.planNextHardeningStep,
+            subtitle: summary.syncEnabled
+                ? l10n.dashboardRoadmapSyncEnabled
+                : l10n.dashboardRoadmapSyncDisabled,
+            onTap: null,
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _QuickActionRow extends StatelessWidget {
+  const _QuickActionRow({
+    required this.icon,
+    required this.tint,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+  final IconData icon;
+  final Color tint;
+  final String title;
+  final String subtitle;
+  final Future<void> Function()? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap == null ? null : () => onTap!(),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: tint.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                ),
+                child: Icon(icon, color: tint, size: 22),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      title,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (onTap != null) ...[
+                const SizedBox(width: AppSpacing.sm),
+                Icon(
+                  Icons.arrow_forward_rounded,
+                  size: 18,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -647,6 +639,7 @@ class _VaultSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
 
     return AppPanel(
       child: Column(
@@ -656,17 +649,17 @@ class _VaultSection extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  context.l10n.vaultEntriesSectionTitle,
+                  l10n.vaultEntriesSectionTitle,
                   style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
               ),
               Text(
                 totalItems == items.length
-                    ? context.l10n.itemsTotal(items.length)
-                    : context.l10n.itemsShownOfTotal(items.length, totalItems),
-                style: theme.textTheme.labelLarge?.copyWith(
+                    ? l10n.itemsTotal(items.length)
+                    : l10n.itemsShownOfTotal(items.length, totalItems),
+                style: theme.textTheme.labelMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
               ),
@@ -678,7 +671,7 @@ class _VaultSection extends StatelessWidget {
             textInputAction: TextInputAction.search,
             onChanged: onSearchChanged,
             decoration: InputDecoration(
-              labelText: context.l10n.searchVault,
+              labelText: l10n.searchVault,
               prefixIcon: const Icon(Icons.search_rounded),
               suffixIcon: searchController.text.isEmpty
                   ? null
@@ -692,7 +685,7 @@ class _VaultSection extends StatelessWidget {
           DropdownButtonFormField<_VaultFilter>(
             key: ValueKey(activeFilter),
             initialValue: activeFilter,
-            decoration: InputDecoration(labelText: context.l10n.filter),
+            decoration: InputDecoration(labelText: l10n.filter),
             items: _VaultFilter.values
                 .map(
                   (filter) => DropdownMenuItem<_VaultFilter>(
@@ -728,34 +721,36 @@ class _VaultSection extends StatelessWidget {
 
 class _NoResultsState extends StatelessWidget {
   const _NoResultsState({required this.onClearFilters});
-
   final VoidCallback onClearFilters;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(24),
+        color: theme.colorScheme.surfaceContainerHighest.withValues(
+          alpha: 0.5,
+        ),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Icon(Icons.filter_alt_off_rounded, size: 32),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.xs),
           Text(
-            context.l10n.noResultsTitle,
+            l10n.noResultsTitle,
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w700,
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: AppSpacing.xs),
           Text(
-            context.l10n.noResultsSubtitle,
+            l10n.noResultsSubtitle,
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
@@ -764,7 +759,7 @@ class _NoResultsState extends StatelessWidget {
           OutlinedButton.icon(
             onPressed: onClearFilters,
             icon: const Icon(Icons.restart_alt_rounded),
-            label: Text(context.l10n.resetFilters),
+            label: Text(l10n.resetFilters),
           ),
         ],
       ),
@@ -774,36 +769,49 @@ class _NoResultsState extends StatelessWidget {
 
 class _EmptyVaultState extends StatelessWidget {
   const _EmptyVaultState({required this.onCreateEntry});
-
   final Future<void> Function() onCreateEntry;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest.withValues(
-          alpha: 0.45,
+        color: AppColors.crimson.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+        border: Border.all(
+          color: AppColors.crimson.withValues(alpha: 0.30),
         ),
-        borderRadius: BorderRadius.circular(24),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.vpn_key_rounded, size: 36, color: AppColors.ocean),
-          const SizedBox(height: 12),
-          Text(
-            context.l10n.emptyVaultTitle,
-            style: theme.textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w700,
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: AppColors.crimson,
+              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+            ),
+            child: const Icon(
+              Icons.vpn_key_rounded,
+              color: AppColors.paperDark,
+              size: 28,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.md),
           Text(
-            context.l10n.emptyVaultSubtitle,
+            l10n.emptyVaultTitle,
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            l10n.emptyVaultSubtitle,
             style: theme.textTheme.bodyLarge?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
@@ -812,58 +820,9 @@ class _EmptyVaultState extends StatelessWidget {
           FilledButton.icon(
             onPressed: onCreateEntry,
             icon: const Icon(Icons.add_rounded),
-            label: Text(context.l10n.createFirstEntry),
+            label: Text(l10n.createFirstEntry),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _AmbientOrbs extends StatelessWidget {
-  const _AmbientOrbs();
-
-  @override
-  Widget build(BuildContext context) {
-    return IgnorePointer(
-      child: Stack(
-        children: [
-          Positioned(
-            top: -50,
-            right: -20,
-            child: _Orb(
-              color: AppColors.mint.withValues(alpha: 0.24),
-              size: 180,
-            ),
-          ),
-          Positioned(
-            top: 220,
-            left: -70,
-            child: _Orb(
-              color: AppColors.ocean.withValues(alpha: 0.14),
-              size: 160,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _Orb extends StatelessWidget {
-  const _Orb({required this.color, required this.size});
-
-  final Color color;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: size,
-      width: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: RadialGradient(colors: [color, color.withValues(alpha: 0)]),
       ),
     );
   }

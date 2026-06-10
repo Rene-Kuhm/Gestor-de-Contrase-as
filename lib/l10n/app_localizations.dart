@@ -347,6 +347,12 @@ abstract class AppLocalizations {
   /// **'Other active sessions were revoked.'**
   String get settingsRevokeOthersDone;
 
+  /// No description provided for @settingsRevokeOthersFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not revoke other sessions. Please retry in a few seconds.'**
+  String get settingsRevokeOthersFailed;
+
   /// No description provided for @settingsRoadmapTitle.
   ///
   /// In en, this message translates to:
@@ -382,6 +388,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Vault item encryption wired end-to-end'**
   String get settingsVaultEncryptionReady;
+
+  /// No description provided for @settingsConflictsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync conflicts'**
+  String get settingsConflictsTitle;
+
+  /// No description provided for @settingsConflictsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No pending conflicts. Sync queue is clean.'**
+  String get settingsConflictsEmpty;
+
+  /// No description provided for @settingsConflictsRefresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh'**
+  String get settingsConflictsRefresh;
+
+  /// No description provided for @settingsConflictsKindConflict.
+  ///
+  /// In en, this message translates to:
+  /// **'Conflict'**
+  String get settingsConflictsKindConflict;
+
+  /// No description provided for @settingsConflictsReasonFallback.
+  ///
+  /// In en, this message translates to:
+  /// **'CAS conflict detected while pushing mutation.'**
+  String get settingsConflictsReasonFallback;
+
+  /// No description provided for @settingsConflictsVersionRow.
+  ///
+  /// In en, this message translates to:
+  /// **'Local base v{expected} · Remote v{remote}'**
+  String settingsConflictsVersionRow(Object expected, Object remote);
+
+  /// No description provided for @settingsDeviceStatusLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'status: {code}'**
+  String settingsDeviceStatusLabel(Object code);
+
+  /// No description provided for @settingsDeviceRevokeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'If you revoke this device, Vaulta will lock immediately.'**
+  String get settingsDeviceRevokeHint;
 
   /// No description provided for @idleNever.
   ///
@@ -515,6 +569,24 @@ abstract class AppLocalizations {
   /// **'Use 12+ characters with real variety. Never store this key in plaintext.'**
   String get securityMasterPasswordDescription;
 
+  /// No description provided for @securityMasterPasswordRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'A master password is required.'**
+  String get securityMasterPasswordRequired;
+
+  /// No description provided for @securityMasterPasswordMinLength.
+  ///
+  /// In en, this message translates to:
+  /// **'Use at least 12 characters.'**
+  String get securityMasterPasswordMinLength;
+
+  /// No description provided for @securityMasterPasswordMismatch.
+  ///
+  /// In en, this message translates to:
+  /// **'The confirmation does not match the master password.'**
+  String get securityMasterPasswordMismatch;
+
   /// No description provided for @securityCreateMasterPassword.
   ///
   /// In en, this message translates to:
@@ -592,6 +664,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Use your master password to recover access.'**
   String get securityUnlockPasswordSubtitle;
+
+  /// No description provided for @securityUnlockBiometricHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Type your master password or tap the fingerprint button to unlock.'**
+  String get securityUnlockBiometricHint;
+
+  /// No description provided for @securityUnlockPasswordHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Type your master password to unlock the vault.'**
+  String get securityUnlockPasswordHint;
 
   /// No description provided for @securityProtectedAccess.
   ///
@@ -790,6 +874,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count} passwords need rotation'**
   String dashboardPillWeakNeedRotation(int count);
+
+  /// No description provided for @dashboardQuickActionsEyebrow.
+  ///
+  /// In en, this message translates to:
+  /// **'Action'**
+  String get dashboardQuickActionsEyebrow;
 
   /// No description provided for @securityScore.
   ///
@@ -1264,6 +1354,270 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'We could not enable the fingerprint. Verify your master password and try again.'**
   String get securitySetupBiometricError;
+
+  /// No description provided for @updateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Updates'**
+  String get updateTitle;
+
+  /// No description provided for @updateInstalled.
+  ///
+  /// In en, this message translates to:
+  /// **'Installed'**
+  String get updateInstalled;
+
+  /// No description provided for @updateRemote.
+  ///
+  /// In en, this message translates to:
+  /// **'Remote'**
+  String get updateRemote;
+
+  /// No description provided for @updateDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'New versions are published automatically when there is a push to master. Tap below to check for a newer build without uninstalling the app.'**
+  String get updateDescription;
+
+  /// No description provided for @updateCheck.
+  ///
+  /// In en, this message translates to:
+  /// **'Check for updates'**
+  String get updateCheck;
+
+  /// No description provided for @updateChecking.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking...'**
+  String get updateChecking;
+
+  /// No description provided for @updateDownload.
+  ///
+  /// In en, this message translates to:
+  /// **'Download and install'**
+  String get updateDownload;
+
+  /// No description provided for @updateDownloading.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading APK...'**
+  String get updateDownloading;
+
+  /// No description provided for @updateInstalling.
+  ///
+  /// In en, this message translates to:
+  /// **'Opening installer...'**
+  String get updateInstalling;
+
+  /// No description provided for @updateRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get updateRetry;
+
+  /// No description provided for @updateUpToDateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Up to date'**
+  String get updateUpToDateTitle;
+
+  /// No description provided for @updateUpToDateBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The installed build matches the latest release on master.'**
+  String get updateUpToDateBody;
+
+  /// No description provided for @updateErrorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not check for updates'**
+  String get updateErrorTitle;
+
+  /// No description provided for @updateInstallerFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not open the system installer. Verify that \"Unknown sources\" is enabled.'**
+  String get updateInstallerFailed;
+
+  /// No description provided for @updateAvailableVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'New version {tag}'**
+  String updateAvailableVersion(Object tag);
+
+  /// No description provided for @updateReleaseId.
+  ///
+  /// In en, this message translates to:
+  /// **'release #{id}'**
+  String updateReleaseId(Object id);
+
+  /// No description provided for @updateAvailableBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'New version {tag} is available'**
+  String updateAvailableBanner(Object tag);
+
+  /// No description provided for @updateActionUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'Update'**
+  String get updateActionUpdate;
+
+  /// No description provided for @updateInstallPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm the installation on the system screen.'**
+  String get updateInstallPrompt;
+
+  /// No description provided for @updateInstallFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not open the installer. Enable \"Unknown sources\" in Settings and try again.'**
+  String get updateInstallFailed;
+
+  /// No description provided for @updateGenericError.
+  ///
+  /// In en, this message translates to:
+  /// **'Update failed: {error}'**
+  String updateGenericError(Object error);
+
+  /// No description provided for @accessEyebrow.
+  ///
+  /// In en, this message translates to:
+  /// **'Autofill & access'**
+  String get accessEyebrow;
+
+  /// No description provided for @accessTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Vault on every input'**
+  String get accessTitle;
+
+  /// No description provided for @accessSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Set Vaulta as the system autofill provider and unlock your entries the moment a password field needs them.'**
+  String get accessSubtitle;
+
+  /// No description provided for @accessHeroTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'One-tap autofill'**
+  String get accessHeroTitle;
+
+  /// No description provided for @accessHeroBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Hardware-backed. Offline-first. No data leaves the device.'**
+  String get accessHeroBody;
+
+  /// No description provided for @accessPlatformAndroid.
+  ///
+  /// In en, this message translates to:
+  /// **'Android 11+'**
+  String get accessPlatformAndroid;
+
+  /// No description provided for @accessPlatformBiometrics.
+  ///
+  /// In en, this message translates to:
+  /// **'Biometric unlock'**
+  String get accessPlatformBiometrics;
+
+  /// No description provided for @accessPlatformOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline by default'**
+  String get accessPlatformOffline;
+
+  /// No description provided for @accessSetupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Setup in three steps'**
+  String get accessSetupTitle;
+
+  /// No description provided for @accessSetupSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'On Android 11 and above the platform exposes an Autofill service that Vaulta can plug into.'**
+  String get accessSetupSubtitle;
+
+  /// No description provided for @accessSetupStep1Title.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Android settings'**
+  String get accessSetupStep1Title;
+
+  /// No description provided for @accessSetupStep1Body.
+  ///
+  /// In en, this message translates to:
+  /// **'Go to System → Languages & input → Autofill service.'**
+  String get accessSetupStep1Body;
+
+  /// No description provided for @accessSetupStep2Title.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick Vaulta'**
+  String get accessSetupStep2Title;
+
+  /// No description provided for @accessSetupStep2Body.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Vaulta as the active service. Android will ask for confirmation.'**
+  String get accessSetupStep2Body;
+
+  /// No description provided for @accessSetupStep3Title.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlock and approve'**
+  String get accessSetupStep3Title;
+
+  /// No description provided for @accessSetupStep3Body.
+  ///
+  /// In en, this message translates to:
+  /// **'Next time you tap a password field, Vaulta prompts for biometrics or master password and fills the right entry.'**
+  String get accessSetupStep3Body;
+
+  /// No description provided for @accessUnlockPostureTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlock posture'**
+  String get accessUnlockPostureTitle;
+
+  /// No description provided for @accessUnlockPostureBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Autofill requests are gated by the same unlock state as the rest of the app.'**
+  String get accessUnlockPostureBody;
+
+  /// No description provided for @accessUnlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Vault is unlocked'**
+  String get accessUnlocked;
+
+  /// No description provided for @accessLocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Vault is locked'**
+  String get accessLocked;
+
+  /// No description provided for @accessLockNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Lock vault now'**
+  String get accessLockNow;
+
+  /// No description provided for @accessRoadmapTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'What\'s next'**
+  String get accessRoadmapTitle;
+
+  /// No description provided for @accessRoadmapBody.
+  ///
+  /// In en, this message translates to:
+  /// **'iOS and desktop autofill ship after the biometric platform bindings (iOS/macOS) are in place.'**
+  String get accessRoadmapBody;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

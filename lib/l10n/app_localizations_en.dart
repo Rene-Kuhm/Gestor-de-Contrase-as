@@ -137,6 +137,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsRevokeOthersDone => 'Other active sessions were revoked.';
 
   @override
+  String get settingsRevokeOthersFailed => 'We could not revoke other sessions. Please retry in a few seconds.';
+
+  @override
   String get settingsRoadmapTitle => 'Platform security roadmap';
 
   @override
@@ -153,6 +156,34 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsVaultEncryptionReady => 'Vault item encryption wired end-to-end';
+
+  @override
+  String get settingsConflictsTitle => 'Sync conflicts';
+
+  @override
+  String get settingsConflictsEmpty => 'No pending conflicts. Sync queue is clean.';
+
+  @override
+  String get settingsConflictsRefresh => 'Refresh';
+
+  @override
+  String get settingsConflictsKindConflict => 'Conflict';
+
+  @override
+  String get settingsConflictsReasonFallback => 'CAS conflict detected while pushing mutation.';
+
+  @override
+  String settingsConflictsVersionRow(Object expected, Object remote) {
+    return 'Local base v$expected · Remote v$remote';
+  }
+
+  @override
+  String settingsDeviceStatusLabel(Object code) {
+    return 'status: $code';
+  }
+
+  @override
+  String get settingsDeviceRevokeHint => 'If you revoke this device, Vaulta will lock immediately.';
 
   @override
   String get idleNever => 'Never';
@@ -221,6 +252,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get securityMasterPasswordDescription => 'Use 12+ characters with real variety. Never store this key in plaintext.';
 
   @override
+  String get securityMasterPasswordRequired => 'A master password is required.';
+
+  @override
+  String get securityMasterPasswordMinLength => 'Use at least 12 characters.';
+
+  @override
+  String get securityMasterPasswordMismatch => 'The confirmation does not match the master password.';
+
+  @override
   String get securityCreateMasterPassword => 'Create master password';
 
   @override
@@ -262,6 +302,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get securityUnlockPasswordSubtitle => 'Use your master password to recover access.';
+
+  @override
+  String get securityUnlockBiometricHint => 'Type your master password or tap the fingerprint button to unlock.';
+
+  @override
+  String get securityUnlockPasswordHint => 'Type your master password to unlock the vault.';
 
   @override
   String get securityProtectedAccess => 'Protected access';
@@ -365,6 +411,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String dashboardPillWeakNeedRotation(int count) {
     return '$count passwords need rotation';
   }
+
+  @override
+  String get dashboardQuickActionsEyebrow => 'Action';
 
   @override
   String get securityScore => 'Security score';
@@ -616,4 +665,144 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get securitySetupBiometricError => 'We could not enable the fingerprint. Verify your master password and try again.';
+
+  @override
+  String get updateTitle => 'Updates';
+
+  @override
+  String get updateInstalled => 'Installed';
+
+  @override
+  String get updateRemote => 'Remote';
+
+  @override
+  String get updateDescription => 'New versions are published automatically when there is a push to master. Tap below to check for a newer build without uninstalling the app.';
+
+  @override
+  String get updateCheck => 'Check for updates';
+
+  @override
+  String get updateChecking => 'Checking...';
+
+  @override
+  String get updateDownload => 'Download and install';
+
+  @override
+  String get updateDownloading => 'Downloading APK...';
+
+  @override
+  String get updateInstalling => 'Opening installer...';
+
+  @override
+  String get updateRetry => 'Retry';
+
+  @override
+  String get updateUpToDateTitle => 'Up to date';
+
+  @override
+  String get updateUpToDateBody => 'The installed build matches the latest release on master.';
+
+  @override
+  String get updateErrorTitle => 'We could not check for updates';
+
+  @override
+  String get updateInstallerFailed => 'We could not open the system installer. Verify that \"Unknown sources\" is enabled.';
+
+  @override
+  String updateAvailableVersion(Object tag) {
+    return 'New version $tag';
+  }
+
+  @override
+  String updateReleaseId(Object id) {
+    return 'release #$id';
+  }
+
+  @override
+  String updateAvailableBanner(Object tag) {
+    return 'New version $tag is available';
+  }
+
+  @override
+  String get updateActionUpdate => 'Update';
+
+  @override
+  String get updateInstallPrompt => 'Confirm the installation on the system screen.';
+
+  @override
+  String get updateInstallFailed => 'We could not open the installer. Enable \"Unknown sources\" in Settings and try again.';
+
+  @override
+  String updateGenericError(Object error) {
+    return 'Update failed: $error';
+  }
+
+  @override
+  String get accessEyebrow => 'Autofill & access';
+
+  @override
+  String get accessTitle => 'Vault on every input';
+
+  @override
+  String get accessSubtitle => 'Set Vaulta as the system autofill provider and unlock your entries the moment a password field needs them.';
+
+  @override
+  String get accessHeroTitle => 'One-tap autofill';
+
+  @override
+  String get accessHeroBody => 'Hardware-backed. Offline-first. No data leaves the device.';
+
+  @override
+  String get accessPlatformAndroid => 'Android 11+';
+
+  @override
+  String get accessPlatformBiometrics => 'Biometric unlock';
+
+  @override
+  String get accessPlatformOffline => 'Offline by default';
+
+  @override
+  String get accessSetupTitle => 'Setup in three steps';
+
+  @override
+  String get accessSetupSubtitle => 'On Android 11 and above the platform exposes an Autofill service that Vaulta can plug into.';
+
+  @override
+  String get accessSetupStep1Title => 'Open Android settings';
+
+  @override
+  String get accessSetupStep1Body => 'Go to System → Languages & input → Autofill service.';
+
+  @override
+  String get accessSetupStep2Title => 'Pick Vaulta';
+
+  @override
+  String get accessSetupStep2Body => 'Select Vaulta as the active service. Android will ask for confirmation.';
+
+  @override
+  String get accessSetupStep3Title => 'Unlock and approve';
+
+  @override
+  String get accessSetupStep3Body => 'Next time you tap a password field, Vaulta prompts for biometrics or master password and fills the right entry.';
+
+  @override
+  String get accessUnlockPostureTitle => 'Unlock posture';
+
+  @override
+  String get accessUnlockPostureBody => 'Autofill requests are gated by the same unlock state as the rest of the app.';
+
+  @override
+  String get accessUnlocked => 'Vault is unlocked';
+
+  @override
+  String get accessLocked => 'Vault is locked';
+
+  @override
+  String get accessLockNow => 'Lock vault now';
+
+  @override
+  String get accessRoadmapTitle => 'What\'s next';
+
+  @override
+  String get accessRoadmapBody => 'iOS and desktop autofill ship after the biometric platform bindings (iOS/macOS) are in place.';
 }

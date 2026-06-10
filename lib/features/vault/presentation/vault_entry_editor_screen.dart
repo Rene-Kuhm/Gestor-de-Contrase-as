@@ -2,8 +2,10 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
+import '../../../app/design_system/app_components.dart';
 import '../../../app/design_system/app_panel.dart';
 import '../../../app/localization/l10n.dart';
+import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../domain/vault_item.dart';
 
@@ -64,6 +66,7 @@ class _VaultEntryEditorScreenState extends State<VaultEntryEditorScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(
           widget.isEditing ? l10n.editorTitleEdit : l10n.editorTitleNew,
@@ -71,7 +74,12 @@ class _VaultEntryEditorScreenState extends State<VaultEntryEditorScreen> {
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            AppSpacing.md,
+            AppSpacing.lg,
+            AppSpacing.xxl,
+          ),
           child: Form(
             key: _formKey,
             child: Column(
@@ -81,11 +89,9 @@ class _VaultEntryEditorScreenState extends State<VaultEntryEditorScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        l10n.editorIdentityTitle,
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
+                      AppSectionHeader(
+                        eyebrow: l10n.editorIdentityTitle,
+                        title: l10n.editorIdentityTitle,
                       ),
                       const SizedBox(height: AppSpacing.md),
                       TextFormField(
@@ -94,6 +100,7 @@ class _VaultEntryEditorScreenState extends State<VaultEntryEditorScreen> {
                         decoration: InputDecoration(
                           labelText: l10n.editorTitleLabel,
                           hintText: l10n.editorTitleHint,
+                          prefixIcon: const Icon(Icons.title_rounded),
                         ),
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
@@ -108,6 +115,7 @@ class _VaultEntryEditorScreenState extends State<VaultEntryEditorScreen> {
                         textInputAction: TextInputAction.next,
                         decoration: InputDecoration(
                           labelText: l10n.editorUsernameLabel,
+                          prefixIcon: const Icon(Icons.person_rounded),
                         ),
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
@@ -121,12 +129,15 @@ class _VaultEntryEditorScreenState extends State<VaultEntryEditorScreen> {
                         initialValue: _category,
                         decoration: InputDecoration(
                           labelText: l10n.editorCategoryLabel,
+                          prefixIcon: const Icon(Icons.category_rounded),
                         ),
                         items: VaultCategory.values
                             .map(
                               (category) => DropdownMenuItem(
                                 value: category,
-                                child: Text(category.localizedLabel(context)),
+                                child: Text(
+                                  category.localizedLabel(context),
+                                ),
                               ),
                             )
                             .toList(),
@@ -147,10 +158,10 @@ class _VaultEntryEditorScreenState extends State<VaultEntryEditorScreen> {
                       Text(
                         l10n.editorSecretTitle,
                         style: theme.textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
-                      const SizedBox(height: AppSpacing.sm),
+                      const SizedBox(height: AppSpacing.xs),
                       Text(
                         l10n.editorSecretDescription,
                         style: theme.textTheme.bodyMedium?.copyWith(
@@ -164,9 +175,12 @@ class _VaultEntryEditorScreenState extends State<VaultEntryEditorScreen> {
                         textInputAction: TextInputAction.next,
                         decoration: InputDecoration(
                           labelText: l10n.editorSecretLabel,
+                          prefixIcon: const Icon(Icons.password_rounded),
                           suffixIcon: IconButton(
                             onPressed: () {
-                              setState(() => _obscureSecret = !_obscureSecret);
+                              setState(
+                                () => _obscureSecret = !_obscureSecret,
+                              );
                             },
                             icon: Icon(
                               _obscureSecret
@@ -190,20 +204,31 @@ class _VaultEntryEditorScreenState extends State<VaultEntryEditorScreen> {
                         width: double.infinity,
                         padding: const EdgeInsets.all(AppSpacing.md),
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.surfaceContainerHighest
-                              .withValues(alpha: 0.42),
-                          borderRadius: BorderRadius.circular(18),
+                          color: AppColors.crimson.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(
+                            AppSpacing.radiusLg,
+                          ),
+                          border: Border.all(
+                            color: AppColors.crimson.withValues(alpha: 0.25),
+                          ),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
                               children: [
+                                const Icon(
+                                  Icons.auto_awesome_rounded,
+                                  color: AppColors.crimsonBright,
+                                ),
+                                const SizedBox(width: AppSpacing.xs),
                                 Expanded(
                                   child: Text(
                                     l10n.editorGeneratorTitle,
                                     style: theme.textTheme.titleMedium
-                                        ?.copyWith(fontWeight: FontWeight.w700),
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.w700,
+                                        ),
                                   ),
                                 ),
                                 Text(
@@ -225,8 +250,8 @@ class _VaultEntryEditorScreenState extends State<VaultEntryEditorScreen> {
                               },
                             ),
                             Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
+                              spacing: AppSpacing.xs,
+                              runSpacing: AppSpacing.xs,
                               children: [
                                 FilterChip(
                                   label: const Text('A-Z'),
@@ -250,14 +275,18 @@ class _VaultEntryEditorScreenState extends State<VaultEntryEditorScreen> {
                                   label: const Text('0-9'),
                                   selected: _includeNumbers,
                                   onSelected: (selected) {
-                                    setState(() => _includeNumbers = selected);
+                                    setState(
+                                      () => _includeNumbers = selected,
+                                    );
                                   },
                                 ),
                                 FilterChip(
                                   label: const Text('#!?'),
                                   selected: _includeSymbols,
                                   onSelected: (selected) {
-                                    setState(() => _includeSymbols = selected);
+                                    setState(
+                                      () => _includeSymbols = selected,
+                                    );
                                   },
                                 ),
                               ],
@@ -278,6 +307,7 @@ class _VaultEntryEditorScreenState extends State<VaultEntryEditorScreen> {
                         decoration: InputDecoration(
                           labelText: l10n.editorWebsiteLabel,
                           hintText: l10n.editorWebsiteHint,
+                          prefixIcon: const Icon(Icons.link_rounded),
                         ),
                       ),
                       const SizedBox(height: AppSpacing.md),
@@ -288,6 +318,10 @@ class _VaultEntryEditorScreenState extends State<VaultEntryEditorScreen> {
                         decoration: InputDecoration(
                           labelText: l10n.editorNotesLabel,
                           hintText: l10n.editorNotesHint,
+                          prefixIcon: const Padding(
+                            padding: EdgeInsets.only(bottom: 56),
+                            child: Icon(Icons.notes_rounded),
+                          ),
                         ),
                       ),
                     ],

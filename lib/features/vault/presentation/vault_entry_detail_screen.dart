@@ -3,8 +3,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../app/design_system/app_components.dart';
 import '../../../app/design_system/app_panel.dart';
+import '../../../app/design_system/vault_entry_tile.dart';
 import '../../../app/localization/l10n.dart';
+import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../domain/vault_item.dart';
 
@@ -36,6 +39,7 @@ class _VaultEntryDetailScreenState extends State<VaultEntryDetailScreen> {
     final item = widget.item;
 
     return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(l10n.entryDetailTitle),
         actions: [
@@ -53,7 +57,12 @@ class _VaultEntryDetailScreenState extends State<VaultEntryDetailScreen> {
       ),
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            AppSpacing.md,
+            AppSpacing.lg,
+            AppSpacing.xxl,
+          ),
           children: [
             AppPanel(
               child: Column(
@@ -61,30 +70,37 @@ class _VaultEntryDetailScreenState extends State<VaultEntryDetailScreen> {
                 children: [
                   Row(
                     children: [
-                      CircleAvatar(
-                        radius: 26,
-                        backgroundColor: item.accentColor.withValues(
-                          alpha: 0.14,
+                      Container(
+                        width: 64,
+                        height: 64,
+                        decoration: BoxDecoration(
+                          color: item.accentColor.withValues(alpha: 0.18),
+                          borderRadius: BorderRadius.circular(
+                            AppSpacing.radiusMd,
+                          ),
                         ),
-                        child: Icon(item.icon, color: item.accentColor),
+                        child: Icon(
+                          item.icon,
+                          color: item.accentColor,
+                          size: 30,
+                        ),
                       ),
-                      const SizedBox(width: 16),
+                      const SizedBox(width: AppSpacing.md),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               item.title,
-                              style: theme.textTheme.headlineSmall?.copyWith(
-                                fontWeight: FontWeight.w700,
+                              style: theme.textTheme.headlineMedium?.copyWith(
+                                fontWeight: FontWeight.w800,
                               ),
                             ),
                             const SizedBox(height: 4),
-                            Text(
-                              item.category.label,
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                color: item.accentColor,
-                              ),
+                            AppPill(
+                              label: item.category.label,
+                              tint: _categoryTint(item.category),
+                              compact: true,
                             ),
                           ],
                         ),
@@ -107,6 +123,7 @@ class _VaultEntryDetailScreenState extends State<VaultEntryDetailScreen> {
                   _MetaRow(
                     label: l10n.entryStrengthLabel,
                     value: '${item.strengthScore}%',
+                    trailing: StrengthBadge(score: item.strengthScore),
                   ),
                   const SizedBox(height: AppSpacing.md),
                   _MetaRow(
@@ -127,7 +144,7 @@ class _VaultEntryDetailScreenState extends State<VaultEntryDetailScreen> {
                         child: Text(
                           l10n.entrySecretTitle,
                           style: theme.textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w700,
+                            fontWeight: FontWeight.w800,
                           ),
                         ),
                       ),
@@ -151,17 +168,19 @@ class _VaultEntryDetailScreenState extends State<VaultEntryDetailScreen> {
                   const SizedBox(height: AppSpacing.md),
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(AppSpacing.md),
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.surfaceContainerHighest
-                          .withValues(alpha: 0.5),
-                      borderRadius: BorderRadius.circular(20),
+                      color: AppColors.backgroundDark,
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                      border: Border.all(color: AppColors.borderDark),
                     ),
                     child: SelectableText(
                       _obscureSecret ? _mask(item.secret) : item.secret,
                       style: theme.textTheme.titleMedium?.copyWith(
+                        color: AppColors.paperDark,
                         letterSpacing: 0.6,
                         fontWeight: FontWeight.w600,
+                        fontFamily: 'monospace',
                       ),
                     ),
                   ),
@@ -183,11 +202,14 @@ class _VaultEntryDetailScreenState extends State<VaultEntryDetailScreen> {
                     Text(
                       l10n.entryNotesTitle,
                       style: theme.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
                     const SizedBox(height: AppSpacing.sm),
-                    Text(item.notes!, style: theme.textTheme.bodyLarge),
+                    Text(
+                      item.notes!,
+                      style: theme.textTheme.bodyLarge,
+                    ),
                   ],
                 ),
               ),
@@ -196,6 +218,15 @@ class _VaultEntryDetailScreenState extends State<VaultEntryDetailScreen> {
         ),
       ),
     );
+  }
+
+  AppPillTint _categoryTint(VaultCategory c) {
+    return switch (c) {
+      VaultCategory.work => AppPillTint.crimson,
+      VaultCategory.finance => AppPillTint.success,
+      VaultCategory.personal => AppPillTint.warning,
+      VaultCategory.infrastructure => AppPillTint.danger,
+    };
   }
 
   String _mask(String secret) {
@@ -277,31 +308,44 @@ class _VaultEntryDetailScreenState extends State<VaultEntryDetailScreen> {
 }
 
 class _MetaRow extends StatelessWidget {
-  const _MetaRow({required this.label, required this.value});
+  const _MetaRow({
+    required this.label,
+    required this.value,
+    this.trailing,
+  });
 
   final String label;
   final String value;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Text(
-          label,
-          style: theme.textTheme.labelLarge?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label,
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                value,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
           ),
         ),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+        ?trailing,
       ],
     );
   }

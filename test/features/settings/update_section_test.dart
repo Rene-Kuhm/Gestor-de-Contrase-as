@@ -1,4 +1,4 @@
-// Widget test that exercises the UpdateSection "Buscar actualizaciones"
+// Widget test that exercises the UpdateSection "Check for updates"
 // button end-to-end. Verifies the button changes the visible state
 // (spinner, success banner, or error banner) so a "silent no-op" can
 // never reach a real device again.
@@ -9,36 +9,35 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gestor_contrasenas/core/update/update_service.dart';
 import 'package:gestor_contrasenas/features/settings/presentation/update_section.dart';
+import 'package:gestor_contrasenas/l10n/app_localizations.dart';
 
 void main() {
-  testWidgets('Buscar actualizaciones button enters checking state immediately '
+  testWidgets('Check for updates button enters checking state immediately '
       'after tap, then resolves to updateAvailable when the service '
       'returns available=true', (tester) async {
     final pending = Completer<UpdateInfo>();
     final service = _StubUpdateService(checkResult: pending.future);
 
     await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: SingleChildScrollView(child: UpdateSection(service: service)),
-        ),
+      _testApp(
+        SingleChildScrollView(child: UpdateSection(service: service)),
       ),
     );
 
     // Initial state: the button label must be exactly the action we
     // expect, never null or a spinner.
-    expect(find.text('Buscar actualizaciones'), findsOneWidget);
+    expect(find.text('Check for updates'), findsOneWidget);
 
     // Tap. The synchronous setState must flip us into checking
     // *before* the async gap closes, so the spinner must appear
     // in the same frame the tap is dispatched.
-    await tester.tap(find.text('Buscar actualizaciones'));
+    await tester.tap(find.text('Check for updates'));
     await tester.pump();
 
     // While the future is pending, the button should be a busy
     // button with a CircularProgressIndicator and no tap handler.
     expect(find.byType(CircularProgressIndicator), findsWidgets);
-    expect(find.text('Buscando...'), findsOneWidget);
+    expect(find.text('Checking...'), findsOneWidget);
     expect(service.checkForUpdateCallCount, 1);
 
     // Now resolve the future and drain the second setState.
@@ -58,7 +57,7 @@ void main() {
 
     // After resolving with available=true we must show the
     // changelog panel, not silently fall back to up-to-date.
-    expect(find.text('Nueva version dev-latest'), findsOneWidget);
+    expect(find.text('New version dev-latest'), findsOneWidget);
     expect(find.text('test changelog'), findsOneWidget);
   });
 
@@ -71,19 +70,17 @@ void main() {
     );
 
     await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: SingleChildScrollView(child: UpdateSection(service: service)),
-        ),
+      _testApp(
+        SingleChildScrollView(child: UpdateSection(service: service)),
       ),
     );
 
-    await tester.tap(find.text('Buscar actualizaciones'));
+    await tester.tap(find.text('Check for updates'));
     await tester.pumpAndSettle();
 
-    // The "ya estás al día" banner is the only way a no-op button
+    // The "up to date" banner is the only way a no-op button
     // tap becomes a clear, non-misleading signal.
-    expect(find.textContaining('Ya estas al dia'), findsOneWidget);
+    expect(find.textContaining('Up to date'), findsOneWidget);
   });
 
   testWidgets('button resolves to error banner when the service throws', (
@@ -94,17 +91,15 @@ void main() {
     );
 
     await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: SingleChildScrollView(child: UpdateSection(service: service)),
-        ),
+      _testApp(
+        SingleChildScrollView(child: UpdateSection(service: service)),
       ),
     );
 
-    await tester.tap(find.text('Buscar actualizaciones'));
+    await tester.tap(find.text('Check for updates'));
     await tester.pumpAndSettle();
 
-    expect(find.text('No pudimos comprobar actualizaciones'), findsOneWidget);
+    expect(find.text('We could not check for updates'), findsOneWidget);
     expect(
       find.textContaining('native channel not registered'),
       findsOneWidget,
@@ -131,26 +126,33 @@ void main() {
       );
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: SingleChildScrollView(child: UpdateSection(service: service)),
-          ),
+        _testApp(
+          SingleChildScrollView(child: UpdateSection(service: service)),
         ),
       );
 
-      await tester.tap(find.text('Buscar actualizaciones'));
+      await tester.tap(find.text('Check for updates'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Descargar e instalar'));
+      await tester.tap(find.text('Download and install'));
       await tester.pumpAndSettle();
 
       expect(service.downloadCallCount, 1);
       expect(service.openInstallPromptCallCount, 1);
       expect(service.markBuildPromptedCallCount, 0);
       expect(
-        find.textContaining('No pudimos abrir el instalador'),
+        find.textContaining('could not open the system installer'),
         findsOneWidget,
       );
     },
+  );
+}
+
+Widget _testApp(Widget body) {
+  return MaterialApp(
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    locale: const Locale('en'),
+    home: Scaffold(body: body),
   );
 }
 

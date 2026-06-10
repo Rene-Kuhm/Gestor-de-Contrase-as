@@ -4,6 +4,7 @@
   "navVault": "Vault",
   "navAccess": "Acceso",
   "navSettings": "Ajustes",
+
   "languageSectionTitle": "Idioma",
   "languageSelectorLabel": "Idioma de la app",
   "languageEnglish": "Inglés",
@@ -48,12 +49,32 @@
   "settingsDeviceNeverSeen": "Sin actividad registrada",
   "settingsDeviceRevokedMessage": "Dispositivo revocado correctamente.",
   "settingsRevokeOthersDone": "Se revocaron las otras sesiones activas.",
+  "settingsRevokeOthersFailed": "No pudimos revocar las otras sesiones. Reintenta en unos segundos.",
   "settingsRoadmapTitle": "Roadmap de seguridad de plataforma",
   "settingsRoadmapNotes": "Los ítems del vault usan ADR-001 v2: Argon2id deriva una KEK desde la master password y una DEK aleatoria cifra entradas con AES-256-GCM. Android ya usa KeyStore para desbloqueo biométrico; iOS/macOS quedan pendientes.",
   "settingsSecureStorage": "Almacenamiento seguro",
   "settingsBiometricUnlock": "Recovery biométrico de clave",
   "settingsHardwareBackedKeys": "Claves con respaldo de hardware",
   "settingsVaultEncryptionReady": "Cifrado del vault conectado end-to-end",
+  "settingsConflictsTitle": "Conflictos de sync",
+  "settingsConflictsEmpty": "Sin conflictos pendientes. La cola de sync está limpia.",
+  "settingsConflictsRefresh": "Refrescar",
+  "settingsConflictsKindConflict": "Conflicto",
+  "settingsConflictsReasonFallback": "Conflicto CAS detectado al enviar la mutación.",
+  "settingsConflictsVersionRow": "Base local v{expected} · Remoto v{remote}",
+  "@settingsConflictsVersionRow": {
+    "placeholders": {
+      "expected": {},
+      "remote": {}
+    }
+  },
+  "settingsDeviceStatusLabel": "estado: {code}",
+  "@settingsDeviceStatusLabel": {
+    "placeholders": {
+      "code": {}
+    }
+  },
+  "settingsDeviceRevokeHint": "Si revocás este dispositivo, Vaulta se va a bloquear de inmediato.",
   "idleNever": "Nunca",
   "idleDisabled": "Desactivado",
   "idleOneMinute": "1 minuto",
@@ -77,6 +98,9 @@
   "securityOnboardingSubtitle": "La master password valida acceso local y deriva la clave que cifra los items del vault.",
   "securityMasterPasswordTitle": "Master password",
   "securityMasterPasswordDescription": "Pedimos 12+ caracteres con mezcla real. Nada de guardar la clave en texto plano.",
+  "securityMasterPasswordRequired": "Hace falta una master password.",
+  "securityMasterPasswordMinLength": "Usa al menos 12 caracteres.",
+  "securityMasterPasswordMismatch": "La confirmación no coincide con la master password.",
   "securityCreateMasterPassword": "Crear master password",
   "securityConfirmMasterPassword": "Confirmar master password",
   "securityChecklistHash": "Argon2id para verificar la master password.",
@@ -100,6 +124,8 @@
     }
   },
   "securityUnlockPasswordSubtitle": "Usa tu master password para recuperar acceso.",
+  "securityUnlockBiometricHint": "Escribí tu master password o tocá la huella para desbloquear.",
+  "securityUnlockPasswordHint": "Escribí tu master password para desbloquear el vault.",
   "securityProtectedAccess": "Acceso protegido",
   "securityUnlockVault": "Desbloquear vault",
   "securityBiometricButton": "Biometria",
@@ -148,6 +174,7 @@
       }
     }
   },
+  "dashboardQuickActionsEyebrow": "Acción",
   "securityScore": "Puntaje de seguridad",
   "vaultEntries": "Entradas del vault",
   "weakPasswords": "Passwords debiles",
@@ -230,7 +257,7 @@
   "editorGeneratedInserted": "Password generada e insertada.",
 
   "syncConflictsTitle": "Conflictos de sincronizacion",
-  "syncConflictsSubtitle": "Un cambio remoto llego mientras tu edicion local estaba pendiente. Elegi qué version conservar.",
+  "syncConflictsSubtitle": "Un cambio remoto llego mientras tu edicion local estaba pendiente. Elegí qué version conservar.",
   "syncConflictsEmpty": "Sin conflictos pendientes. Todo sincronizado.",
   "syncConflictsBannerLabel": "{count} {count, plural, =1{conflicto} other{conflictos}} de sync pendiente{count, plural, =1{} other{s}}",
   "@syncConflictsBannerLabel": {
@@ -260,5 +287,71 @@
   "securitySetupBiometricDialogAction": "Activar",
   "securitySetupBiometricDialogCancel": "Cancelar",
   "securitySetupBiometricSuccess": "Listo. La próxima vez podrás desbloquear Vaulta con tu huella.",
-  "securitySetupBiometricError": "No pudimos activar la huella. Verifica tu master password e intenta de nuevo."
+  "securitySetupBiometricError": "No pudimos activar la huella. Verifica tu master password e intenta de nuevo.",
+
+  "updateTitle": "Actualizaciones",
+  "updateInstalled": "Instalada",
+  "updateRemote": "Remota",
+  "updateDescription": "Las nuevas versiones se publican automaticamente cuando hay un push a master. Tocá el botón para comprobar si hay una version más reciente sin desinstalar la app.",
+  "updateCheck": "Buscar actualizaciones",
+  "updateChecking": "Buscando...",
+  "updateDownload": "Descargar e instalar",
+  "updateDownloading": "Descargando APK...",
+  "updateInstalling": "Abriendo instalador...",
+  "updateRetry": "Reintentar",
+  "updateUpToDateTitle": "Al día",
+  "updateUpToDateBody": "La version instalada coincide con la ultima publicada en master.",
+  "updateErrorTitle": "No pudimos comprobar actualizaciones",
+  "updateInstallerFailed": "No pudimos abrir el instalador del sistema. Verifica que \"Fuentes desconocidas\" este habilitado.",
+  "updateAvailableVersion": "Nueva version {tag}",
+  "@updateAvailableVersion": {
+    "placeholders": {
+      "tag": {}
+    }
+  },
+  "updateReleaseId": "release #{id}",
+  "@updateReleaseId": {
+    "placeholders": {
+      "id": {}
+    }
+  },
+  "updateAvailableBanner": "Nueva version {tag} disponible",
+  "@updateAvailableBanner": {
+    "placeholders": {
+      "tag": {}
+    }
+  },
+  "updateActionUpdate": "Actualizar",
+  "updateInstallPrompt": "Confirma la instalacion en la pantalla del sistema.",
+  "updateInstallFailed": "No pudimos abrir el instalador. Andá a Ajustes para habilitar \"Fuentes desconocidas\" y volve a intentar.",
+  "updateGenericError": "Error al actualizar: {error}",
+  "@updateGenericError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+
+  "accessEyebrow": "Autofill y acceso",
+  "accessTitle": "Tu vault en cada input",
+  "accessSubtitle": "Configurá Vaulta como proveedor de autofill del sistema y desbloqueá tus entradas en el momento que un campo de password las necesita.",
+  "accessHeroTitle": "Autofill en un toque",
+  "accessHeroBody": "Respaldado por hardware. Offline por defecto. Nada sale del dispositivo.",
+  "accessPlatformAndroid": "Android 11+",
+  "accessPlatformBiometrics": "Desbloqueo biométrico",
+  "accessPlatformOffline": "Offline por defecto",
+  "accessSetupTitle": "Configuracion en tres pasos",
+  "accessSetupSubtitle": "En Android 11 y superiores el sistema expone un servicio de Autofill al que Vaulta se puede conectar.",
+  "accessSetupStep1Title": "Abrí Ajustes de Android",
+  "accessSetupStep1Body": "Andá a Sistema → Idiomas y entrada → Servicio de Autofill.",
+  "accessSetupStep2Title": "Elegí Vaulta",
+  "accessSetupStep2Body": "Seleccioná Vaulta como servicio activo. Android va a pedir confirmacion.",
+  "accessSetupStep3Title": "Desbloqueá y aprobá",
+  "accessSetupStep3Body": "La próxima vez que toques un campo de password, Vaulta pide biometria o master password y completa la entrada correcta.",
+  "accessUnlockPostureTitle": "Postura de desbloqueo",
+  "accessUnlockPostureBody": "Las solicitudes de autofill usan el mismo estado de desbloqueo que el resto de la app.",
+  "accessUnlocked": "Vault desbloqueado",
+  "accessLocked": "Vault bloqueado",
+  "accessLockNow": "Bloquear vault ahora",
+  "accessRoadmapTitle": "Lo que viene",
+  "accessRoadmapBody": "El autofill de iOS y desktop sale despues de los bindings biometricos (iOS/macOS) que faltan."
 }

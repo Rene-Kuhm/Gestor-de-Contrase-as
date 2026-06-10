@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../../app/design_system/app_components.dart';
 import '../../../app/design_system/app_panel.dart';
 import '../../../app/localization/l10n.dart';
 import '../../../app/theme/app_colors.dart';
@@ -10,6 +11,8 @@ import '../../../core/security/native_biometric_auth_service.dart';
 import '../../../core/security/vault_security_controller.dart';
 import '../../../core/sync/device_registration_service.dart';
 
+/// Top-level gate that swaps between loading / onboarding / locked
+/// / unlocked and animates the transition.
 class SecurityGate extends StatefulWidget {
   const SecurityGate({
     super.key,
@@ -70,9 +73,6 @@ class _SecurityGateState extends State<SecurityGate>
         currentStage == VaultSecurityStage.locked;
     _lastStage = currentStage;
 
-    // Biometric availability can change after lock/unlock, after the
-    // user toggles the preference, or after the platform reports a
-    // new enrollment. Always re-check when the stage moves.
     if (movedToLocked || movedToUnlocked) {
       unawaited(_refreshBiometricUnlockAvailability());
     }
@@ -117,47 +117,101 @@ class _SecurityGateState extends State<SecurityGate>
     return AnimatedBuilder(
       animation: widget.controller,
       builder: (context, _) {
-        return switch (widget.controller.stage) {
-          VaultSecurityStage.loading => _SecurityScaffold(
-            child: const Center(child: CircularProgressIndicator()),
-          ),
-          VaultSecurityStage.onboarding => _OnboardingScreen(
-            controller: widget.controller,
-          ),
-          VaultSecurityStage.locked => _UnlockScreen(
-            controller: widget.controller,
-          ),
-          VaultSecurityStage.unlocked => Focus(
-            canRequestFocus: false,
-            onKeyEvent: (_, _) {
-              widget.controller.registerUserInteraction();
-              return KeyEventResult.ignored;
-            },
-            child: Listener(
-              behavior: HitTestBehavior.translucent,
-              onPointerDown: (_) {
-                widget.controller.registerUserInteraction();
-              },
-              onPointerMove: (_) {
-                widget.controller.registerUserInteraction();
-              },
-              onPointerSignal: (_) {
-                widget.controller.registerUserInteraction();
-              },
-              onPointerPanZoomStart: (_) {
-                widget.controller.registerUserInteraction();
-              },
+        return AnimatedSwitcher(
+          duration: AppMotion.slow,
+          switchInCurve: AppMotion.enter,
+          switchOutCurve: AppMotion.exit,
+          transitionBuilder: (child, animation) {
+            return FadeTransition(
+              opacity: animation,
+              child: SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(0, 0.04),
+                  end: Offset.zero,
+                ).animate(animation),
+                child: child,
+              ),
+            );
+          },
+          child: switch (widget.controller.stage) {
+            VaultSecurityStage.loading => const _LoadingStage(
+              key: ValueKey('security.loading'),
+            ),
+            VaultSecurityStage.onboarding => _OnboardingScreen(
+              key: const ValueKey('security.onboarding'),
+              controller: widget.controller,
+            ),
+            VaultSecurityStage.locked => _UnlockScreen(
+              key: const ValueKey('security.locked'),
+              controller: widget.controller,
+            ),
+            VaultSecurityStage.unlocked => _UnlockedHost(
+              key: const ValueKey('security.unlocked'),
+              controller: widget.controller,
               child: widget.child,
             ),
-          ),
-        };
+          },
+        );
       },
     );
   }
 }
 
+/// Wraps the unlocked UI in the same idle/pointer tracking the
+/// previous gate did, but visually identityless — the AppShell
+/// paints its own background.
+class _UnlockedHost extends StatelessWidget {
+  const _UnlockedHost({super.key, required this.controller, required this.child});
+
+  final VaultSecurityController controller;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Focus(
+      canRequestFocus: false,
+      onKeyEvent: (_, _) {
+        controller.registerUserInteraction();
+        return KeyEventResult.ignored;
+      },
+      child: Listener(
+        behavior: HitTestBehavior.translucent,
+        onPointerDown: (_) => controller.registerUserInteraction(),
+        onPointerMove: (_) => controller.registerUserInteraction(),
+        onPointerSignal: (_) => controller.registerUserInteraction(),
+        onPointerPanZoomStart: (_) => controller.registerUserInteraction(),
+        child: child,
+      ),
+    );
+  }
+}
+
+class _LoadingStage extends StatelessWidget {
+  const _LoadingStage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return AppHeroBackground(
+      child: const Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Center(
+          child: SizedBox(
+            width: 32,
+            height: 32,
+            child: CircularProgressIndicator(strokeWidth: 2.5),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Onboarding
+// ---------------------------------------------------------------------------
+
 class _OnboardingScreen extends StatefulWidget {
-  const _OnboardingScreen({required this.controller});
+  const _OnboardingScreen({super.key, required this.controller});
 
   final VaultSecurityController controller;
 
@@ -183,127 +237,435 @@ class _OnboardingScreenState extends State<_OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final theme = Theme.of(context);
     final controller = widget.controller;
+    final isWide = MediaQuery.sizeOf(context).width >= 880;
 
-    return _SecurityScaffold(
-      child: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
-          children: [
-            _BrandHero(
-              eyebrow: l10n.securityOnboardingEyebrow,
-              title: l10n.securityOnboardingTitle,
-              subtitle: l10n.securityOnboardingSubtitle,
+    final form = _OnboardingForm(
+      formKey: _formKey,
+      controller: controller,
+      passwordController: _passwordController,
+      confirmationController: _confirmationController,
+      enableBiometrics: _enableBiometrics,
+      obscurePassword: _obscurePassword,
+      obscureConfirmation: _obscureConfirmation,
+      onEnableBiometricsChanged: (value) {
+        setState(() => _enableBiometrics = value);
+      },
+      onTogglePasswordObscure: () {
+        setState(() => _obscurePassword = !_obscurePassword);
+      },
+      onToggleConfirmationObscure: () {
+        setState(() => _obscureConfirmation = !_obscureConfirmation);
+      },
+    );
+
+    final hero = _OnboardingHero(
+      eyebrow: l10n.securityOnboardingEyebrow,
+      title: l10n.securityOnboardingTitle,
+      subtitle: l10n.securityOnboardingSubtitle,
+    );
+
+    return AppHeroBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: SafeArea(
+          child: isWide
+              ? _SplitLayout(hero: hero, form: form)
+              : _StackedLayout(hero: hero, form: form),
+        ),
+      ),
+    );
+  }
+}
+
+class _SplitLayout extends StatelessWidget {
+  const _SplitLayout({required this.hero, required this.form});
+  final Widget hero;
+  final Widget form;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          flex: 5,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.xxl,
+              AppSpacing.xxl,
+              AppSpacing.xxl,
+              AppSpacing.xxl,
             ),
-            const SizedBox(height: AppSpacing.lg),
-            AppPanel(
-              child: Form(
-                key: _formKey,
+            child: Center(child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 480),
+              child: hero,
+            )),
+          ),
+        ),
+        Expanded(
+          flex: 6,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.xl,
+              vertical: AppSpacing.xl,
+            ),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 520),
+                child: form,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _StackedLayout extends StatelessWidget {
+  const _StackedLayout({required this.hero, required this.form});
+  final Widget hero;
+  final Widget form;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.xl,
+        AppSpacing.lg,
+        AppSpacing.xxl,
+      ),
+      children: [
+        hero,
+        const SizedBox(height: AppSpacing.xl),
+        form,
+      ],
+    );
+  }
+}
+
+class _OnboardingHero extends StatelessWidget {
+  const _OnboardingHero({
+    required this.eyebrow,
+    required this.title,
+    required this.subtitle,
+  });
+
+  final String eyebrow;
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          children: [
+            const VaultaLogomark(size: 64),
+            const SizedBox(width: AppSpacing.md),
+            Text(
+              l10n.appTitle,
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w800,
+                letterSpacing: 2.0,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.xxl),
+        Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: 14,
+            vertical: 7,
+          ),
+          decoration: BoxDecoration(
+            color: AppColors.crimson.withValues(alpha: 0.18),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
+            border: Border.all(
+              color: AppColors.crimson.withValues(alpha: 0.45),
+            ),
+          ),
+          child: Text(
+            eyebrow,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: AppColors.crimsonBright,
+              letterSpacing: 1.5,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        Text(
+          title,
+          style: theme.textTheme.displaySmall?.copyWith(
+            fontWeight: FontWeight.w800,
+            height: 1.05,
+            letterSpacing: -0.6,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        Text(
+          subtitle,
+          style: theme.textTheme.titleMedium?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+            height: 1.5,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.xl),
+        _SecurityChecklist(
+          items: [
+            _ChecklistItemData(
+              icon: Icons.shield_moon_rounded,
+              titleKey: 'Argon2id master key',
+              subtitleKey: 'KEK derived on-device, never persisted.',
+            ),
+            _ChecklistItemData(
+              icon: Icons.lock_reset_rounded,
+              titleKey: 'Random per-vault DEK',
+              subtitleKey: 'Wrapped with AES-256-GCM, rotates with password.',
+            ),
+            _ChecklistItemData(
+              icon: Icons.account_tree_rounded,
+              titleKey: 'Hardware-backed biometrics',
+              subtitleKey: 'Android KeyStore on Pixel & Samsung-class devices.',
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _ChecklistItemData {
+  _ChecklistItemData({
+    required this.icon,
+    required this.titleKey,
+    required this.subtitleKey,
+  });
+  final IconData icon;
+  final String titleKey;
+  final String subtitleKey;
+}
+
+class _SecurityChecklist extends StatelessWidget {
+  const _SecurityChecklist({required this.items});
+  final List<_ChecklistItemData> items;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final item in items) ...[
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: AppColors.crimson.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                ),
+                child: Icon(item.icon, size: 18, color: AppColors.crimsonBright),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      l10n.securityMasterPasswordTitle,
-                      style: theme.textTheme.titleLarge?.copyWith(
+                      item.titleKey,
+                      style: theme.textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                    const SizedBox(height: AppSpacing.sm),
+                    const SizedBox(height: 2),
                     Text(
-                      l10n.securityMasterPasswordDescription,
-                      style: theme.textTheme.bodyLarge?.copyWith(
+                      item.subtitleKey,
+                      style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
-                    TextFormField(
-                      controller: _passwordController,
-                      obscureText: _obscurePassword,
-                      decoration: InputDecoration(
-                        labelText: l10n.securityCreateMasterPassword,
-                        suffixIcon: IconButton(
-                          onPressed: () {
-                            setState(() {
-                              _obscurePassword = !_obscurePassword;
-                            });
-                          },
-                          icon: Icon(
-                            _obscurePassword
-                                ? Icons.visibility_off_rounded
-                                : Icons.visibility_rounded,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    TextFormField(
-                      controller: _confirmationController,
-                      obscureText: _obscureConfirmation,
-                      decoration: InputDecoration(
-                        labelText: l10n.securityConfirmMasterPassword,
-                        suffixIcon: IconButton(
-                          onPressed: () {
-                            setState(() {
-                              _obscureConfirmation = !_obscureConfirmation;
-                            });
-                          },
-                          icon: Icon(
-                            _obscureConfirmation
-                                ? Icons.visibility_off_rounded
-                                : Icons.visibility_rounded,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    _SecurityChecklist(
-                      items: [
-                        l10n.securityChecklistHash,
-                        l10n.securityChecklistDerive,
-                        l10n.securityChecklistEncrypt,
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    Material(
-                      type: MaterialType.transparency,
-                      child: SwitchListTile.adaptive(
-                        contentPadding: EdgeInsets.zero,
-                        value: _enableBiometrics,
-                        onChanged: controller.canOfferBiometricToggle
-                            ? (value) {
-                                setState(() => _enableBiometrics = value);
-                              }
-                            : null,
-                        title: Text(l10n.securityEnableBiometrics),
-                        subtitle: Text(
-                          controller.canOfferBiometricToggle
-                              ? l10n.securityBiometricAvailable(
-                                  controller.biometricAvailability.label,
-                                )
-                              : l10n.securityBiometricUnavailable,
-                        ),
-                      ),
-                    ),
-                    if (controller.message case final message?) ...[
-                      const SizedBox(height: AppSpacing.sm),
-                      _StatusBanner(message: message),
-                    ],
-                    const SizedBox(height: AppSpacing.lg),
-                    FilledButton.icon(
-                      onPressed: controller.busy ? null : _submit,
-                      icon: controller.busy
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.shield_rounded),
-                      label: Text(l10n.securityCreateSecureAccess),
                     ),
                   ],
                 ),
               ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+        ],
+      ],
+    );
+  }
+}
+
+class _OnboardingForm extends StatelessWidget {
+  const _OnboardingForm({
+    required this.formKey,
+    required this.controller,
+    required this.passwordController,
+    required this.confirmationController,
+    required this.enableBiometrics,
+    required this.obscurePassword,
+    required this.obscureConfirmation,
+    required this.onEnableBiometricsChanged,
+    required this.onTogglePasswordObscure,
+    required this.onToggleConfirmationObscure,
+  });
+
+  final GlobalKey<FormState> formKey;
+  final VaultSecurityController controller;
+  final TextEditingController passwordController;
+  final TextEditingController confirmationController;
+  final bool enableBiometrics;
+  final bool obscurePassword;
+  final bool obscureConfirmation;
+  final ValueChanged<bool> onEnableBiometricsChanged;
+  final VoidCallback onTogglePasswordObscure;
+  final VoidCallback onToggleConfirmationObscure;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+
+    return AppGlassSurface(
+      tint: AppGlassTint.strong,
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: Form(
+        key: formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              l10n.securityMasterPasswordTitle,
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              l10n.securityMasterPasswordDescription,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            TextFormField(
+              controller: passwordController,
+              obscureText: obscurePassword,
+              autocorrect: false,
+              enableSuggestions: false,
+              textInputAction: TextInputAction.next,
+              decoration: InputDecoration(
+                labelText: l10n.securityCreateMasterPassword,
+                prefixIcon: const Icon(Icons.password_rounded),
+                suffixIcon: IconButton(
+                  onPressed: onTogglePasswordObscure,
+                  icon: Icon(
+                    obscurePassword
+                        ? Icons.visibility_off_rounded
+                        : Icons.visibility_rounded,
+                  ),
+                ),
+              ),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return l10n.securityMasterPasswordRequired;
+                }
+                if (value.length < 12) {
+                  return l10n.securityMasterPasswordMinLength;
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: AppSpacing.md),
+            TextFormField(
+              controller: confirmationController,
+              obscureText: obscureConfirmation,
+              autocorrect: false,
+              enableSuggestions: false,
+              textInputAction: TextInputAction.done,
+              decoration: InputDecoration(
+                labelText: l10n.securityConfirmMasterPassword,
+                prefixIcon: const Icon(Icons.password_rounded),
+                suffixIcon: IconButton(
+                  onPressed: onToggleConfirmationObscure,
+                  icon: Icon(
+                    obscureConfirmation
+                        ? Icons.visibility_off_rounded
+                        : Icons.visibility_rounded,
+                  ),
+                ),
+              ),
+              validator: (value) {
+                if (value != passwordController.text) {
+                  return l10n.securityMasterPasswordMismatch;
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            _Checklist(items: [
+              l10n.securityChecklistHash,
+              l10n.securityChecklistDerive,
+              l10n.securityChecklistEncrypt,
+            ]),
+            const SizedBox(height: AppSpacing.md),
+            Material(
+              type: MaterialType.transparency,
+              child: SwitchListTile.adaptive(
+                contentPadding: EdgeInsets.zero,
+                value: enableBiometrics,
+                onChanged: controller.canOfferBiometricToggle
+                    ? onEnableBiometricsChanged
+                    : null,
+                title: Text(
+                  l10n.securityEnableBiometrics,
+                  style: theme.textTheme.titleSmall,
+                ),
+                subtitle: Text(
+                  controller.canOfferBiometricToggle
+                      ? l10n.securityBiometricAvailable(
+                          controller.biometricAvailability.label,
+                        )
+                      : l10n.securityBiometricUnavailable,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ),
+            if (controller.message case final message?) ...[
+              const SizedBox(height: AppSpacing.sm),
+              AppBanner(
+                message: message,
+                tone: _bannerToneFor(controller.message),
+                icon: controller.messageIsError == true
+                    ? Icons.error_outline_rounded
+                    : Icons.info_outline_rounded,
+              ),
+            ],
+            const SizedBox(height: AppSpacing.lg),
+            FilledButton.icon(
+              onPressed: controller.busy ? null : _submit,
+              icon: controller.busy
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.shield_rounded),
+              label: Text(l10n.securityCreateSecureAccess),
             ),
           ],
         ),
@@ -311,21 +673,39 @@ class _OnboardingScreenState extends State<_OnboardingScreen> {
     );
   }
 
-  Future<void> _submit() async {
-    final created = await widget.controller.createMasterPassword(
-      password: _passwordController.text,
-      confirmation: _confirmationController.text,
-      enableBiometrics: _enableBiometrics,
-    );
+  AppBannerTone _bannerToneFor(String? message) {
+    if (message == null) return AppBannerTone.info;
+    final lower = message.toLowerCase();
+    if (lower.contains('error') || lower.contains('fail') || lower.contains('inv')) {
+      return AppBannerTone.danger;
+    }
+    return AppBannerTone.info;
+  }
 
-    if (created && mounted) {
-      FocusScope.of(context).unfocus();
+  Future<void> _submit() async {
+    if (!(formKey.currentState?.validate() ?? false)) {
+      return;
+    }
+    final created = await controller.createMasterPassword(
+      password: passwordController.text,
+      confirmation: confirmationController.text,
+      enableBiometrics: enableBiometrics,
+    );
+    if (created) {
+      // Unfocus the password field by grabbing the current focus
+      // node from the active element. We don't carry a context
+      // through the async gap, so we just clear focus globally.
+      FocusManager.instance.primaryFocus?.unfocus();
     }
   }
 }
 
+// ---------------------------------------------------------------------------
+// Unlock
+// ---------------------------------------------------------------------------
+
 class _UnlockScreen extends StatefulWidget {
-  const _UnlockScreen({required this.controller});
+  const _UnlockScreen({super.key, required this.controller});
 
   final VaultSecurityController controller;
 
@@ -336,25 +716,12 @@ class _UnlockScreen extends StatefulWidget {
 class _UnlockScreenState extends State<_UnlockScreen> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
-  // Whether the unlock screen should *render* the biometric button.
-  // The button is offered whenever biometrics are enabled and the
-  // device supports them — even if the envelope is not yet on disk.
-  // The unlock itself can still fail with a clear message, and the
-  // user is no longer left wondering why the button disappeared.
   bool _canOfferBiometricButton = false;
   String? _biometricStatusMessage;
-  // Rich platform capability, used to render a "Set up biometrics"
-  // CTA when the device lost its enrollment between launches.
   NativeBiometricCapability _biometricCapability =
       NativeBiometricCapability.empty;
   bool _enrollingBiometric = false;
   bool _settingUpBiometric = false;
-  // Cached view of [VaultSecurityController.isBiometricEnvelopeEnrolled].
-  // Refreshed by [_refreshBiometricUnlockAvailability] so the
-  // "Activar desbloqueo biometrico" CTA renders in the right
-  // place: the CTA must appear whenever the device has biometrics
-  // available AND the user has the preference on (or the device
-  // does) but the wrapped-DEK envelope is not on disk yet.
   bool _envelopeEnrolled = false;
 
   @override
@@ -410,8 +777,6 @@ class _UnlockScreenState extends State<_UnlockScreen> {
           SnackBar(content: Text(context.l10n.biometricEnrollUnavailable)),
         );
       }
-      // Re-probe a few seconds later in case the user came back from
-      // the system settings with a fresh biometric enrolled.
       await Future<void>.delayed(const Duration(seconds: 1));
       await _refreshBiometricUnlockAvailability();
     } finally {
@@ -421,10 +786,6 @@ class _UnlockScreenState extends State<_UnlockScreen> {
     }
   }
 
-  /// One-shot biometric-enrollment flow. Opens a small dialog that
-  /// asks the user to confirm the master password (without unlocking
-  /// the vault) and writes the wrapped-DEK envelope so the next
-  /// unlock can use the fingerprint button.
   Future<void> _openBiometricSetupDialog() async {
     if (_settingUpBiometric) return;
     final password = await showDialog<String>(
@@ -460,143 +821,45 @@ class _UnlockScreenState extends State<_UnlockScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final theme = Theme.of(context);
     final controller = widget.controller;
+    final isWide = MediaQuery.sizeOf(context).width >= 880;
 
-    return _SecurityScaffold(
-      child: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
-          children: [
-            _BrandHero(
-              eyebrow: l10n.securityUnlockEyebrow,
-              title: l10n.securityUnlockTitle,
-              subtitle: _canOfferBiometricButton
-                  ? l10n.securityUnlockBiometricSubtitle(
-                      controller.biometricAvailability.label,
-                    )
-                  : l10n.securityUnlockPasswordSubtitle,
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            AppPanel(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    l10n.securityProtectedAccess,
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  TextField(
-                    controller: _passwordController,
-                    obscureText: _obscurePassword,
-                    onSubmitted: (_) => _unlockWithPassword(),
-                    decoration: InputDecoration(
-                      labelText: l10n.securityMasterPasswordTitle,
-                      suffixIcon: IconButton(
-                        onPressed: () {
-                          setState(() {
-                            _obscurePassword = !_obscurePassword;
-                          });
-                        },
-                        icon: Icon(
-                          _obscurePassword
-                              ? Icons.visibility_off_rounded
-                              : Icons.visibility_rounded,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: FilledButton(
-                          onPressed: controller.busy
-                              ? null
-                              : _unlockWithPassword,
-                          child: controller.busy
-                              ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : Text(l10n.securityUnlockVault),
-                        ),
-                      ),
-                      if (_canOfferBiometricButton) ...[
-                        const SizedBox(width: AppSpacing.sm),
-                        OutlinedButton.icon(
-                          onPressed: controller.busy
-                              ? null
-                              : _unlockWithBiometrics,
-                          icon: const Icon(Icons.fingerprint_rounded),
-                          label: Text(l10n.securityBiometricButton),
-                        ),
-                      ],
-                    ],
-                  ),
-                  if (_biometricStatusMessage case final statusMessage?) ...[
-                    const SizedBox(height: AppSpacing.md),
-                    _StatusBanner(message: statusMessage),
-                  ],
-                  if (controller.message case final message?) ...[
-                    const SizedBox(height: AppSpacing.md),
-                    _StatusBanner(message: message),
-                  ],
-                  // The device has biometrics enrolled and either
-                  // (a) the user has not turned biometric unlock on
-                  // yet, or (b) the user has the preference on but
-                  // the wrapped-DEK envelope is missing on disk.
-                  // In both cases the right action is the same:
-                  // surface the one-tap setup CTA that opens a
-                  // password dialog, verifies the master password,
-                  // and writes the envelope without unlocking the
-                  // vault.
-                  if (controller.canOfferBiometricToggle &&
-                      (!widget.controller.biometricEnabled ||
-                          !_envelopeEnrolled)) ...[
-                    const SizedBox(height: AppSpacing.md),
-                    _SetupBiometricButton(
-                      label: l10n.securitySetupBiometricCta,
-                      busy: _settingUpBiometric,
-                      onPressed: _openBiometricSetupDialog,
-                    ),
-                  ],
-                  // The user enabled biometrics at some point but the
-                  // platform now reports NONE_ENROLLED — most likely
-                  // they removed their fingerprint from the device or
-                  // wiped the keystore. Show a CTA so they can re-add
-                  // it without going through Settings.
-                  if (!_canOfferBiometricButton &&
-                      widget.controller.biometricEnabled &&
-                      _biometricCapability.needsEnrollment) ...[
-                    const SizedBox(height: AppSpacing.md),
-                    _BiometricEnrollInline(
-                      title: l10n.biometricEnrollCta,
-                      actionLabel: l10n.biometricEnrollAction,
-                      busy: _enrollingBiometric,
-                      onAction: _openBiometricEnrollment,
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            AppPanel(
-              child: _SecurityChecklist(
-                items: [
-                  l10n.securityChecklistHash,
-                  l10n.securityChecklistDerive,
-                  l10n.securityChecklistEncrypt,
-                ],
-              ),
-            ),
-          ],
+    final form = _UnlockForm(
+      controller: controller,
+      passwordController: _passwordController,
+      obscurePassword: _obscurePassword,
+      canOfferBiometricButton: _canOfferBiometricButton,
+      biometricStatusMessage: _biometricStatusMessage,
+      biometricCapability: _biometricCapability,
+      envelopeEnrolled: _envelopeEnrolled,
+      enrollingBiometric: _enrollingBiometric,
+      settingUpBiometric: _settingUpBiometric,
+      onToggleObscure: () {
+        setState(() => _obscurePassword = !_obscurePassword);
+      },
+      onUnlockWithPassword: _unlockWithPassword,
+      onUnlockWithBiometrics: _unlockWithBiometrics,
+      onOpenBiometricEnrollment: _openBiometricEnrollment,
+      onOpenBiometricSetup: _openBiometricSetupDialog,
+    );
+
+    final hero = _UnlockHero(
+      eyebrow: l10n.securityUnlockEyebrow,
+      title: l10n.securityUnlockTitle,
+      subtitle: _canOfferBiometricButton
+          ? l10n.securityUnlockBiometricSubtitle(
+              controller.biometricAvailability.label,
+            )
+          : l10n.securityUnlockPasswordSubtitle,
+    );
+
+    return AppHeroBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: SafeArea(
+          child: isWide
+              ? _SplitLayout(hero: hero, form: form)
+              : _StackedLayout(hero: hero, form: form),
         ),
       ),
     );
@@ -621,58 +884,8 @@ class _UnlockScreenState extends State<_UnlockScreen> {
   }
 }
 
-class _SecurityScaffold extends StatelessWidget {
-  const _SecurityScaffold({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Scaffold(
-      body: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              theme.brightness == Brightness.dark
-                  ? const Color(0xFF0D1C28)
-                  : const Color(0xFFE2F6F1),
-              theme.scaffoldBackgroundColor,
-              theme.scaffoldBackgroundColor,
-            ],
-          ),
-        ),
-        child: Stack(
-          children: [
-            Positioned(
-              top: -90,
-              right: -30,
-              child: _GlowOrb(
-                color: AppColors.mint.withValues(alpha: 0.24),
-                size: 220,
-              ),
-            ),
-            Positioned(
-              bottom: -100,
-              left: -60,
-              child: _GlowOrb(
-                color: AppColors.ocean.withValues(alpha: 0.12),
-                size: 240,
-              ),
-            ),
-            child,
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _BrandHero extends StatelessWidget {
-  const _BrandHero({
+class _UnlockHero extends StatelessWidget {
+  const _UnlockHero({
     required this.eyebrow,
     required this.title,
     required this.subtitle,
@@ -689,56 +902,325 @@ class _BrandHero extends StatelessWidget {
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
+        Row(
+          children: [
+            const VaultaLogomark(size: 64),
+            const SizedBox(width: AppSpacing.md),
+            Text(
+              l10n.appTitle,
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w800,
+                letterSpacing: 2.0,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.xxl),
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
           decoration: BoxDecoration(
-            color: AppColors.ink,
-            borderRadius: BorderRadius.circular(999),
+            color: AppColors.crimson.withValues(alpha: 0.18),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
+            border: Border.all(
+              color: AppColors.crimson.withValues(alpha: 0.45),
+            ),
           ),
           child: Text(
             eyebrow,
-            style: theme.textTheme.labelLarge?.copyWith(
-              color: Colors.white,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: AppColors.crimsonBright,
+              letterSpacing: 1.5,
               fontWeight: FontWeight.w700,
             ),
           ),
         ),
-        const SizedBox(height: AppSpacing.md),
-        Text(
-          l10n.appTitle,
-          style: theme.textTheme.displaySmall?.copyWith(
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.sm),
+        const SizedBox(height: AppSpacing.lg),
         Text(
           title,
-          style: theme.textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.w700,
+          style: theme.textTheme.displaySmall?.copyWith(
+            fontWeight: FontWeight.w800,
+            height: 1.05,
+            letterSpacing: -0.6,
           ),
         ),
-        const SizedBox(height: AppSpacing.sm),
+        const SizedBox(height: AppSpacing.md),
         Text(
           subtitle,
-          style: theme.textTheme.bodyLarge?.copyWith(
+          style: theme.textTheme.titleMedium?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
+            height: 1.5,
           ),
+        ),
+        const SizedBox(height: AppSpacing.xl),
+        _SecurityChecklist(
+          items: [
+            _ChecklistItemData(
+              icon: Icons.fingerprint_rounded,
+              titleKey: 'Unlock with biometrics',
+              subtitleKey: 'Use the fingerprint already enrolled on this device.',
+            ),
+            _ChecklistItemData(
+              icon: Icons.password_rounded,
+              titleKey: 'Master password fallback',
+              subtitleKey: 'Always available — your recovery path if biometrics are unavailable.',
+            ),
+            _ChecklistItemData(
+              icon: Icons.timer_outlined,
+              titleKey: 'Auto-lock on background',
+              subtitleKey: 'Vault closes when the app is backgrounded or after idle.',
+            ),
+          ],
         ),
       ],
     );
   }
 }
 
-class _SecurityChecklist extends StatelessWidget {
-  const _SecurityChecklist({required this.items});
+class _UnlockForm extends StatelessWidget {
+  const _UnlockForm({
+    required this.controller,
+    required this.passwordController,
+    required this.obscurePassword,
+    required this.canOfferBiometricButton,
+    required this.biometricStatusMessage,
+    required this.biometricCapability,
+    required this.envelopeEnrolled,
+    required this.enrollingBiometric,
+    required this.settingUpBiometric,
+    required this.onToggleObscure,
+    required this.onUnlockWithPassword,
+    required this.onUnlockWithBiometrics,
+    required this.onOpenBiometricEnrollment,
+    required this.onOpenBiometricSetup,
+  });
 
+  final VaultSecurityController controller;
+  final TextEditingController passwordController;
+  final bool obscurePassword;
+  final bool canOfferBiometricButton;
+  final String? biometricStatusMessage;
+  final NativeBiometricCapability biometricCapability;
+  final bool envelopeEnrolled;
+  final bool enrollingBiometric;
+  final bool settingUpBiometric;
+  final VoidCallback onToggleObscure;
+  final VoidCallback onUnlockWithPassword;
+  final VoidCallback onUnlockWithBiometrics;
+  final VoidCallback onOpenBiometricEnrollment;
+  final VoidCallback onOpenBiometricSetup;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+
+    return AppGlassSurface(
+      tint: AppGlassTint.strong,
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            l10n.securityProtectedAccess,
+            style: theme.textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            canOfferBiometricButton
+                ? l10n.securityUnlockBiometricHint
+                : l10n.securityUnlockPasswordHint,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          TextField(
+            controller: passwordController,
+            obscureText: obscurePassword,
+            autocorrect: false,
+            enableSuggestions: false,
+            onSubmitted: (_) => onUnlockWithPassword(),
+            textInputAction: TextInputAction.go,
+            decoration: InputDecoration(
+              labelText: l10n.securityMasterPasswordTitle,
+              prefixIcon: const Icon(Icons.password_rounded),
+              suffixIcon: IconButton(
+                onPressed: onToggleObscure,
+                icon: Icon(
+                  obscurePassword
+                      ? Icons.visibility_off_rounded
+                      : Icons.visibility_rounded,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            children: [
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: controller.busy ? null : onUnlockWithPassword,
+                  icon: controller.busy
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.lock_open_rounded),
+                  label: Text(l10n.securityUnlockVault),
+                ),
+              ),
+              if (canOfferBiometricButton) ...[
+                const SizedBox(width: AppSpacing.sm),
+                SizedBox(
+                  width: 64,
+                  height: 52,
+                  child: OutlinedButton(
+                    onPressed: controller.busy ? null : onUnlockWithBiometrics,
+                    style: OutlinedButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius:
+                            BorderRadius.circular(AppSpacing.radiusMd),
+                      ),
+                      padding: EdgeInsets.zero,
+                    ),
+                    child: const Icon(Icons.fingerprint_rounded, size: 26),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          if (biometricStatusMessage != null) ...[
+            const SizedBox(height: AppSpacing.md),
+            AppBanner(
+              message: biometricStatusMessage!,
+              icon: Icons.fingerprint_rounded,
+              tone: AppBannerTone.info,
+            ),
+          ],
+          if (controller.message != null) ...[
+            const SizedBox(height: AppSpacing.md),
+            AppBanner(
+              message: controller.message!,
+              tone: controller.messageIsError == true
+                  ? AppBannerTone.danger
+                  : AppBannerTone.info,
+              icon: controller.messageIsError == true
+                  ? Icons.error_outline_rounded
+                  : Icons.info_outline_rounded,
+            ),
+          ],
+          if (controller.canOfferBiometricToggle &&
+              (!controller.biometricEnabled || !envelopeEnrolled)) ...[
+            const SizedBox(height: AppSpacing.md),
+            _SetupBiometricButton(
+              label: l10n.securitySetupBiometricCta,
+              busy: settingUpBiometric,
+              onPressed: onOpenBiometricSetup,
+            ),
+          ],
+          if (!canOfferBiometricButton &&
+              controller.biometricEnabled &&
+              biometricCapability.needsEnrollment) ...[
+            const SizedBox(height: AppSpacing.md),
+            _BiometricEnrollInline(
+              title: l10n.biometricEnrollCta,
+              actionLabel: l10n.biometricEnrollAction,
+              busy: enrollingBiometric,
+              onAction: onOpenBiometricEnrollment,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Compact "biometric is enabled but not enrolled" CTA used in the
+/// unlock screen. Single row, primary action on the right.
+class _BiometricEnrollInline extends StatelessWidget {
+  const _BiometricEnrollInline({
+    required this.title,
+    required this.actionLabel,
+    required this.busy,
+    required this.onAction,
+  });
+
+  final String title;
+  final String actionLabel;
+  final bool busy;
+  final VoidCallback onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppBanner(
+      message: title,
+      tone: AppBannerTone.warning,
+      icon: Icons.fingerprint_rounded,
+      action: FilledButton.tonalIcon(
+        onPressed: busy ? null : onAction,
+        icon: busy
+            ? const SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const Icon(Icons.open_in_new_rounded, size: 16),
+        label: Text(actionLabel),
+        style: FilledButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          minimumSize: const Size(0, 36),
+        ),
+      ),
+    );
+  }
+}
+
+/// Full-width CTA rendered on the unlock screen when the device has
+/// biometrics enrolled but the user has not turned biometric unlock
+/// on yet. Tapping it opens [_SetupBiometricDialog].
+class _SetupBiometricButton extends StatelessWidget {
+  const _SetupBiometricButton({
+    required this.label,
+    required this.busy,
+    required this.onPressed,
+  });
+
+  final String label;
+  final bool busy;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: FilledButton.tonalIcon(
+        onPressed: busy ? null : onPressed,
+        icon: busy
+            ? const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const Icon(Icons.fingerprint_rounded),
+        label: Text(label),
+      ),
+    );
+  }
+}
+
+class _Checklist extends StatelessWidget {
+  const _Checklist({required this.items});
   final List<String> items;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -773,158 +1255,9 @@ class _SecurityChecklist extends StatelessWidget {
   }
 }
 
-class _StatusBanner extends StatelessWidget {
-  const _StatusBanner({required this.message});
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: colors.surfaceContainerHighest.withValues(alpha: 0.92),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: colors.outlineVariant),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.info_outline_rounded, color: colors.onSurfaceVariant),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Text(
-              message,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: colors.onSurface,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _GlowOrb extends StatelessWidget {
-  const _GlowOrb({required this.color, required this.size});
-
-  final Color color;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    return IgnorePointer(
-      child: Container(
-        height: size,
-        width: size,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: RadialGradient(colors: [color, color.withValues(alpha: 0)]),
-        ),
-      ),
-    );
-  }
-}
-
-/// Compact "biometric is enabled but not enrolled" CTA used in the
-/// unlock screen. Different from the banner in settings_screen so
-/// it fits in the narrower unlock layout — single row, primary
-/// action on the right.
-class _BiometricEnrollInline extends StatelessWidget {
-  const _BiometricEnrollInline({
-    required this.title,
-    required this.actionLabel,
-    required this.busy,
-    required this.onAction,
-  });
-
-  final String title;
-  final String actionLabel;
-  final bool busy;
-  final VoidCallback onAction;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: colors.surfaceContainerHighest.withValues(alpha: 0.92),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: colors.outlineVariant),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.fingerprint_rounded, color: AppColors.warning),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Text(
-              title,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: colors.onSurface,
-              ),
-            ),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          FilledButton.tonalIcon(
-            onPressed: busy ? null : onAction,
-            icon: busy
-                ? const SizedBox(
-                    width: 14,
-                    height: 14,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.open_in_new_rounded, size: 18),
-            label: Text(actionLabel),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Filled-tonal CTA rendered on the unlock screen when the device
-/// has biometrics enrolled but the user has not turned biometric
-/// unlock on yet. Tapping it opens [_SetupBiometricDialog].
-class _SetupBiometricButton extends StatelessWidget {
-  const _SetupBiometricButton({
-    required this.label,
-    required this.busy,
-    required this.onPressed,
-  });
-
-  final String label;
-  final bool busy;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      child: FilledButton.tonalIcon(
-        onPressed: busy ? null : onPressed,
-        icon: busy
-            ? const SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
-            : const Icon(Icons.fingerprint_rounded),
-        label: Text(label),
-      ),
-    );
-  }
-}
-
 /// Modal dialog that asks for the master password so the controller
 /// can derive a one-shot DEK and write the wrapped-DEK envelope
-/// without unlocking the vault. Returns the entered password, or
-/// null if the user cancels.
+/// without unlocking the vault.
 class _SetupBiometricDialog extends StatefulWidget {
   const _SetupBiometricDialog();
 

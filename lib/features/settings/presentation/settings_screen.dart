@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../app/design_system/app_components.dart';
 import '../../../app/design_system/app_panel.dart';
 import '../../../app/localization/app_locale_controller.dart';
 import '../../../app/localization/l10n.dart';
@@ -81,8 +82,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           SnackBar(content: Text(context.l10n.biometricEnrollUnavailable)),
         );
       }
-      // Re-probe a few seconds later in case the user came back from
-      // the system settings with a fresh biometric enrolled.
       await Future<void>.delayed(const Duration(seconds: 1));
       await _refreshBiometricCapability();
     } finally {
@@ -108,7 +107,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (resolver == null) {
       return const [];
     }
-
     return resolver.readPendingConflicts();
   }
 
@@ -117,7 +115,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (revocationService == null) {
       return const [];
     }
-
     return revocationService.listDevices();
   }
 
@@ -141,7 +138,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (revocationService == null) {
       return;
     }
-
     if (_revocationInProgress) {
       return;
     }
@@ -191,8 +187,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         await _handleCurrentDeviceRevocation(
           context,
           status: DeviceSessionStatus.revokedDevice,
-          lockReason:
-              'Esta sesion se revoco en este dispositivo. Vaulta se bloqueo por seguridad.',
+          lockReason: context.l10n.settingsCurrentDeviceRevokedBody,
         );
         return;
       }
@@ -209,7 +204,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (!context.mounted) {
         return;
       }
-
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(context.l10n.settingsRevokeDeviceError)),
       );
@@ -277,7 +271,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (revocationService == null) {
       return;
     }
-
     if (_revocationInProgress) {
       return;
     }
@@ -301,13 +294,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (!context.mounted) {
         return;
       }
-
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'We could not revoke other sessions. Please retry in a few seconds.',
-          ),
-        ),
+        SnackBar(content: Text(context.l10n.settingsRevokeOthersFailed)),
       );
     } finally {
       if (mounted) {
@@ -332,7 +320,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (date == null) {
       return l10n.settingsDeviceNeverSeen;
     }
-
     return DateFormat.yMMMd(
       Localizations.localeOf(context).toLanguageTag(),
     ).add_Hm().format(date.toLocal());
@@ -393,9 +380,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
     ];
 
     return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(title: Text(l10n.settingsTitle)),
       body: ListView(
-        padding: const EdgeInsets.all(AppSpacing.md),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          AppSpacing.md,
+          AppSpacing.lg,
+          AppSpacing.xxxl,
+        ),
         children: [
           AppPanel(
             child: AnimatedBuilder(
@@ -407,13 +400,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     Text(
                       l10n.settingsLocalUnlockPostureTitle,
                       style: theme.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
-                    const SizedBox(height: AppSpacing.sm),
+                    const SizedBox(height: AppSpacing.xs),
                     Text(
                       l10n.settingsLocalUnlockPostureDescription,
-                      style: theme.textTheme.bodyLarge?.copyWith(
+                      style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
@@ -476,7 +469,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     .setAutoLockOnBackgroundEnabled(value);
                               },
                         title: Text(l10n.settingsAutoLockBackgroundTitle),
-                        subtitle: Text(l10n.settingsAutoLockBackgroundSubtitle),
+                        subtitle: Text(
+                          l10n.settingsAutoLockBackgroundSubtitle,
+                        ),
                       ),
                     ),
                     const SizedBox(height: AppSpacing.sm),
@@ -510,42 +505,42 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               );
                             },
                     ),
-                    const SizedBox(height: AppSpacing.sm),
-                    FilledButton.icon(
-                      onPressed: securityController.busy
-                          ? null
-                          : securityController.lock,
-                      icon: const Icon(Icons.lock_rounded),
-                      label: Text(l10n.settingsLockNow),
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    OutlinedButton.icon(
-                      onPressed: securityController.busy
-                          ? null
-                          : () {
-                              _openChangeMasterPasswordDialog(context);
-                            },
-                      icon: const Icon(Icons.password_rounded),
-                      label: Text(l10n.settingsChangeMasterPassword),
+                    const SizedBox(height: AppSpacing.md),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: FilledButton.icon(
+                            onPressed: securityController.busy
+                                ? null
+                                : securityController.lock,
+                            icon: const Icon(Icons.lock_rounded),
+                            label: Text(l10n.settingsLockNow),
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: securityController.busy
+                                ? null
+                                : () {
+                                    _openChangeMasterPasswordDialog(context);
+                                  },
+                            icon: const Icon(Icons.password_rounded),
+                            label: Text(l10n.settingsChangeMasterPassword),
+                          ),
+                        ),
+                      ],
                     ),
                     if (securityController.message case final message?) ...[
-                      const SizedBox(height: AppSpacing.sm),
-                      Container(
-                        padding: const EdgeInsets.all(AppSpacing.md),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.surfaceContainerHighest
-                              .withValues(alpha: 0.92),
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(
-                            color: theme.colorScheme.outlineVariant,
-                          ),
-                        ),
-                        child: Text(
-                          message,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onSurface,
-                          ),
-                        ),
+                      const SizedBox(height: AppSpacing.md),
+                      AppBanner(
+                        message: message,
+                        tone: securityController.messageIsError
+                            ? AppBannerTone.danger
+                            : AppBannerTone.info,
+                        icon: securityController.messageIsError
+                            ? Icons.error_outline_rounded
+                            : Icons.info_outline_rounded,
                       ),
                     ],
                   ],
@@ -568,20 +563,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         children: [
                           Expanded(
                             child: Text(
-                              'Sync conflicts',
+                              l10n.settingsConflictsTitle,
                               style: theme.textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.w700,
+                                fontWeight: FontWeight.w800,
                               ),
                             ),
                           ),
                           IconButton(
-                            tooltip: 'Refresh',
+                            tooltip: l10n.settingsConflictsRefresh,
                             onPressed: _refreshConflicts,
                             icon: const Icon(Icons.refresh_rounded),
                           ),
                         ],
                       ),
-                      const SizedBox(height: AppSpacing.sm),
+                      const SizedBox(height: AppSpacing.xs),
                       if (snapshot.connectionState != ConnectionState.done)
                         const Padding(
                           padding: EdgeInsets.symmetric(
@@ -591,7 +586,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         )
                       else if (conflicts.isEmpty)
                         Text(
-                          'No pending conflicts. Sync queue is clean.',
+                          l10n.settingsConflictsEmpty,
                           style: theme.textTheme.bodyLarge?.copyWith(
                             color: theme.colorScheme.onSurfaceVariant,
                           ),
@@ -648,15 +643,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       if (!mounted) {
                         return;
                       }
-
                       final status = currentDevice!.status;
                       final reason = switch (status) {
                         DeviceSessionStatus.revokedAll =>
-                          'Todas las sesiones se revocaron para esta cuenta. Vaulta se bloqueo por seguridad.',
-                        _ =>
-                          'Esta sesion se revoco en este dispositivo. Vaulta se bloqueo por seguridad.',
+                          l10n.settingsRevokedAllBody,
+                        _ => l10n.settingsCurrentDeviceRevokedBody,
                       };
-
                       _handleCurrentDeviceRevocation(
                         context,
                         status: status,
@@ -674,7 +666,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             child: Text(
                               l10n.settingsSessionsTitle,
                               style: theme.textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.w700,
+                                fontWeight: FontWeight.w800,
                               ),
                             ),
                           ),
@@ -685,7 +677,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: AppSpacing.sm),
+                      const SizedBox(height: AppSpacing.xs),
                       Text(
                         l10n.settingsSessionsSubtitle,
                         style: theme.textTheme.bodyMedium?.copyWith(
@@ -739,7 +731,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 l10n.settingsSessionStatusRevoked,
                             revokingInProgress: _revocationInProgress,
                             currentDeviceRevocationHint:
-                                'If you revoke this device, Vaulta will lock immediately.',
+                                l10n.settingsDeviceRevokeHint,
                             onRevoke: device.isRevoked
                                 ? null
                                 : () {
@@ -771,10 +763,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 Text(
                   l10n.settingsRoadmapTitle,
                   style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
-                const SizedBox(height: AppSpacing.sm),
+                const SizedBox(height: AppSpacing.xs),
                 Text(
                   l10n.settingsRoadmapNotes,
                   style: theme.textTheme.bodyLarge?.copyWith(
@@ -819,10 +811,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     Text(
                       l10n.languageSectionTitle,
                       style: theme.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
-                    const SizedBox(height: AppSpacing.sm),
+                    const SizedBox(height: AppSpacing.xs),
                     DropdownButtonFormField<Locale>(
                       key: ValueKey<String>(
                         localeController.locale?.languageCode ?? 'es',
@@ -868,7 +860,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         return preset;
       }
     }
-
     return presets[2];
   }
 }
@@ -879,7 +870,6 @@ class _IdleTimeoutPreset {
     required this.label,
     required this.description,
   });
-
   final int seconds;
   final String label;
   final String description;
@@ -902,14 +892,17 @@ class _SyncConflictCard extends StatelessWidget {
     final expectedVersion = conflict.expectedVersion?.toString() ?? 'unknown';
     final remoteVersion = conflict.currentVersion?.toString() ?? 'unknown';
     final subtitle =
-        conflict.message ?? 'CAS conflict detected while pushing mutation.';
+        conflict.message ?? context.l10n.settingsConflictsReasonFallback;
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
-        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+        color: AppColors.warning.withValues(alpha: 0.10),
+        border: Border.all(
+          color: AppColors.warning.withValues(alpha: 0.35),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -917,7 +910,7 @@ class _SyncConflictCard extends StatelessWidget {
           Row(
             children: [
               const Icon(Icons.sync_problem_rounded, color: AppColors.warning),
-              const SizedBox(width: 8),
+              const SizedBox(width: AppSpacing.xs),
               Expanded(
                 child: Text(
                   conflict.localRecordId,
@@ -928,16 +921,16 @@ class _SyncConflictCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: AppSpacing.xs),
           Text(
             subtitle,
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.xs),
           Text(
-            'Local base v$expectedVersion - Remote v$remoteVersion',
+            context.l10n.settingsConflictsVersionRow(expectedVersion, remoteVersion),
             style: theme.textTheme.labelLarge,
           ),
           const SizedBox(height: AppSpacing.sm),
@@ -1003,8 +996,11 @@ class _DeviceSessionCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
-        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+        color: AppColors.crimson.withValues(alpha: 0.06),
+        border: Border.all(
+          color: AppColors.crimson.withValues(alpha: 0.20),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1019,35 +1015,36 @@ class _DeviceSessionCard extends StatelessWidget {
                   ),
                 ),
               ),
-              _SessionStatusBadge(
+              AppPill(
                 label: revoked ? statusRevokedLabel : statusActiveLabel,
-                revoked: revoked,
+                tint: revoked ? AppPillTint.danger : AppPillTint.success,
+                compact: true,
               ),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: AppSpacing.xs),
           Text(
             subtitle,
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.xs),
           Text(seenAtLabel, style: theme.textTheme.labelLarge),
           const SizedBox(height: 4),
           Text(
-            'status: $statusCode',
+            context.l10n.settingsDeviceStatusLabel(statusCode),
             style: theme.textTheme.labelLarge?.copyWith(
               fontFamily: 'monospace',
               color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
           if (currentLabel case final label?) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.xs),
             Text(
               label,
               style: theme.textTheme.labelLarge?.copyWith(
-                color: theme.colorScheme.primary,
+                color: AppColors.crimsonBright,
               ),
             ),
             if (onRevoke != null) ...[
@@ -1077,54 +1074,36 @@ class _DeviceSessionCard extends StatelessWidget {
   }
 }
 
-class _SessionStatusBadge extends StatelessWidget {
-  const _SessionStatusBadge({required this.label, required this.revoked});
-
-  final String label;
-  final bool revoked;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = revoked ? AppColors.warning : AppColors.success;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-          color: color,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
-  }
-}
-
 class _CapabilityRow extends StatelessWidget {
   const _CapabilityRow({required this.title, required this.enabled});
-
   final String title;
   final bool enabled;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final color = enabled ? AppColors.success : theme.colorScheme.onSurfaceVariant;
 
     return Padding(
       padding: const EdgeInsets.only(top: AppSpacing.sm),
       child: Row(
         children: [
-          Icon(
-            enabled
-                ? Icons.verified_user_rounded
-                : Icons.radio_button_unchecked,
-            color: enabled ? Colors.green : theme.colorScheme.onSurfaceVariant,
+          Container(
+            width: 24,
+            height: 24,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.18),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+            ),
+            child: Icon(
+              enabled
+                  ? Icons.verified_user_rounded
+                  : Icons.radio_button_unchecked,
+              size: 14,
+              color: color,
+            ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: AppSpacing.sm),
           Expanded(child: Text(title, style: theme.textTheme.titleMedium)),
         ],
       ),
@@ -1134,7 +1113,6 @@ class _CapabilityRow extends StatelessWidget {
 
 class _ChangeMasterPasswordDialog extends StatefulWidget {
   const _ChangeMasterPasswordDialog({required this.controller});
-
   final VaultSecurityController controller;
 
   @override
@@ -1242,23 +1220,10 @@ class _ChangeMasterPasswordDialogState
                 ),
                 if (_formFeedback case final feedback?) ...[
                   const SizedBox(height: AppSpacing.sm),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(AppSpacing.sm),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surfaceContainerHighest
-                          .withValues(alpha: 0.92),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: theme.colorScheme.outlineVariant,
-                      ),
-                    ),
-                    child: Text(
-                      feedback,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurface,
-                      ),
-                    ),
+                  AppBanner(
+                    message: feedback,
+                    tone: AppBannerTone.danger,
+                    icon: Icons.error_outline_rounded,
                   ),
                 ],
               ],
@@ -1337,57 +1302,24 @@ class _BiometricEnrollBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest.withValues(
-          alpha: 0.92,
+    return AppBanner(
+      message: '$title\n$subtitle',
+      tone: AppBannerTone.warning,
+      icon: Icons.fingerprint_rounded,
+      action: FilledButton.icon(
+        onPressed: busy ? null : onAction,
+        icon: busy
+            ? const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const Icon(Icons.open_in_new_rounded, size: 18),
+        label: Text(actionLabel),
+        style: FilledButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          minimumSize: const Size(0, 40),
         ),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: theme.colorScheme.outlineVariant),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.fingerprint_rounded, color: AppColors.warning),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Text(
-                  title,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            subtitle,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: FilledButton.icon(
-              onPressed: busy ? null : onAction,
-              icon: busy
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.open_in_new_rounded),
-              label: Text(actionLabel),
-            ),
-          ),
-        ],
       ),
     );
   }

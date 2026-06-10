@@ -2,21 +2,14 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../../app/design_system/app_components.dart';
 import '../../../app/design_system/app_panel.dart';
+import '../../../app/localization/l10n.dart';
+import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../core/update/update_service.dart';
+import '../../../l10n/app_localizations.dart';
 
-/// Settings section for over-the-air updates.
-///
-/// The user can tap "Buscar actualizaciones" at any time to query
-/// the GitHub Releases API via the native `UpdateChannel`. When an
-/// update is found we render a compact changelog and a single
-/// "Descargar e instalar" button that streams the APK and hands it
-/// off to the system installer. No data leaves the device: the
-/// update check is a GET against the public Releases endpoint, the
-/// download goes to the app's private files dir, and the
-/// installation is a regular `ACTION_VIEW` against the package
-/// archive MIME.
 class UpdateSection extends StatefulWidget {
   const UpdateSection({super.key, required this.service});
 
@@ -98,16 +91,11 @@ class _UpdateSectionState extends State<UpdateSection> {
       if (!ok) {
         setState(() {
           _state = _UpdateState.failed;
-          _errorMessage =
-              'No pudimos abrir el instalador del sistema. '
-              'Verifica que "Fuentes desconocidas" este habilitado.';
+          _errorMessage = context.l10n.updateInstallerFailed;
         });
         return;
       }
       await widget.service.markBuildPrompted(info);
-      // The system installer is now in charge. The user confirms
-      // there and the new APK replaces the running one — at which
-      // point this widget is gone.
       setState(() => _state = _UpdateState.idle);
     } catch (error) {
       if (!mounted) return;
@@ -121,89 +109,84 @@ class _UpdateSectionState extends State<UpdateSection> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
     return AppPanel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Actualizaciones',
+            l10n.updateTitle,
             style: theme.textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w800,
             ),
           ),
-          const SizedBox(height: AppSpacing.sm),
+          const SizedBox(height: AppSpacing.xs),
           _VersionRow(
-            label: 'Instalada',
+            label: l10n.updateInstalled,
             value: _currentVersion,
             highlighted: _state == _UpdateState.upToDate,
           ),
           if (_info != null && (_info!.tagName.isNotEmpty)) ...[
-            const SizedBox(height: AppSpacing.xs),
+            const SizedBox(height: AppSpacing.xxs),
             _VersionRow(
-              label: 'Remota',
-              value: '${_info!.tagName} (release #${_info!.releaseId})',
+              label: l10n.updateRemote,
+              value:
+                  '${_info!.tagName} (${l10n.updateReleaseId(_info!.releaseId)})',
               highlighted: _state == _UpdateState.updateAvailable,
             ),
           ],
           const SizedBox(height: AppSpacing.sm),
           Text(
-            'Las nuevas versiones se publican automaticamente cuando '
-            'hay un push a master. Toca el boton para comprobar si '
-            'hay una version mas reciente sin desinstalar la app.',
+            l10n.updateDescription,
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
           const SizedBox(height: AppSpacing.md),
-          _buildAction(theme),
-          // Surface every terminal state explicitly so the user
-          // never has to guess whether "no button change" means
-          // "still working", "up to date", or "silently failed".
+          _buildAction(theme, l10n),
           if (_state == _UpdateState.upToDate) ...[
             const SizedBox(height: AppSpacing.md),
-            const _UpToDateBanner(),
+            _UpToDateBanner(),
           ],
           if (_state == _UpdateState.updateAvailable && _info != null) ...[
             const SizedBox(height: AppSpacing.md),
             _UpdateAvailablePanel(info: _info!),
           ],
-          if (_state == _UpdateState.failed) ...[
-            if (_errorMessage != null) ...[
-              const SizedBox(height: AppSpacing.md),
-              _ErrorBanner(message: _errorMessage!),
-            ],
+          if (_state == _UpdateState.failed && _errorMessage != null) ...[
+            const SizedBox(height: AppSpacing.md),
+            _ErrorBanner(message: _errorMessage!),
           ],
         ],
       ),
     );
   }
 
-  Widget _buildAction(ThemeData theme) {
+  Widget _buildAction(ThemeData theme, AppLocalizations l10n) {
     switch (_state) {
       case _UpdateState.idle:
       case _UpdateState.upToDate:
         return FilledButton.icon(
           onPressed: _checkForUpdate,
           icon: const Icon(Icons.refresh_rounded),
-          label: const Text('Buscar actualizaciones'),
+          label: Text(l10n.updateCheck),
         );
       case _UpdateState.checking:
-        return const _BusyButton(label: 'Buscando...');
+        return _BusyButton(label: l10n.updateChecking);
       case _UpdateState.updateAvailable:
         return FilledButton.icon(
           onPressed: _downloadAndInstall,
           icon: const Icon(Icons.download_rounded),
-          label: const Text('Descargar e instalar'),
+          label: Text(l10n.updateDownload),
         );
       case _UpdateState.downloading:
-        return const _BusyButton(label: 'Descargando APK...');
+        return _BusyButton(label: l10n.updateDownloading);
       case _UpdateState.installing:
-        return const _BusyButton(label: 'Abriendo instalador...');
+        return _BusyButton(label: l10n.updateInstalling);
       case _UpdateState.failed:
         return FilledButton.icon(
           onPressed: _checkForUpdate,
           icon: const Icon(Icons.refresh_rounded),
-          label: const Text('Reintentar'),
+          label: Text(l10n.updateRetry),
         );
     }
   }
@@ -211,7 +194,6 @@ class _UpdateSectionState extends State<UpdateSection> {
 
 class _BusyButton extends StatelessWidget {
   const _BusyButton({required this.label});
-
   final String label;
 
   @override
@@ -228,11 +210,6 @@ class _BusyButton extends StatelessWidget {
   }
 }
 
-/// One row in the version table. The "highlighted" flag colours the
-/// value cell (green for the installed version when the device is
-/// up-to-date, primary for the remote version when an update is
-/// waiting). The label is always muted so the value carries the
-/// signal.
 class _VersionRow extends StatelessWidget {
   const _VersionRow({
     required this.label,
@@ -262,9 +239,9 @@ class _VersionRow extends StatelessWidget {
           child: Text(
             value,
             style: theme.textTheme.bodyLarge?.copyWith(
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w700,
               color: highlighted
-                  ? theme.colorScheme.primary
+                  ? AppColors.crimsonBright
                   : theme.colorScheme.onSurface,
             ),
           ),
@@ -276,32 +253,35 @@ class _VersionRow extends StatelessWidget {
 
 class _UpdateAvailablePanel extends StatelessWidget {
   const _UpdateAvailablePanel({required this.info});
-
   final UpdateInfo info;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
     final changelog = info.changelog.trim();
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: theme.colorScheme.primaryContainer.withValues(alpha: 0.4),
-        borderRadius: BorderRadius.circular(18),
+        color: AppColors.crimson.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+        border: Border.all(
+          color: AppColors.crimson.withValues(alpha: 0.35),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(
+              const Icon(
                 Icons.system_update_alt_rounded,
-                color: theme.colorScheme.primary,
+                color: AppColors.crimsonBright,
               ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Text(
-                  'Nueva version ${info.tagName}',
+                  l10n.updateAvailableVersion(info.tagName),
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
@@ -326,88 +306,59 @@ class _UpdateAvailablePanel extends StatelessWidget {
   }
 }
 
-/// Full-width success banner shown when the device is running the
-/// same build the server has. The user gets a clear "ya estás al
-/// día" signal so a no-op button tap is never confused with a
-/// broken button.
 class _UpToDateBanner extends StatelessWidget {
-  const _UpToDateBanner();
-
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.tertiaryContainer.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            Icons.check_circle_rounded,
-            color: theme.colorScheme.onTertiaryContainer,
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Text(
-              'Ya estas al dia. La version instalada coincide con la '
-              'ultima publicada en master.',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onTertiaryContainer,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
+    final l10n = context.l10n;
+    return AppBanner(
+      tone: AppBannerTone.success,
+      icon: Icons.check_circle_outline_rounded,
+      message: '${l10n.updateUpToDateTitle} - ${l10n.updateUpToDateBody}',
     );
   }
 }
 
-/// Full-width error banner with monospace message + copy button.
-/// The user can grab the raw error text in one tap and paste it
-/// into a chat — much more useful than a truncated one-liner.
 class _ErrorBanner extends StatelessWidget {
   const _ErrorBanner({required this.message});
-
   final String message;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: theme.colorScheme.errorContainer,
-        borderRadius: BorderRadius.circular(18),
+        color: AppColors.danger.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+        border: Border.all(color: AppColors.danger.withValues(alpha: 0.35)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(
+              const Icon(
                 Icons.error_outline_rounded,
-                color: theme.colorScheme.onErrorContainer,
+                color: AppColors.danger,
               ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Text(
-                  'No pudimos comprobar actualizaciones',
+                  l10n.updateErrorTitle,
                   style: theme.textTheme.titleSmall?.copyWith(
-                    color: theme.colorScheme.onErrorContainer,
-                    fontWeight: FontWeight.w700,
+                    color: AppColors.danger,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.sm),
+          const SizedBox(height: AppSpacing.xs),
           SelectableText(
             message,
             style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onErrorContainer,
+              color: theme.colorScheme.onSurface,
               fontFamily: 'monospace',
             ),
           ),
