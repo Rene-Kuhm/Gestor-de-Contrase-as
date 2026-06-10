@@ -1,10 +1,22 @@
-# Vaulta
+<p align="center">
+  <img src="docs/publication/vaulta-hero.png" alt="Vaulta - gestor de contrasenas cifrado por TecnoDespegue" width="100%">
+</p>
 
-**Gestor de contrasenas cifrado, offline-first y multiplataforma.**
+<h1 align="center">Vaulta</h1>
+
+<p align="center">
+  <strong>Gestor de contrasenas cifrado, offline-first y listo para Android.</strong>
+</p>
+
+<p align="center">
+  <a href="https://github.com/Rene-Kuhm/Gestor-de-Contrase-as/releases/download/dev-latest/vaulta.apk">Descargar APK</a>
+  ·
+  <a href="https://github.com/Rene-Kuhm/Gestor-de-Contrase-as/releases/tag/dev-latest">Ver release</a>
+  ·
+  <a href="https://www.tecnodespegue.com/">TecnoDespegue</a>
+</p>
 
 Vaulta es una aplicacion desarrollada por [TecnoDespegue](https://www.tecnodespegue.com/) para proteger credenciales sensibles con una experiencia moderna, rapida y preparada para Android. El proyecto combina Flutter, Material 3, cifrado local real, desbloqueo biometrico en Android y un canal de actualizaciones firmado desde GitHub Releases.
-
-[Descargar APK](https://github.com/Rene-Kuhm/Gestor-de-Contrase-as/releases/download/dev-latest/vaulta.apk) · [Ver release](https://github.com/Rene-Kuhm/Gestor-de-Contrase-as/releases/tag/dev-latest) · [TecnoDespegue](https://www.tecnodespegue.com/)
 
 ## Vision
 
