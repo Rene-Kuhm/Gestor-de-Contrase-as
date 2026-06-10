@@ -1,12 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Modify this file to customize your launch splash screen -->
+<!--
+  Pre-Android-12 splash background. Solid Vaulta crimson so the
+  flash between the launch icon and the first frame of the
+  security gate stays on brand. The Dart `_OnboardingHero` then
+  paints the same crimson gradient with the lock-V glyph on top.
+-->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:drawable="@android:color/white" />
-
-    <!-- You can insert your own image assets here -->
-    <!-- <item>
-        <bitmap
-            android:gravity="center"
-            android:src="@mipmap/launch_image" />
-    </item> -->
+    <item android:drawable="@color/vaulta_crimson" />
 </layer-list>

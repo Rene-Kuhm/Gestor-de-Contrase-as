@@ -1,12 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Biometric prompt copy surfaced by MainActivity.kt.
-         The prompt authenticator set is BIOMETRIC_STRONG or DEVICE_CREDENTIAL,
-         so the system draws its own fallback button ("Use PIN" / "Use pattern").
-         setNegativeButtonText is therefore intentionally NOT used. -->
-    <string name="vaulta_biometric_prompt_title">Desbloquear Vaulta</string>
-    <string name="vaulta_biometric_prompt_subtitle">Confirma tu identidad para recuperar tu sesion</string>
-    <string name="vaulta_biometric_prompt_description">La biometria protege la clave que cifra tu vault.</string>
+         The prompt authenticator set is BIOMETRIC_STRONG (no
+         DEVICE_CREDENTIAL fallback), so we render our own
+         negative button labelled "Use master password" so the
+         user always has an explicit recovery path. -->
+    <string name="vaulta_biometric_prompt_title">Unlock Vaulta</string>
+    <string name="vaulta_biometric_prompt_subtitle">Confirm your identity to recover your session</string>
+    <string name="vaulta_biometric_prompt_description">Biometric authentication protects the key that encrypts your vault.</string>
+    <string name="vaulta_biometric_prompt_negative">Use master password</string>
 
     <!-- Per-error code messages returned through MethodChannel. The Dart
          side has its own i18n for the user-facing message, but the native

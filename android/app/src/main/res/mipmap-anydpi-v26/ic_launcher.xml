@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Adaptive launcher icon manifest (Android 8.0+, API 26+). The
+  Android system composites the background and foreground at
+  runtime and the launcher applies the mask (round, squircle,
+  teardrop, etc.) on top.
+
+  For pre-Android-8 devices we fall back to the legacy
+  `mipmap-*/ic_launcher.png` files in each density bucket.
+-->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@drawable/ic_launcher_background" />
+    <foreground android:drawable="@drawable/ic_launcher_foreground" />
+</adaptive-icon>

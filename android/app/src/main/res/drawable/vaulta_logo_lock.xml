@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Brand mark for Vaulta — the same lock-V glyph the Dart logomark
+  draws, packaged as a vector drawable so we can use it in the
+  BiometricPrompt, the adaptive launcher icon foreground, and the
+  in-app surfaces that want a "lock" affordance.
+
+  The shape mirrors `VaultaLogomark` in lib/app/design_system so
+  every visible surface reads as the same brand. The body is the
+  crimson accent (#9B1B1F), the shackle is paper (#F5F2EA), and
+  the keyhole / bar are the gold accent (#F2C70F).
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="120"
+    android:viewportHeight="120">
+
+    <!-- Body of the lock -->
+    <path
+        android:fillColor="#9B1B1F"
+        android:pathData="M 36 52 L 30 58 L 30 100 L 90 100 L 90 58 L 84 52 Z" />
+
+    <!-- Shackle in the V shape that names the brand -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#F5F2EA"
+        android:strokeWidth="7"
+        android:strokeLineCap="square"
+        android:strokeLineJoin="miter"
+        android:pathData="M 42 52 L 42 30 L 60 48 L 78 30 L 78 52" />
+
+    <!-- Gold bar (the lock's "key slot") -->
+    <path
+        android:fillColor="#F2C70F"
+        android:pathData="M 40 70 L 80 70 L 80 72.5 L 40 72.5 Z" />
+
+    <!-- Gold keyhole -->
+    <path
+        android:fillColor="#F2C70F"
+        android:pathData="M 56 78 L 64 78 L 64 86 L 56 86 Z" />
+</vector>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Brand color tokens referenced from the splash background, the
+      adaptive launcher icon, and the biometric prompt logo. Kept in
+      sync with the `crimson` constant in
+      lib/app/theme/app_colors.dart so the in-app surfaces and the
+      platform chrome agree on the same red.
+    -->
+    <color name="vaulta_crimson">#9B1B1F</color>
+    <color name="vaulta_crimson_deep">#7A0A0E</color>
+    <color name="vaulta_paper">#F5F2EA</color>
+    <color name="vaulta_gold">#F2C70F</color>
+    <color name="vaulta_ink">#0A0A0C</color>
+</resources>

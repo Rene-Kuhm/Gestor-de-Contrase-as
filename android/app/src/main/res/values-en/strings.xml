@@ -1,13 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- English overrides for the BiometricPrompt copy. The default
+         values/strings.xml is bilingual-on-purpose so the prompt
+         remains useful when the system picks a locale that does
+         not match the Dart ARB; here we localize the platform
+         chrome for English-speaking users. -->
     <string name="vaulta_biometric_prompt_title">Unlock Vaulta</string>
     <string name="vaulta_biometric_prompt_subtitle">Confirm your identity to recover your session</string>
-    <string name="vaulta_biometric_prompt_description">Biometrics protects the key that encrypts your vault.</string>
+    <string name="vaulta_biometric_prompt_description">Biometric authentication protects the key that encrypts your vault.</string>
+    <string name="vaulta_biometric_prompt_negative">Use master password</string>
 
     <string name="vaulta_biometric_error_no_hardware">This device has no biometric hardware.</string>
-    <string name="vaulta_biometric_error_hw_unavailable">Biometric hardware is temporarily unavailable. Please retry in a few seconds.</string>
-    <string name="vaulta_biometric_error_none_enrolled">No biometrics enrolled on this device. Set one up in Settings.</string>
-    <string name="vaulta_biometric_error_security_update_required">A critical OS security update is required before biometrics can be used.</string>
+    <string name="vaulta_biometric_error_hw_unavailable">The biometric hardware is temporarily unavailable. Retry in a few seconds.</string>
+    <string name="vaulta_biometric_error_none_enrolled">No biometrics are enrolled on this device. Configure them in Settings.</string>
+    <string name="vaulta_biometric_error_security_update_required">A critical system security update is required. Biometrics are unavailable.</string>
     <string name="vaulta_biometric_error_unsupported">Your device does not support the biometric verification required by Vaulta.</string>
-    <string name="vaulta_biometric_error_unknown">We could not verify your identity. Retry or use the master password.</string>
+    <string name="vaulta_biometric_error_unknown">We could not verify your identity. Retry or use your master password.</string>
 </resources>
