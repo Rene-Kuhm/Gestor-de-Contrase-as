@@ -179,6 +179,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsConflictsRefresh => 'Refresh';
 
   @override
+  String get settingsConflictsLoadError => 'We could not load sync conflicts. Please retry.';
+
+  @override
+  String get settingsSessionsLoadError => 'We could not load device sessions. Please retry.';
+
+  @override
   String get settingsConflictsKindConflict => 'Conflict';
 
   @override
@@ -606,6 +612,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get syncConflictsEmpty => 'No pending conflicts. Everything is in sync.';
+
+  @override
+  String get syncConflictsLoadError => 'We could not load pending conflicts. Please retry.';
+
+  @override
+  String get syncConflictResolveError => 'We could not resolve this conflict. Please retry.';
 
   @override
   String syncConflictsBannerLabel(int count) {

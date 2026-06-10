@@ -54,6 +54,12 @@ class _SyncConflictsSheetState extends State<_SyncConflictsSheet> {
         conflictId: conflictId,
         resolution: resolution,
       );
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.l10n.syncConflictResolveError)),
+        );
+      }
     } finally {
       if (mounted) {
         setState(() {
@@ -156,16 +162,21 @@ class _SyncConflictsSheetState extends State<_SyncConflictsSheet> {
                   ),
                 ),
               ),
-              Divider(
-                color: theme.colorScheme.outlineVariant,
-                height: 1,
-              ),
+              Divider(color: theme.colorScheme.outlineVariant, height: 1),
               Expanded(
                 child: FutureBuilder<List<SyncConflictRecord>>(
                   future: _future,
                   builder: (context, snapshot) {
                     if (snapshot.connectionState != ConnectionState.done) {
                       return const Center(child: CircularProgressIndicator());
+                    }
+
+                    if (snapshot.hasError) {
+                      return _SheetErrorState(
+                        message: l10n.syncConflictsLoadError,
+                        retryLabel: l10n.retry,
+                        onRetry: () => setState(_reload),
+                      );
                     }
 
                     final conflicts = snapshot.data ?? [];
@@ -244,6 +255,37 @@ class _SyncConflictsSheetState extends State<_SyncConflictsSheet> {
   }
 }
 
+class _SheetErrorState extends StatelessWidget {
+  const _SheetErrorState({
+    required this.message,
+    required this.retryLabel,
+    required this.onRetry,
+  });
+
+  final String message;
+  final String retryLabel;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: AppBanner(
+          message: message,
+          tone: AppBannerTone.danger,
+          icon: Icons.error_outline_rounded,
+          action: FilledButton.tonalIcon(
+            onPressed: onRetry,
+            icon: const Icon(Icons.refresh_rounded, size: 16),
+            label: Text(retryLabel),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _ConflictTile extends StatelessWidget {
   const _ConflictTile({
     required this.conflict,
@@ -294,7 +336,8 @@ class _ConflictTile extends StatelessWidget {
           const SizedBox(height: AppSpacing.xs),
           _VersionRow(
             label: l10n.syncConflictRemoteVersion,
-            version: conflict.remoteSnapshot?.version ?? conflict.currentVersion,
+            version:
+                conflict.remoteSnapshot?.version ?? conflict.currentVersion,
             updatedAt: conflict.remoteSnapshot?.updatedAt ?? conflict.updatedAt,
           ),
           const SizedBox(height: AppSpacing.md),

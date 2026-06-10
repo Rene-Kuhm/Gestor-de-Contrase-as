@@ -63,6 +63,8 @@
   "settingsConflictsTitle": "Conflictos de sync",
   "settingsConflictsEmpty": "Sin conflictos pendientes. La cola de sync está limpia.",
   "settingsConflictsRefresh": "Refrescar",
+  "settingsConflictsLoadError": "No pudimos cargar los conflictos de sync. Reintenta.",
+  "settingsSessionsLoadError": "No pudimos cargar las sesiones de dispositivos. Reintenta.",
   "settingsConflictsKindConflict": "Conflicto",
   "settingsConflictsReasonFallback": "Conflicto CAS detectado al enviar la mutación.",
   "settingsConflictsVersionRow": "Base local v{expected} · Remoto v{remote}",
@@ -263,6 +265,8 @@
   "syncConflictsTitle": "Conflictos de sincronizacion",
   "syncConflictsSubtitle": "Un cambio remoto llego mientras tu edicion local estaba pendiente. Elegí qué version conservar.",
   "syncConflictsEmpty": "Sin conflictos pendientes. Todo sincronizado.",
+  "syncConflictsLoadError": "No pudimos cargar los conflictos pendientes. Reintenta.",
+  "syncConflictResolveError": "No pudimos resolver este conflicto. Reintenta.",
   "syncConflictsBannerLabel": "{count} {count, plural, =1{conflicto} other{conflictos}} de sync pendiente{count, plural, =1{} other{s}}",
   "@syncConflictsBannerLabel": {
     "placeholders": {

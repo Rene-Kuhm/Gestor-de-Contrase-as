@@ -63,6 +63,8 @@
   "settingsConflictsTitle": "Sync conflicts",
   "settingsConflictsEmpty": "No pending conflicts. Sync queue is clean.",
   "settingsConflictsRefresh": "Refresh",
+  "settingsConflictsLoadError": "We could not load sync conflicts. Please retry.",
+  "settingsSessionsLoadError": "We could not load device sessions. Please retry.",
   "settingsConflictsKindConflict": "Conflict",
   "settingsConflictsReasonFallback": "CAS conflict detected while pushing mutation.",
   "settingsConflictsVersionRow": "Local base v{expected} · Remote v{remote}",
@@ -263,6 +265,8 @@
   "syncConflictsTitle": "Sync conflicts",
   "syncConflictsSubtitle": "A remote change arrived while your local edit was pending. Choose which version to keep.",
   "syncConflictsEmpty": "No pending conflicts. Everything is in sync.",
+  "syncConflictsLoadError": "We could not load pending conflicts. Please retry.",
+  "syncConflictResolveError": "We could not resolve this conflict. Please retry.",
   "syncConflictsBannerLabel": "{count} sync {count, plural, =1{conflict} other{conflicts}} pending",
   "@syncConflictsBannerLabel": {
     "placeholders": {

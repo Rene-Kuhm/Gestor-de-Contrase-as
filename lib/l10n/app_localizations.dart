@@ -431,6 +431,18 @@ abstract class AppLocalizations {
   /// **'Refresh'**
   String get settingsConflictsRefresh;
 
+  /// No description provided for @settingsConflictsLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not load sync conflicts. Please retry.'**
+  String get settingsConflictsLoadError;
+
+  /// No description provided for @settingsSessionsLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not load device sessions. Please retry.'**
+  String get settingsSessionsLoadError;
+
   /// No description provided for @settingsConflictsKindConflict.
   ///
   /// In en, this message translates to:
@@ -1252,6 +1264,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No pending conflicts. Everything is in sync.'**
   String get syncConflictsEmpty;
+
+  /// No description provided for @syncConflictsLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not load pending conflicts. Please retry.'**
+  String get syncConflictsLoadError;
+
+  /// No description provided for @syncConflictResolveError.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not resolve this conflict. Please retry.'**
+  String get syncConflictResolveError;
 
   /// No description provided for @syncConflictsBannerLabel.
   ///

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -10,8 +12,9 @@ import 'package:gestor_contrasenas/l10n/app_localizations.dart';
 
 void main() {
   group('VaultDashboardScreen filtering', () {
-    testWidgets('filters by free-text search across title and username',
-        (tester) async {
+    testWidgets('filters by free-text search across title and username', (
+      tester,
+    ) async {
       final items = _seedItems();
       final repository = _FakeVaultRepository(items: items);
 
@@ -34,10 +37,7 @@ void main() {
       expect(find.text('Bank'), findsOneWidget);
       expect(find.text('Email'), findsOneWidget);
 
-      await tester.enterText(
-        find.widgetWithText(TextField, '').first,
-        'bank',
-      );
+      await tester.enterText(find.widgetWithText(TextField, '').first, 'bank');
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 16));
 
@@ -46,8 +46,9 @@ void main() {
       expect(find.text('Email'), findsNothing);
     });
 
-    testWidgets('free-text search narrows the visible list and clears back',
-        (tester) async {
+    testWidgets('free-text search narrows the visible list and clears back', (
+      tester,
+    ) async {
       final items = _seedItems();
       final repository = _FakeVaultRepository(items: items);
 
@@ -89,8 +90,9 @@ void main() {
       expect(find.text('Email'), findsOneWidget);
     });
 
-    testWidgets('shows the empty state when there are no items',
-        (tester) async {
+    testWidgets('shows the empty state when there are no items', (
+      tester,
+    ) async {
       final repository = _FakeVaultRepository(items: const []);
 
       // Use a tall viewport so the dashboard renders the whole sliver
@@ -118,8 +120,9 @@ void main() {
       );
     });
 
-    testWidgets('shows the no-results state when filters exclude everything',
-        (tester) async {
+    testWidgets('shows the no-results state when filters exclude everything', (
+      tester,
+    ) async {
       final items = _seedItems();
       final repository = _FakeVaultRepository(items: items);
 
@@ -152,11 +155,143 @@ void main() {
         findsOneWidget,
       );
     });
+
+    testWidgets(
+      'handles case, whitespace, special characters, and empty query',
+      (tester) async {
+        final items = _seedItems();
+        final repository = _FakeVaultRepository(items: items);
+        _setTallViewport(tester);
+
+        await tester.pumpWidget(
+          _testApp(VaultDashboardScreen(repository: repository)),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 16));
+
+        final searchField = find.byType(TextField).first;
+
+        await tester.enterText(searchField, '  BANK  ');
+        await tester.pump();
+        expect(find.text('Bank'), findsOneWidget);
+        expect(find.text('GitHub'), findsNothing);
+
+        await tester.enterText(searchField, 'LEO@EXAMPLE.COM');
+        await tester.pump();
+        expect(find.text('GitHub'), findsOneWidget);
+        expect(find.text('Bank'), findsNothing);
+
+        await tester.enterText(searchField, '@vaulta.app');
+        await tester.pump();
+        expect(find.text('Bank'), findsOneWidget);
+        expect(find.text('Email'), findsOneWidget);
+        expect(find.text('GitHub'), findsNothing);
+
+        await tester.enterText(searchField, '');
+        await tester.pump();
+        expect(find.text('GitHub'), findsOneWidget);
+        expect(find.text('Bank'), findsOneWidget);
+        expect(find.text('Email'), findsOneWidget);
+      },
+    );
+
+    testWidgets('keeps only the latest visible query when typing quickly', (
+      tester,
+    ) async {
+      final items = _seedItems();
+      final repository = _FakeVaultRepository(items: items);
+      _setTallViewport(tester);
+
+      await tester.pumpWidget(
+        _testApp(VaultDashboardScreen(repository: repository)),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 16));
+
+      final searchField = find.byType(TextField).first;
+      await tester.enterText(searchField, 'bank');
+      await tester.enterText(searchField, 'github');
+      await tester.enterText(searchField, 'email');
+      await tester.pump();
+
+      expect(find.text('Email'), findsOneWidget);
+      expect(find.text('GitHub'), findsNothing);
+      expect(find.text('Bank'), findsNothing);
+      expect(repository.fetchItemsCalls, 1);
+    });
+
+    testWidgets('does not duplicate results after repeated matching queries', (
+      tester,
+    ) async {
+      final items = _seedItems();
+      final repository = _FakeVaultRepository(items: items);
+      _setTallViewport(tester);
+
+      await tester.pumpWidget(
+        _testApp(VaultDashboardScreen(repository: repository)),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 16));
+
+      final searchField = find.byType(TextField).first;
+      await tester.enterText(searchField, 'bank');
+      await tester.pump();
+      await tester.enterText(searchField, 'BANK');
+      await tester.pump();
+
+      expect(find.text('Bank'), findsOneWidget);
+      expect(find.text('GitHub'), findsNothing);
+      expect(find.text('Email'), findsNothing);
+    });
+
+    testWidgets('shows loading while vault data is still loading', (
+      tester,
+    ) async {
+      final repository = _DelayedVaultRepository();
+      _setTallViewport(tester);
+
+      await tester.pumpWidget(
+        _testApp(VaultDashboardScreen(repository: repository)),
+      );
+      await tester.pump();
+
+      expect(_dashboardLoadingSpinner(), findsOneWidget);
+
+      repository.complete(items: _seedItems());
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 16));
+
+      expect(_dashboardLoadingSpinner(), findsNothing);
+      expect(find.text('GitHub'), findsOneWidget);
+    });
+
+    testWidgets('shows an error state when vault data cannot load', (
+      tester,
+    ) async {
+      final repository = _FakeVaultRepository(
+        items: const [],
+        loadError: StateError('boom'),
+      );
+      _setTallViewport(tester);
+
+      await tester.pumpWidget(
+        _testApp(VaultDashboardScreen(repository: repository)),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 16));
+
+      expect(
+        find.text('Vaulta could not decrypt the local vault right now.'),
+        findsOneWidget,
+      );
+      expect(find.widgetWithText(FilledButton, 'Retry'), findsOneWidget);
+    });
   });
 
   group('VaultEntryDetailScreen', () {
-    testWidgets('obscures the secret by default and reveals on tap',
-        (tester) async {
+    testWidgets('obscures the secret by default and reveals on tap', (
+      tester,
+    ) async {
       const item = VaultItem(
         id: 'github',
         title: 'GitHub',
@@ -211,8 +346,9 @@ void main() {
       expect(find.text('****'), findsOneWidget);
     });
 
-    testWidgets('copy button is wired and shows a confirmation snackbar',
-        (tester) async {
+    testWidgets('copy button is wired and shows a confirmation snackbar', (
+      tester,
+    ) async {
       const item = VaultItem(
         id: 'gh',
         title: 'GitHub',
@@ -244,10 +380,7 @@ void main() {
         matching: find.byType(OutlinedButton),
       );
       expect(copyButton, findsOneWidget);
-      expect(
-        tester.widget<OutlinedButton>(copyButton).onPressed,
-        isNotNull,
-      );
+      expect(tester.widget<OutlinedButton>(copyButton).onPressed, isNotNull);
     });
   });
 
@@ -266,6 +399,28 @@ void main() {
       expect(estimatePasswordStrength('a'), lessThan(20));
     });
   });
+}
+
+Widget _testApp(Widget home) {
+  return MaterialApp(
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    home: home,
+  );
+}
+
+void _setTallViewport(WidgetTester tester) {
+  tester.view.physicalSize = const Size(1080, 4000);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+}
+
+Finder _dashboardLoadingSpinner() {
+  return find.byWidgetPredicate(
+    (widget) =>
+        widget is CircularProgressIndicator && widget.strokeWidth == 2.5,
+  );
 }
 
 List<VaultItem> _seedItems() {
@@ -307,16 +462,29 @@ List<VaultItem> _seedItems() {
 // without depending on the internal enum name.
 
 class _FakeVaultRepository implements VaultRepository {
-  _FakeVaultRepository({required this.items});
+  _FakeVaultRepository({required this.items, this.loadError});
 
   final List<VaultItem> items;
+  final Object? loadError;
   VaultSummary? summaryOverride;
+  int fetchItemsCalls = 0;
 
   @override
-  Future<List<VaultItem>> fetchItems() async => items;
+  Future<List<VaultItem>> fetchItems() async {
+    fetchItemsCalls += 1;
+    final error = loadError;
+    if (error != null) {
+      throw error;
+    }
+    return items;
+  }
 
   @override
   Future<VaultSummary> fetchSummary() async {
+    final error = loadError;
+    if (error != null) {
+      throw error;
+    }
     return summaryOverride ??
         VaultSummary(
           totalItems: items.length,
@@ -324,7 +492,8 @@ class _FakeVaultRepository implements VaultRepository {
           reusedItems: 0,
           securityScore: items.isEmpty
               ? 0
-              : items.fold<int>(0, (s, i) => s + i.strengthScore) ~/ items.length,
+              : items.fold<int>(0, (s, i) => s + i.strengthScore) ~/
+                    items.length,
           connectedDevices: 1,
           syncEnabled: false,
         );
@@ -337,6 +506,41 @@ class _FakeVaultRepository implements VaultRepository {
     }
     return null;
   }
+
+  @override
+  Future<VaultItem> saveItem(VaultItem item) async => item;
+
+  @override
+  Future<void> deleteItem(String id) async {}
+}
+
+class _DelayedVaultRepository implements VaultRepository {
+  final _itemsCompleter = Completer<List<VaultItem>>();
+
+  void complete({required List<VaultItem> items}) {
+    _itemsCompleter.complete(items);
+  }
+
+  @override
+  Future<List<VaultItem>> fetchItems() => _itemsCompleter.future;
+
+  @override
+  Future<VaultSummary> fetchSummary() async {
+    final items = await _itemsCompleter.future;
+    return VaultSummary(
+      totalItems: items.length,
+      weakItems: items.where((i) => i.strengthScore < 80).length,
+      reusedItems: 0,
+      securityScore: items.isEmpty
+          ? 0
+          : items.fold<int>(0, (s, i) => s + i.strengthScore) ~/ items.length,
+      connectedDevices: 1,
+      syncEnabled: false,
+    );
+  }
+
+  @override
+  Future<VaultItem?> fetchItemById(String id) async => null;
 
   @override
   Future<VaultItem> saveItem(VaultItem item) async => item;

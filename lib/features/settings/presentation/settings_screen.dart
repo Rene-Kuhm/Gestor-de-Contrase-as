@@ -582,6 +582,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                           child: LinearProgressIndicator(),
                         )
+                      else if (snapshot.hasError)
+                        _InlineLoadError(
+                          message: l10n.settingsConflictsLoadError,
+                          retryLabel: l10n.retry,
+                          onRetry: _refreshConflicts,
+                        )
                       else if (conflicts.isEmpty)
                         Text(
                           l10n.settingsConflictsEmpty,
@@ -700,6 +706,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             vertical: AppSpacing.sm,
                           ),
                           child: LinearProgressIndicator(),
+                        )
+                      else if (snapshot.hasError)
+                        _InlineLoadError(
+                          message: l10n.settingsSessionsLoadError,
+                          retryLabel: l10n.retry,
+                          onRetry: _refreshDevices,
                         )
                       else if (devices.isEmpty)
                         Text(
@@ -912,6 +924,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
       }
     }
     return presets[2];
+  }
+}
+
+class _InlineLoadError extends StatelessWidget {
+  const _InlineLoadError({
+    required this.message,
+    required this.retryLabel,
+    required this.onRetry,
+  });
+
+  final String message;
+  final String retryLabel;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppBanner(
+      message: message,
+      tone: AppBannerTone.danger,
+      icon: Icons.error_outline_rounded,
+      action: FilledButton.tonalIcon(
+        onPressed: onRetry,
+        icon: const Icon(Icons.refresh_rounded, size: 16),
+        label: Text(retryLabel),
+      ),
+    );
   }
 }
 

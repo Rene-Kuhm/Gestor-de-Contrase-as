@@ -47,9 +47,16 @@ class _VaultDashboardScreenState extends State<VaultDashboardScreen> {
   Future<void> _loadConflictCount() async {
     final resolver = widget.conflictResolver;
     if (resolver == null) return;
-    final conflicts = await resolver.readPendingConflicts();
-    if (mounted) {
-      setState(() => _pendingConflicts = conflicts.length);
+    try {
+      final conflicts = await resolver.readPendingConflicts();
+      if (mounted) {
+        setState(() => _pendingConflicts = conflicts.length);
+      }
+    } catch (error, stack) {
+      debugPrint('[Vaulta/Sync] conflict count failed: $error\n$stack');
+      if (mounted) {
+        setState(() => _pendingConflicts = 0);
+      }
     }
   }
 

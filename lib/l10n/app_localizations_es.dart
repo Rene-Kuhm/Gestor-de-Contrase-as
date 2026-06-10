@@ -179,6 +179,12 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingsConflictsRefresh => 'Refrescar';
 
   @override
+  String get settingsConflictsLoadError => 'No pudimos cargar los conflictos de sync. Reintenta.';
+
+  @override
+  String get settingsSessionsLoadError => 'No pudimos cargar las sesiones de dispositivos. Reintenta.';
+
+  @override
   String get settingsConflictsKindConflict => 'Conflicto';
 
   @override
@@ -606,6 +612,12 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get syncConflictsEmpty => 'Sin conflictos pendientes. Todo sincronizado.';
+
+  @override
+  String get syncConflictsLoadError => 'No pudimos cargar los conflictos pendientes. Reintenta.';
+
+  @override
+  String get syncConflictResolveError => 'No pudimos resolver este conflicto. Reintenta.';
 
   @override
   String syncConflictsBannerLabel(int count) {
