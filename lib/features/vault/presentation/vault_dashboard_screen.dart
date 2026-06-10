@@ -425,8 +425,7 @@ class _ScoreRing extends StatelessWidget {
             child: CircularProgressIndicator(
               value: score / 100,
               strokeWidth: 6,
-              backgroundColor: AppColors.surfaceDarkHigh
-                  .withValues(alpha: 0.4),
+              backgroundColor: AppColors.surfaceDarkHigh.withValues(alpha: 0.4),
               valueColor: AlwaysStoppedAnimation<Color>(color),
             ),
           ),
@@ -711,7 +710,8 @@ class _VaultSection extends StatelessWidget {
                 item: items[index],
                 onTap: () => onOpenEntry(items[index]),
               ),
-              if (index != items.length - 1) const Divider(height: 24),
+              if (index != items.length - 1)
+                const SizedBox(height: AppSpacing.sm),
             ],
         ],
       ),
@@ -732,9 +732,7 @@ class _NoResultsState extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest.withValues(
-          alpha: 0.5,
-        ),
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
       ),
       child: Column(
@@ -782,9 +780,7 @@ class _EmptyVaultState extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.crimson.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-        border: Border.all(
-          color: AppColors.crimson.withValues(alpha: 0.30),
-        ),
+        border: Border.all(color: AppColors.crimson.withValues(alpha: 0.30)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

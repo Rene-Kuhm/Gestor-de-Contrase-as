@@ -54,6 +54,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Changed
 
+- **Android system icon coverage.** The Android manifest now declares
+  Vaulta's adaptive icon, round icon, and themed monochrome icon for
+  the app, launcher activity, and AndroidX biometric fallback activity.
+  `MainActivity` also reapplies a Vaulta task bitmap after Flutter
+  initializes so Samsung/Android system surfaces stop falling back to
+  stale/default task icons.
+- **Launcher cache bust.** Android now exposes Vaulta through a
+  dedicated `.VaultaLauncherActivity` alias instead of using
+  `.MainActivity` directly as the launcher component, forcing Samsung
+  One UI Launcher to resolve a fresh component/icon pair after upgrades.
+- **Adaptive icon framing.** The Android foreground and monochrome
+  launcher vectors were redrawn inside the adaptive-icon safe zone so
+  Samsung launchers do not crop the Vaulta lock toward the bottom edge.
+- **Legacy launcher PNG refresh.** Android legacy `mipmap-*`
+  launcher PNGs now use the same centered Vaulta geometry as the
+  adaptive icon, covering Samsung/theme fallback paths that rasterize
+  legacy resources.
+- **Icon parity with app UI.** Android launcher, task, and biometric
+  resources now mirror the in-app `VaultaLogomark`: dark surface,
+  crimson lock body, paper shackle, and gold key slot.
+- **Vault entry cards.** Saved credentials now render as richer cards
+  with category icons, metadata chips, strength badges, update time,
+  and an affordance to open the detail view.
 - **Brand.** The `redesign/brand/*.svg` assets are now wired up as
   the launcher icon on Android, iOS, macOS, Windows and web. The
   vault icon stays the crimson padlock with the gold keyhole.

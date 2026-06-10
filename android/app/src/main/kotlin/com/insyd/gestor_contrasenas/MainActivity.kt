@@ -1,8 +1,14 @@
 package com.insyd.gestor_contrasenas
 
 import android.app.Activity
+import android.app.ActivityManager
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.os.Build
+import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
 import android.util.Log
 import androidx.biometric.BiometricManager
@@ -47,6 +53,18 @@ class MainActivity : FlutterFragmentActivity() {
 
     private var pendingResult: MethodChannel.Result? = null
     private var pendingCiphertext: ByteArray? = null
+    private val mainHandler = Handler(Looper.getMainLooper())
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        applyVaultaTaskDescription()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        applyVaultaTaskDescription()
+        mainHandler.postDelayed({ applyVaultaTaskDescription() }, TASK_DESCRIPTION_DELAY_MS)
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -58,6 +76,28 @@ class MainActivity : FlutterFragmentActivity() {
             this::openBiometricEnrollment,
         )
         UpdateChannel(flutterEngine, applicationContext)
+    }
+
+    private fun applyVaultaTaskDescription() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return
+
+        setTaskDescription(
+            ActivityManager.TaskDescription(
+                applicationInfo.loadLabel(packageManager).toString(),
+                buildTaskIconBitmap(),
+                getColor(R.color.vaulta_crimson_deep),
+            )
+        )
+    }
+
+    private fun buildTaskIconBitmap(): Bitmap? {
+        val icon = ContextCompat.getDrawable(this, R.mipmap.ic_launcher) ?: return null
+        val size = (96 * resources.displayMetrics.density).toInt()
+        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        icon.setBounds(0, 0, canvas.width, canvas.height)
+        icon.draw(canvas)
+        return bitmap
     }
 
     // ---- Public helpers exposed to the BiometricChannel ----
@@ -385,6 +425,7 @@ class MainActivity : FlutterFragmentActivity() {
         private const val ANDROID_KEYSTORE = "AndroidKeyStore"
         private const val KEY_ALIAS = "vaulta_biometric_envelope_v1"
         private const val TRANSFORMATION_RSA = "RSA/ECB/OAEPWithSHA-256AndMGF1Padding"
+        private const val TASK_DESCRIPTION_DELAY_MS = 750L
         private val OAEP_SHA256_MGF1_SHA1 = OAEPParameterSpec(
             "SHA-256",
             "MGF1",
