@@ -161,7 +161,11 @@ class _SecurityGateState extends State<SecurityGate>
 /// previous gate did, but visually identityless — the AppShell
 /// paints its own background.
 class _UnlockedHost extends StatelessWidget {
-  const _UnlockedHost({super.key, required this.controller, required this.child});
+  const _UnlockedHost({
+    super.key,
+    required this.controller,
+    required this.child,
+  });
 
   final VaultSecurityController controller;
   final Widget child;
@@ -270,8 +274,16 @@ class _OnboardingScreenState extends State<_OnboardingScreen> {
         backgroundColor: Colors.transparent,
         body: SafeArea(
           child: isWide
-              ? _SplitLayout(hero: hero, form: form)
-              : _StackedLayout(hero: hero, form: form),
+              ? _SplitLayout(
+                  hero: hero,
+                  form: form,
+                  footer: const _BrandFooter(),
+                )
+              : _StackedLayout(
+                  hero: hero,
+                  form: form,
+                  footer: const _BrandFooter(),
+                ),
         ),
       ),
     );
@@ -279,9 +291,10 @@ class _OnboardingScreenState extends State<_OnboardingScreen> {
 }
 
 class _SplitLayout extends StatelessWidget {
-  const _SplitLayout({required this.hero, required this.form});
+  const _SplitLayout({required this.hero, required this.form, this.footer});
   final Widget hero;
   final Widget form;
+  final Widget? footer;
 
   @override
   Widget build(BuildContext context) {
@@ -296,10 +309,12 @@ class _SplitLayout extends StatelessWidget {
               AppSpacing.xxl,
               AppSpacing.xxl,
             ),
-            child: Center(child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 480),
-              child: hero,
-            )),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 480),
+                child: hero,
+              ),
+            ),
           ),
         ),
         Expanded(
@@ -312,7 +327,16 @@ class _SplitLayout extends StatelessWidget {
             child: Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 520),
-                child: form,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    form,
+                    if (footer case final footer?) ...[
+                      const SizedBox(height: AppSpacing.lg),
+                      footer,
+                    ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -323,9 +347,10 @@ class _SplitLayout extends StatelessWidget {
 }
 
 class _StackedLayout extends StatelessWidget {
-  const _StackedLayout({required this.hero, required this.form});
+  const _StackedLayout({required this.hero, required this.form, this.footer});
   final Widget hero;
   final Widget form;
+  final Widget? footer;
 
   @override
   Widget build(BuildContext context) {
@@ -340,7 +365,30 @@ class _StackedLayout extends StatelessWidget {
         hero,
         const SizedBox(height: AppSpacing.xl),
         form,
+        if (footer case final footer?) ...[
+          const SizedBox(height: AppSpacing.lg),
+          footer,
+        ],
       ],
+    );
+  }
+}
+
+class _BrandFooter extends StatelessWidget {
+  const _BrandFooter();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Text(
+      context.l10n.brandFooter,
+      textAlign: TextAlign.center,
+      style: theme.textTheme.labelLarge?.copyWith(
+        color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.72),
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0.2,
+      ),
     );
   }
 }
@@ -380,10 +428,7 @@ class _OnboardingHero extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.xxl),
         Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 14,
-            vertical: 7,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
           decoration: BoxDecoration(
             color: AppColors.crimson.withValues(alpha: 0.18),
             borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
@@ -474,7 +519,11 @@ class _SecurityChecklist extends StatelessWidget {
                   color: AppColors.crimson.withValues(alpha: 0.18),
                   borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                 ),
-                child: Icon(item.icon, size: 18, color: AppColors.crimsonBright),
+                child: Icon(
+                  item.icon,
+                  size: 18,
+                  color: AppColors.crimsonBright,
+                ),
               ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
@@ -615,11 +664,13 @@ class _OnboardingForm extends StatelessWidget {
               },
             ),
             const SizedBox(height: AppSpacing.lg),
-            _Checklist(items: [
-              l10n.securityChecklistHash,
-              l10n.securityChecklistDerive,
-              l10n.securityChecklistEncrypt,
-            ]),
+            _Checklist(
+              items: [
+                l10n.securityChecklistHash,
+                l10n.securityChecklistDerive,
+                l10n.securityChecklistEncrypt,
+              ],
+            ),
             const SizedBox(height: AppSpacing.md),
             Material(
               type: MaterialType.transparency,
@@ -676,7 +727,9 @@ class _OnboardingForm extends StatelessWidget {
   AppBannerTone _bannerToneFor(String? message) {
     if (message == null) return AppBannerTone.info;
     final lower = message.toLowerCase();
-    if (lower.contains('error') || lower.contains('fail') || lower.contains('inv')) {
+    if (lower.contains('error') ||
+        lower.contains('fail') ||
+        lower.contains('inv')) {
       return AppBannerTone.danger;
     }
     return AppBannerTone.info;
@@ -858,8 +911,16 @@ class _UnlockScreenState extends State<_UnlockScreen> {
         backgroundColor: Colors.transparent,
         body: SafeArea(
           child: isWide
-              ? _SplitLayout(hero: hero, form: form)
-              : _StackedLayout(hero: hero, form: form),
+              ? _SplitLayout(
+                  hero: hero,
+                  form: form,
+                  footer: const _BrandFooter(),
+                )
+              : _StackedLayout(
+                  hero: hero,
+                  form: form,
+                  footer: const _BrandFooter(),
+                ),
         ),
       ),
     );
@@ -959,17 +1020,20 @@ class _UnlockHero extends StatelessWidget {
             _ChecklistItemData(
               icon: Icons.fingerprint_rounded,
               titleKey: 'Unlock with biometrics',
-              subtitleKey: 'Use the fingerprint already enrolled on this device.',
+              subtitleKey:
+                  'Use the fingerprint already enrolled on this device.',
             ),
             _ChecklistItemData(
               icon: Icons.password_rounded,
               titleKey: 'Master password fallback',
-              subtitleKey: 'Always available — your recovery path if biometrics are unavailable.',
+              subtitleKey:
+                  'Always available — your recovery path if biometrics are unavailable.',
             ),
             _ChecklistItemData(
               icon: Icons.timer_outlined,
               titleKey: 'Auto-lock on background',
-              subtitleKey: 'Vault closes when the app is backgrounded or after idle.',
+              subtitleKey:
+                  'Vault closes when the app is backgrounded or after idle.',
             ),
           ],
         ),
@@ -1084,8 +1148,9 @@ class _UnlockForm extends StatelessWidget {
                     onPressed: controller.busy ? null : onUnlockWithBiometrics,
                     style: OutlinedButton.styleFrom(
                       shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(AppSpacing.radiusMd),
+                        borderRadius: BorderRadius.circular(
+                          AppSpacing.radiusMd,
+                        ),
                       ),
                       padding: EdgeInsets.zero,
                     ),

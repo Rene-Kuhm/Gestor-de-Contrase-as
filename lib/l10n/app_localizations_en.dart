@@ -21,6 +21,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navSettings => 'Settings';
 
   @override
+  String get brandFooter => 'Tecnodespegue.com';
+
+  @override
   String get languageSectionTitle => 'Language';
 
   @override
@@ -34,6 +37,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsTitle => 'Settings';
+
+  @override
+  String get aboutTitle => 'About';
+
+  @override
+  String get aboutCreator => 'Created by René Kuhm, founder of Tecnodespegue.';
+
+  @override
+  String get aboutAgency => 'Tecnodespegue.com';
 
   @override
   String get settingsLocalUnlockPostureTitle => 'Local unlock posture';

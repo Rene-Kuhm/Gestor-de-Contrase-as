@@ -469,9 +469,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     .setAutoLockOnBackgroundEnabled(value);
                               },
                         title: Text(l10n.settingsAutoLockBackgroundTitle),
-                        subtitle: Text(
-                          l10n.settingsAutoLockBackgroundSubtitle,
-                        ),
+                        subtitle: Text(l10n.settingsAutoLockBackgroundSubtitle),
                       ),
                     ),
                     const SizedBox(height: AppSpacing.sm),
@@ -846,6 +844,59 @@ class _SettingsScreenState extends State<SettingsScreen> {
               },
             ),
           ),
+          const SizedBox(height: AppSpacing.md),
+          AppPanel(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: AppColors.crimson.withValues(alpha: 0.14),
+                        borderRadius: BorderRadius.circular(
+                          AppSpacing.radiusMd,
+                        ),
+                        border: Border.all(
+                          color: AppColors.crimson.withValues(alpha: 0.28),
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.info_outline_rounded,
+                        color: AppColors.crimsonBright,
+                        size: 22,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Text(
+                        l10n.aboutTitle,
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  l10n.aboutCreator,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  l10n.aboutAgency,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -900,9 +951,7 @@ class _SyncConflictCard extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
         color: AppColors.warning.withValues(alpha: 0.10),
-        border: Border.all(
-          color: AppColors.warning.withValues(alpha: 0.35),
-        ),
+        border: Border.all(color: AppColors.warning.withValues(alpha: 0.35)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -930,7 +979,10 @@ class _SyncConflictCard extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            context.l10n.settingsConflictsVersionRow(expectedVersion, remoteVersion),
+            context.l10n.settingsConflictsVersionRow(
+              expectedVersion,
+              remoteVersion,
+            ),
             style: theme.textTheme.labelLarge,
           ),
           const SizedBox(height: AppSpacing.sm),
@@ -998,9 +1050,7 @@ class _DeviceSessionCard extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
         color: AppColors.crimson.withValues(alpha: 0.06),
-        border: Border.all(
-          color: AppColors.crimson.withValues(alpha: 0.20),
-        ),
+        border: Border.all(color: AppColors.crimson.withValues(alpha: 0.20)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1082,7 +1132,9 @@ class _CapabilityRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final color = enabled ? AppColors.success : theme.colorScheme.onSurfaceVariant;
+    final color = enabled
+        ? AppColors.success
+        : theme.colorScheme.onSurfaceVariant;
 
     return Padding(
       padding: const EdgeInsets.only(top: AppSpacing.sm),

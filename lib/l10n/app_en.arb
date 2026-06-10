@@ -4,6 +4,7 @@
   "navVault": "Vault",
   "navAccess": "Access",
   "navSettings": "Settings",
+  "brandFooter": "Tecnodespegue.com",
 
   "languageSectionTitle": "Language",
   "languageSelectorLabel": "App language",
@@ -11,6 +12,9 @@
   "languageSpanish": "Spanish",
 
   "settingsTitle": "Settings",
+  "aboutTitle": "About",
+  "aboutCreator": "Created by René Kuhm, founder of Tecnodespegue.",
+  "aboutAgency": "Tecnodespegue.com",
   "settingsLocalUnlockPostureTitle": "Local unlock posture",
   "settingsLocalUnlockPostureDescription": "Vaulta keeps sensitive state in Keychain / Keystore. On Android, biometrics unlock the vault through a hardware-protected key; other platforms still use the master password path.",
   "settingsMasterPasswordCreated": "Master password created",

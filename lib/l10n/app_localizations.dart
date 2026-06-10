@@ -119,6 +119,12 @@ abstract class AppLocalizations {
   /// **'Settings'**
   String get navSettings;
 
+  /// No description provided for @brandFooter.
+  ///
+  /// In en, this message translates to:
+  /// **'Tecnodespegue.com'**
+  String get brandFooter;
+
   /// No description provided for @languageSectionTitle.
   ///
   /// In en, this message translates to:
@@ -148,6 +154,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Settings'**
   String get settingsTitle;
+
+  /// No description provided for @aboutTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'About'**
+  String get aboutTitle;
+
+  /// No description provided for @aboutCreator.
+  ///
+  /// In en, this message translates to:
+  /// **'Created by René Kuhm, founder of Tecnodespegue.'**
+  String get aboutCreator;
+
+  /// No description provided for @aboutAgency.
+  ///
+  /// In en, this message translates to:
+  /// **'Tecnodespegue.com'**
+  String get aboutAgency;
 
   /// No description provided for @settingsLocalUnlockPostureTitle.
   ///

@@ -54,6 +54,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Changed
 
+- **Brand attribution.** The locked/onboarding screens now show a
+  small `Tecnodespegue.com` footer, and Settings includes an About
+  section crediting René Kuhm as founder of Tecnodespegue.
 - **Android system icon coverage.** The Android manifest now declares
   Vaulta's adaptive icon, round icon, and themed monochrome icon for
   the app, launcher activity, and AndroidX biometric fallback activity.
