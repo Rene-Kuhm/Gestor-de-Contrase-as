@@ -18,14 +18,7 @@ include: package:flutter_lints/flutter.yaml
 # `openspec/changes/vaulta-public-api-docs/` for the rollout.
 analyzer:
   errors:
-    # `public_member_api_docs` is scoped to `lib/core/**` via `exclude`
-    # below. Severity is `info` (not warning) because the sync and
-    # update subtrees still have undocumented public members; the
-    # intent is for them to appear in `flutter analyze` output so the
-    # team can clean them up incrementally without breaking the build.
-    # Tighten to `warning` once `flutter analyze` reports 0 issues
-    # in `lib/core/sync/` and `lib/core/update/`.
-    public_member_api_docs: info
+    public_member_api_docs: warning
   exclude:
     - "**/*.g.dart"
     - "**/*.freezed.dart"
