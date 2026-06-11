@@ -8,6 +8,7 @@ import '../security/secure_storage_service.dart';
 
 /// Information about a release the platform fetched from GitHub.
 class UpdateInfo {
+  /// Builds a fully populated [UpdateInfo] from a platform response.
   const UpdateInfo({
     required this.available,
     required this.tagName,
@@ -20,10 +21,20 @@ class UpdateInfo {
     this.buildFingerprint = '',
   });
 
+  /// True when the platform found a release that the running build
+  /// is older than.
   final bool available;
+
+  /// Git tag (e.g. `v1.0.22`). Empty when not available.
   final String tagName;
+
+  /// Signed APK URL. Empty when not available.
   final String apkUrl;
+
+  /// Markdown changelog body. Empty when not available.
   final String changelog;
+
+  /// ISO-8601 publish timestamp. Empty when not available.
   final String publishedAt;
 
   /// GitHub release id. Monotonically increases every time the
@@ -31,8 +42,16 @@ class UpdateInfo {
   /// tell a brand-new build apart from one the user has already
   /// dismissed the SnackBar for.
   final int releaseId;
+
+  /// Cleaned-up remote version string (e.g. `1.0.22`). Empty when
+  /// not available or not parseable from the changelog.
   final String remoteVersion;
+
+  /// The version the user is currently running.
   final String currentVersion;
+
+  /// Build fingerprint (CI build hash). Used to dedupe prompts when
+  /// the same build is re-published without a version bump.
   final String buildFingerprint;
 
   /// Result the platform returned when no update is available.
@@ -68,6 +87,10 @@ class UpdateInfo {
 /// quiet — no more "update available" nag every single time the
 /// app reopens.
 class UpdateService {
+  /// Builds an [UpdateService] bound to the GitHub [owner]/[repo]
+  /// (e.g. `Rene-Kuhm`/`Gestor-de-Contrase-as`) and an optional
+  /// [storage] for install-state persistence plus an optional
+  /// [channel] override for tests.
   UpdateService({
     required this.owner,
     required this.repo,
@@ -76,11 +99,18 @@ class UpdateService {
   }) : _storage = storage,
        _channel = channel ?? const MethodChannel('com.insyd.vaulta/update');
 
+  /// Secure storage key for the last releaseId the user installed.
   static const _lastSeenReleaseIdKey = 'vaulta_last_seen_release_id_v1';
+
+  /// Secure storage key for the last build fingerprint the user was
+  /// shown a SnackBar for.
   static const _lastSeenBuildFingerprintKey =
       'vaulta_last_seen_update_build_v1';
 
+  /// GitHub owner (org or user) hosting the releases.
   final String owner;
+
+  /// GitHub repo name. Together with [owner] it pins the channel.
   final String repo;
   final SecureStorageService? _storage;
   final MethodChannel _channel;
@@ -108,12 +138,20 @@ class UpdateService {
     await storage.save(_lastSeenReleaseIdKey, releaseId.toString());
   }
 
+  /// Returns the last build fingerprint the user was prompted for,
+  /// or empty string if we have never prompted them. Used by
+  /// [AppShell] to decide whether to re-show the SnackBar after a
+  /// session restart.
   Future<String> lastSeenBuildFingerprint() async {
     final storage = _storage;
     if (storage == null) return '';
     return await storage.read(_lastSeenBuildFingerprintKey) ?? '';
   }
 
+  /// Records [info.buildFingerprint] as "already prompted" so the
+  /// next [checkForUpdate] call does not re-show the SnackBar for
+  /// the same build. Only called when the fingerprint is non-empty
+  /// to avoid polluting the storage with empty placeholders.
   Future<void> markBuildPrompted(UpdateInfo info) async {
     final storage = _storage;
     if (storage == null) return;
@@ -249,6 +287,10 @@ class UpdateService {
   }
 }
 
+/// Extracts a version string (e.g. `1.0.22`) from a changelog body.
+/// Looks for either a `Vaulta version:` or a generic `Version:`
+/// line. Test-only because production code goes through the native
+/// channel which already returns the version.
 @visibleForTesting
 String remoteVersionFromChangelogForTest(String changelog) {
   final match = RegExp(
@@ -258,6 +300,8 @@ String remoteVersionFromChangelogForTest(String changelog) {
   return match?.group(1)?.trim() ?? '';
 }
 
+/// Returns true when [remote] is a newer semver than [current],
+/// using a simple major.minor.patch+buildNumber compare. Test-only.
 @visibleForTesting
 bool isRemoteVersionNewerForTest(String remote, String current) {
   final remoteParts = parseVersionForTest(remote);
@@ -272,6 +316,8 @@ bool isRemoteVersionNewerForTest(String remote, String current) {
   return remoteParts.buildNumber > currentParts.buildNumber;
 }
 
+/// Parses `name+buildNumber` into a structure that the version
+/// comparator can walk. Test-only.
 @visibleForTesting
 ({List<int> nameParts, int buildNumber})? parseVersionForTest(String value) {
   final pieces = value.trim().split('+');

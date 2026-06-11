@@ -2,8 +2,14 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'device_registration_repository.dart';
 
+/// Supabase-backed implementation of [DeviceRegistrationRepository].
+/// Maps each method to a single `rpc_*` call against the configured
+/// Supabase project. All RPCs are read-modify-write under a single
+/// SQL transaction so concurrent devices cannot double-register.
 class SupabaseDeviceRegistrationRepository
     implements DeviceRegistrationRepository {
+  /// Wires the repository to a Supabase [client] (typically
+  /// `Supabase.instance.client` after `Supabase.initialize`).
   SupabaseDeviceRegistrationRepository({required SupabaseClient client})
     : _client = client;
 
@@ -140,7 +146,11 @@ class SupabaseDeviceRegistrationRepository
   }
 }
 
+/// Row parser for the `rpc_vault_list_devices` response. Kept as a
+/// top-level utility so tests can construct fixtures without
+/// instantiating the full repository.
 final class VaultDeviceSessionParser {
+  /// Builds a [VaultDeviceSession] from a single RPC row.
   static VaultDeviceSession fromRpcRow(Map<String, dynamic> row) {
     return VaultDeviceSession(
       deviceId: row['device_id'] as String? ?? '',

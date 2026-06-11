@@ -3,7 +3,15 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'remote_vault_blob_change.dart';
 import 'remote_vault_sync_repository.dart';
 
+/// Supabase-backed implementation of [RemoteVaultSyncRepository].
+/// Reads from the `vault_ops` + `vault_blobs` tables (pull) and
+/// writes via the `rpc_vault_upsert_blob` / `rpc_vault_delete_blob`
+/// RPCs (push). The pull path is two-step on purpose: fetch the
+/// latest op id per record, then fetch the current blob for each of
+/// those records. This avoids fetching a long history of tombstones
+/// for records that have since been re-inserted.
 class SupabaseRemoteVaultSyncRepository implements RemoteVaultSyncRepository {
+  /// Wires the repository to a Supabase [client].
   SupabaseRemoteVaultSyncRepository({required SupabaseClient client})
     : _client = client;
 
@@ -93,7 +101,7 @@ class SupabaseRemoteVaultSyncRepository implements RemoteVaultSyncRepository {
     required int? expectedVersion,
     required String ciphertext,
     required String nonce,
-    required String? gcmTag,
+    String? gcmTag,
     required int keyVersion,
   }) async {
     final response = await _client.rpc(

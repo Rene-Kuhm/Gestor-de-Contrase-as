@@ -1,7 +1,9 @@
 /// Single export point for APIs that are part of the sync layer's
 /// internal contract. Files outside `lib/core/sync/` should import
 /// from this barrel instead of the individual files. The wrapped
-/// declarations carry the `@internal` annotation from `package:meta`.
+/// declarations are intended for backend adapters only; features
+/// should depend on the higher-level sync APIs in
+/// `device_registration_service.dart`.
 ///
 /// See `docs/architecture/ADR-004-roadmap-sync.md` for the rationale
 /// (intent: discourage `lib/features/` from coupling to backend
