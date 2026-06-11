@@ -10,6 +10,10 @@ import 'sync_runtime_hardening.dart';
 @Deprecated('Use BidirectionalSyncService instead. Will be removed in a '
     'subsequent change.')
 class IncrementalPullSyncService {
+  /// Builds an [IncrementalPullSyncService] with sensible defaults.
+  /// The optional [applyLocalSnapshots] callback is what feeds the
+  /// vault writer; without it the pull still updates the local sync
+  /// state (cursor + lastPullAt) but does not change vault items.
   IncrementalPullSyncService({
     required RemoteVaultSyncRepository repository,
     required LocalRemoteVaultStore localStore,
@@ -33,20 +37,38 @@ class IncrementalPullSyncService {
   final RemoteVaultSyncRepository _repository;
   final LocalRemoteVaultStore _localStore;
   final Future<String> Function() _readDeviceId;
+
+  /// Maximum number of remote changes fetched per RPC. Tune down on
+  /// very constrained networks, up if the backend is local.
   final int batchSize;
+
+  /// Maximum number of retry attempts for a transient fetch failure.
+  /// 0 disables retries entirely.
   final int maxRetryAttempts;
+
+  /// Initial backoff between retries. Doubles on each attempt.
   final Duration baseRetryDelay;
+
+  /// Minimum spacing between two successful pulls. Prevents the
+  /// pull path from hammering the backend on rapid foreground
+  /// transitions.
   final Duration throttleInterval;
+
+  /// Optional hook for surfacing pull errors to the settings screen.
   final SyncDiagnosticsHook? diagnosticsHook;
   final Future<void> Function(Iterable<RemoteVaultBlobSnapshot> snapshots)?
   _applyLocalSnapshots;
   final Future<void> Function(Duration delay) _delay;
   final DateTime Function() _now;
 
+  /// Bootstrap hook. Subject to [throttleInterval]: a call within
+  /// the throttle window after the last pull is a no-op.
   Future<void> onSessionStarted() async {
     await _runPull(force: false);
   }
 
+  /// Foreground-resume hook. Same throttling rules as
+  /// [onSessionStarted].
   Future<void> onAppResumed() async {
     await _runPull(force: false);
   }

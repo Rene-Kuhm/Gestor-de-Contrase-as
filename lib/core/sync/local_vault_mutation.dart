@@ -73,7 +73,15 @@ class LocalVaultMutation {
 
 /// Discriminator for [LocalVaultMutation]: upsert (new or updated
 /// ciphertext) or delete (tombstone).
-enum LocalVaultMutationKind { upsert, delete }
+enum LocalVaultMutationKind {
+  /// Local side created or updated the record. Carries a fresh
+  /// ciphertext.
+  upsert,
+
+  /// Local side deleted the record. The push RPC ships a tombstone
+  /// (no ciphertext, just the record id + expected version).
+  delete,
+}
 
 /// Consumer of local vault mutations. Implemented by
 /// [IncrementalPushSyncService] (and its replacement

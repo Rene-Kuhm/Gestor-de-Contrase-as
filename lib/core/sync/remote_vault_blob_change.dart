@@ -1,4 +1,12 @@
+/// One row of the remote change feed. Combines the
+/// `vault_ops.id` cursor with the current `vault_blobs` row, so the
+/// pull path can advance its cursor and apply the change in a
+/// single pass.
 class RemoteVaultBlobChange {
+  /// Builds a [RemoteVaultBlobChange] from the already-decoded
+  /// fields. All payload fields (ciphertext, nonce, gcmTag,
+  /// deletedAt) default to null so callers can build tombstones
+  /// without supplying encryption material.
   const RemoteVaultBlobChange({
     required this.opCursor,
     required this.recordId,
@@ -11,18 +19,44 @@ class RemoteVaultBlobChange {
     this.deletedAt,
   });
 
+  /// Monotonic op id from `vault_ops.id`. The pull path advances
+  /// its cursor to this value after applying the change.
   final int opCursor;
+
+  /// Remote record id (stable across upserts; the local side
+  /// maps it to a local id via the record-id mapping table).
   final String recordId;
+
+  /// Vault record version. Strictly monotonic per record; CAS
+  /// checks against this value.
   final int version;
+
+  /// DEK version used to encrypt the payload. The pull path uses
+  /// this to know whether a rekey is in flight.
   final int keyVersion;
+
+  /// Base64 ciphertext. Null for tombstones.
   final String? ciphertext;
+
+  /// Base64 nonce. Null for tombstones.
   final String? nonce;
+
+  /// Base64 GCM auth tag. Null for tombstones.
   final String? gcmTag;
+
+  /// When the record was tombstoned. Non-null marks the change as
+  /// a delete.
   final DateTime? deletedAt;
+
+  /// When the record was last modified on the backend.
   final DateTime updatedAt;
 
+  /// True when this change is a delete (tombstone).
   bool get isTombstone => deletedAt != null;
 
+  /// Builds a [RemoteVaultBlobChange] from the two Supabase rows
+  /// the pull query returned (the `vault_ops` row carries the
+  /// cursor, the `vault_blobs` row carries the payload).
   factory RemoteVaultBlobChange.fromSupabaseRows({
     required Map<String, dynamic> opRow,
     required Map<String, dynamic> blobRow,
@@ -53,6 +87,8 @@ class RemoteVaultBlobChange {
     );
   }
 
+  /// Serializes the change for local persistence (used by the
+  /// staging blob during rekey, never sent to the backend).
   Map<String, dynamic> toJson() {
     return {
       'opCursor': opCursor,
@@ -67,6 +103,7 @@ class RemoteVaultBlobChange {
     };
   }
 
+  /// Inverse of [toJson].
   factory RemoteVaultBlobChange.fromJson(Map<String, dynamic> json) {
     return RemoteVaultBlobChange(
       opCursor: json['opCursor'] as int,
@@ -108,7 +145,14 @@ class RemoteVaultBlobChange {
   }
 }
 
+/// Mutable-in-memory shape used by the pull path before applying the
+/// change to the local vault. Distinct from
+/// [RemoteVaultBlobChange] in that it does NOT carry the
+/// `vault_ops.id` cursor (which is consumed by the cursor advance,
+/// not by the vault writer).
 class RemoteVaultBlobSnapshot {
+  /// Builds a [RemoteVaultBlobSnapshot]. Same semantics as
+  /// [RemoteVaultBlobChange] minus the op cursor.
   const RemoteVaultBlobSnapshot({
     required this.recordId,
     required this.version,
@@ -120,17 +164,35 @@ class RemoteVaultBlobSnapshot {
     this.deletedAt,
   });
 
+  /// Remote record id.
   final String recordId;
+
+  /// Vault record version.
   final int version;
+
+  /// DEK version.
   final int keyVersion;
+
+  /// Base64 ciphertext. Null for tombstones.
   final String? ciphertext;
+
+  /// Base64 nonce. Null for tombstones.
   final String? nonce;
+
+  /// Base64 GCM auth tag. Null for tombstones.
   final String? gcmTag;
+
+  /// When the record was tombstoned.
   final DateTime? deletedAt;
+
+  /// When the record was last modified.
   final DateTime updatedAt;
 
+  /// True when this snapshot is a delete (tombstone).
   bool get isTombstone => deletedAt != null;
 
+  /// Builds a [RemoteVaultBlobSnapshot] from a freshly-decoded
+  /// [RemoteVaultBlobChange] (strips the op cursor).
   factory RemoteVaultBlobSnapshot.fromChange(RemoteVaultBlobChange change) {
     return RemoteVaultBlobSnapshot(
       recordId: change.recordId,
@@ -144,6 +206,7 @@ class RemoteVaultBlobSnapshot {
     );
   }
 
+  /// Serializes the snapshot for local persistence.
   Map<String, dynamic> toJson() {
     return {
       'recordId': recordId,
@@ -157,6 +220,9 @@ class RemoteVaultBlobSnapshot {
     };
   }
 
+  /// Inverse of [toJson]. Accepts the legacy `aad` / `gcm_tag`
+  /// field names for [gcmTag] to stay compatible with old persisted
+  /// data.
   factory RemoteVaultBlobSnapshot.fromJson(Map<String, dynamic> json) {
     return RemoteVaultBlobSnapshot(
       recordId: json['recordId'] as String,

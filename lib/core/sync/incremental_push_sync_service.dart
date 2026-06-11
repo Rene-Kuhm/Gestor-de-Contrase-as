@@ -1,5 +1,6 @@
-// ignore_for_file: prefer_const_declarations
+// ignore_for_file: prefer_const_declarations, depend_on_referenced_packages
 
+import 'package:meta/meta.dart';
 import 'package:uuid/uuid.dart';
 
 import 'local_remote_vault_store.dart';
@@ -16,6 +17,8 @@ import 'sync_runtime_hardening.dart';
 @Deprecated('Use BidirectionalSyncService instead. Will be removed in a '
     'subsequent change.')
 class IncrementalPushSyncService implements LocalVaultMutationSink {
+  /// Builds an [IncrementalPushSyncService]. The optional [uuid] is
+  /// for tests; production code uses the default secure source.
   IncrementalPushSyncService({
     required RemoteVaultSyncRepository repository,
     required LocalRemoteVaultStore localStore,
@@ -36,9 +39,21 @@ class IncrementalPushSyncService implements LocalVaultMutationSink {
   final LocalRemoteVaultStore _localStore;
   final Future<String> Function() _readDeviceId;
   final Uuid _uuid;
+
+  /// Maximum number of queue items drained per [runNow] invocation.
+  /// Bounds a single push cycle so a huge local queue does not block
+  /// the lifecycle for minutes.
   final int maxItemsPerRun;
+
+  /// Initial backoff for transient push failures. Doubles on each
+  /// retry, capped at [maxBackoff].
   final Duration baseBackoff;
+
+  /// Hard cap on the per-item backoff. Keeps a long-lived failed
+  /// item from being pushed hours later.
   final Duration maxBackoff;
+
+  /// Optional hook for surfacing push errors to the settings screen.
   final SyncDiagnosticsHook? diagnosticsHook;
   final DateTime Function() _now;
 
@@ -72,14 +87,21 @@ class IncrementalPushSyncService implements LocalVaultMutationSink {
     await _triggerSync();
   }
 
+  /// Bootstrap hook for the lifecycle: triggers an immediate push
+  /// drain to flush any queue items that piled up while the app
+  /// was backgrounded.
   Future<void> onSessionStarted() async {
     await _triggerSync();
   }
 
+  /// Foreground-resume hook: triggers a push drain to push any
+  /// mutations that happened while the app was in the background.
   Future<void> onAppResumed() async {
     await _triggerSync();
   }
 
+  /// Explicit drain trigger. Used by the conflict resolver after a
+  /// `keepLocal` decision to re-attempt the just-rebased item.
   Future<void> runNow() async {
     await _triggerSync();
   }
@@ -267,8 +289,8 @@ class IncrementalPushSyncService implements LocalVaultMutationSink {
         message: message,
         retriable: true,
         timestamp: _now(),
-        hook: diagnosticsHook,
         attempt: retryCount,
+        hook: diagnosticsHook,
         error: error,
       );
       return _DispatchResult(
@@ -332,7 +354,7 @@ class IncrementalPushSyncService implements LocalVaultMutationSink {
 
     if (response.code == RemoteVaultPushResultCode.casConflict) {
       await _registerConflict(userId: userId, item: item, response: response);
-      final code = SyncStatusCodes.casConflict;
+      const code = SyncStatusCodes.casConflict;
       final message = syncMessageForCode(code, fallback: response.message);
       emitSyncDiagnostic(
         scope: 'push',
@@ -356,7 +378,7 @@ class IncrementalPushSyncService implements LocalVaultMutationSink {
     }
 
     if (response.code == RemoteVaultPushResultCode.idempotencyMismatch) {
-      final code = SyncStatusCodes.idempotencyMismatch;
+      const code = SyncStatusCodes.idempotencyMismatch;
       final message = syncMessageForCode(code, fallback: response.message);
       emitSyncDiagnostic(
         scope: 'push',
@@ -414,8 +436,8 @@ class IncrementalPushSyncService implements LocalVaultMutationSink {
       message: unknownMessage,
       retriable: true,
       timestamp: _now(),
-      hook: diagnosticsHook,
       attempt: retryCount,
+      hook: diagnosticsHook,
     );
     return _DispatchResult(
       item: item.copyWith(
@@ -561,6 +583,10 @@ class IncrementalPushSyncService implements LocalVaultMutationSink {
   );
 }
 
+/// Result of a single push RPC dispatch, private to this file.
+/// Carries the new (or unchanged) queue item plus a flag telling
+/// the drain loop whether to remove the item from the queue.
+@immutable
 class _DispatchResult {
   const _DispatchResult({
     required this.item,

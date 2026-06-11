@@ -24,6 +24,10 @@ import 'sync_runtime_hardening.dart';
 /// Implements [LocalVaultMutationSink] so the local vault repository
 /// can notify the service of upserts/deletes as they happen.
 class BidirectionalSyncService implements LocalVaultMutationSink {
+  /// Builds a [BidirectionalSyncService]. Most callers should rely on
+  /// the defaults; the optional [uuid] / [delay] / [now] are for
+  /// tests, and the optional [applyLocalSnapshots] callback is
+  /// what feeds the vault writer during a pull.
   BidirectionalSyncService({
     required RemoteVaultSyncRepository repository,
     required LocalRemoteVaultStore localStore,
@@ -72,25 +76,41 @@ class BidirectionalSyncService implements LocalVaultMutationSink {
   final Future<void> Function(Duration delay) _delay;
   final DateTime Function() _now;
 
+  /// Optional hook that receives a [SyncDiagnosticEvent] for every
+  /// pull/push failure. Wired by the lifecycle to surface sync
+  /// issues in the settings screen.
   final SyncDiagnosticsHook? diagnosticsHook;
 
   bool _pushRunning = false;
   bool _pushRerunRequested = false;
 
+  /// Bootstrap hook (called once per session). Runs a pull and a
+  /// push drain in sequence.
   Future<void> onSessionStarted() async {
     await pullNow();
     await _triggerPush();
   }
 
+  /// Foreground-resume hook. Runs a pull and a push drain in
+  /// sequence; the pull is subject to the [pullThrottleInterval]
+  /// gate so a rapid foreground transition does not hammer the
+  /// backend.
   Future<void> onAppResumed() async {
     await pullNow();
     await _triggerPush();
   }
 
+  /// Triggers a pull cycle. Pass [force] = true to bypass the
+  /// throttle window (used by tests and by future background
+  /// triggers).
   Future<void> pullNow({bool force = false}) async {
     await _runPull(force: force);
   }
 
+  /// Triggers an explicit push drain. Used by the conflict
+  /// resolver after a `keepLocal` decision to immediately re-attempt
+  /// the just-rebased item instead of waiting for the next
+  /// pull/push trigger.
   Future<void> runNow() async {
     await _triggerPush();
   }

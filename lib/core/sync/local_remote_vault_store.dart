@@ -5,19 +5,49 @@ import 'local_vault_mutation.dart';
 import 'remote_vault_blob_change.dart';
 import 'sync_conflict.dart';
 
+/// Persistent on-device state for the sync layer. Backed by
+/// [SecureStorageService] (so it goes through Android Keystore /
+/// Windows Credential Manager / etc.) and namespaced per
+/// `(userId, deviceId)`. Owns:
+///
+/// * the per-(user, device) pull cursor and last-pull timestamp;
+/// * the per-user map of remote record id → blob snapshot;
+/// * the per-user push queue;
+/// * the per-user pending conflict log;
+/// * the per-user local→remote record id mapping.
 class LocalRemoteVaultStore {
+  /// Builds a [LocalRemoteVaultStore] on top of the supplied
+  /// secure [storage].
   LocalRemoteVaultStore({required SecureStorageService storage})
     : _storage = storage;
 
+  /// Secure storage key prefix for the per-(user, device) pull
+  /// cursor.
   static const _cursorPrefix = 'vault_sync_pull_cursor_v1';
+
+  /// Secure storage key prefix for the per-(user, device) last
+  /// pull timestamp.
   static const _lastPullPrefix = 'vault_sync_pull_last_at_v1';
+
+  /// Secure storage key prefix for the per-user map of remote
+  /// record id → blob snapshot.
   static const _blobPrefix = 'vault_sync_remote_blobs_v1';
+
+  /// Secure storage key prefix for the per-user push queue.
   static const _pushQueuePrefix = 'vault_sync_push_queue_v1';
+
+  /// Secure storage key prefix for the per-user conflict log.
   static const _conflictPrefix = 'vault_sync_conflicts_v1';
+
+  /// Secure storage key prefix for the per-user record id mapping
+  /// (remote → local).
   static const _recordIdMapPrefix = 'vault_sync_record_id_map_v1';
 
   final SecureStorageService _storage;
 
+  /// Returns the persisted pull cursor for (user, device), or 0 if
+  /// no pull has run yet. The cursor is the `vault_ops.id` value
+  /// the pull service has consumed up to.
   Future<int> readCursor({
     required String userId,
     required String deviceId,
@@ -33,6 +63,8 @@ class LocalRemoteVaultStore {
     return parsed ?? 0;
   }
 
+  /// Persists the pull cursor for (user, device). Call after a
+  /// successful pull cycle.
   Future<void> saveCursor({
     required String userId,
     required String deviceId,
@@ -44,6 +76,9 @@ class LocalRemoteVaultStore {
     );
   }
 
+  /// Returns the timestamp of the last successful pull for (user,
+  /// device), or null if there has been no pull yet. Used by the
+  /// pull service's throttle window.
   Future<DateTime?> readLastPullAt({
     required String userId,
     required String deviceId,
@@ -58,6 +93,8 @@ class LocalRemoteVaultStore {
     return DateTime.tryParse(raw)?.toUtc();
   }
 
+  /// Persists the last-pull timestamp for (user, device). Call
+  /// after a successful pull cycle.
   Future<void> saveLastPullAt({
     required String userId,
     required String deviceId,
@@ -69,6 +106,8 @@ class LocalRemoteVaultStore {
     );
   }
 
+  /// Returns all remote snapshots the pull path has written for
+  /// [userId]. The map is keyed by remote record id.
   Future<Map<String, RemoteVaultBlobSnapshot>> readSnapshots({
     required String userId,
   }) async {
@@ -87,6 +126,10 @@ class LocalRemoteVaultStore {
     return snapshots;
   }
 
+  /// Applies a batch of [changes] from the pull cycle to the
+  /// snapshot map, advancing the cursor to [newCursor]. Stale
+  /// changes (lower version or older `updatedAt` than what we
+  /// already have) are silently dropped.
   Future<void> applyChanges({
     required String userId,
     required String deviceId,
@@ -110,6 +153,9 @@ class LocalRemoteVaultStore {
     await saveCursor(userId: userId, deviceId: deviceId, cursor: newCursor);
   }
 
+  /// Overwrites a single snapshot. Used by the push service after a
+  /// successful upsert RPC to reflect the new version the backend
+  /// returned.
   Future<void> saveSnapshot({
     required String userId,
     required RemoteVaultBlobSnapshot snapshot,
@@ -122,6 +168,8 @@ class LocalRemoteVaultStore {
     await _storage.save(_blobKey(userId: userId), jsonEncode(encoded));
   }
 
+  /// Returns the snapshot for a single [recordId], or null when the
+  /// record has never been pulled.
   Future<RemoteVaultBlobSnapshot?> readSnapshot({
     required String userId,
     required String recordId,
@@ -130,6 +178,8 @@ class LocalRemoteVaultStore {
     return snapshots[recordId];
   }
 
+  /// Returns the per-user push queue. Returns an empty list when
+  /// the user has never enqueued a mutation.
   Future<List<PushQueueItem>> readPushQueue({required String userId}) async {
     final raw = await _storage.read(_pushQueueKey(userId: userId));
     if (raw == null || raw.isEmpty) {
@@ -143,6 +193,8 @@ class LocalRemoteVaultStore {
         .toList(growable: true);
   }
 
+  /// Persists the per-user push queue, overwriting whatever was
+  /// there before.
   Future<void> savePushQueue({
     required String userId,
     required List<PushQueueItem> items,
@@ -151,6 +203,8 @@ class LocalRemoteVaultStore {
     await _storage.save(_pushQueueKey(userId: userId), jsonEncode(encoded));
   }
 
+  /// Appends [item] to the push queue, de-duplicating against any
+  /// existing non-`inFlight` item for the same `localRecordId`.
   Future<void> enqueuePushMutation({
     required String userId,
     required PushQueueItem item,
@@ -165,6 +219,8 @@ class LocalRemoteVaultStore {
     await savePushQueue(userId: userId, items: queue);
   }
 
+  /// Returns the per-user pending conflict log. Returns an empty
+  /// list when the user has no conflicts pending resolution.
   Future<List<SyncConflictRecord>> readPendingConflicts({
     required String userId,
   }) async {
@@ -180,6 +236,8 @@ class LocalRemoteVaultStore {
         .toList(growable: true);
   }
 
+  /// Persists the per-user conflict log, overwriting whatever was
+  /// there before.
   Future<void> savePendingConflicts({
     required String userId,
     required List<SyncConflictRecord> conflicts,
@@ -190,6 +248,8 @@ class LocalRemoteVaultStore {
     await _storage.save(_conflictKey(userId: userId), jsonEncode(encoded));
   }
 
+  /// Inserts a new conflict or updates an existing one in place
+  /// (matched by `opId`).
   Future<void> upsertPendingConflict({
     required String userId,
     required SyncConflictRecord conflict,
@@ -205,6 +265,8 @@ class LocalRemoteVaultStore {
     await savePendingConflicts(userId: userId, conflicts: conflicts);
   }
 
+  /// Removes the conflict identified by [conflictId] from the
+  /// per-user conflict log.
   Future<void> removePendingConflict({
     required String userId,
     required String conflictId,
@@ -214,6 +276,9 @@ class LocalRemoteVaultStore {
     await savePendingConflicts(userId: userId, conflicts: conflicts);
   }
 
+  /// Records that [localRecordId] is the local projection of
+  /// [remoteRecordId]. No-op when the two ids are already equal
+  /// (the common case for UUIDs minted locally).
   Future<void> saveRecordIdMapping({
     required String userId,
     required String localRecordId,
@@ -231,6 +296,8 @@ class LocalRemoteVaultStore {
     await _storage.save(_recordIdMapKey(userId: userId), jsonEncode(map));
   }
 
+  /// Returns the local record id that [remoteRecordId] maps to,
+  /// or [remoteRecordId] itself when no mapping is recorded.
   Future<String> resolveLocalRecordId({
     required String userId,
     required String remoteRecordId,
@@ -248,6 +315,10 @@ class LocalRemoteVaultStore {
     return remoteRecordId;
   }
 
+  /// Returns true when [incoming] should overwrite [existing] in the
+  /// snapshot map. The rule is: no existing → always apply;
+  /// incoming has higher version → apply; equal version and
+  /// `updatedAt` is later → apply. Otherwise drop.
   bool _shouldApply({
     required RemoteVaultBlobSnapshot? existing,
     required RemoteVaultBlobChange incoming,
@@ -292,11 +363,49 @@ class LocalRemoteVaultStore {
   }
 }
 
-enum PushQueueStatus { pending, inFlight, retry, failed, conflict }
+/// Lifecycle state of a [PushQueueItem] inside the queue.
+enum PushQueueStatus {
+  /// Just enqueued, never attempted.
+  pending,
 
-enum PushQueueOperationKind { upsert, delete }
+  /// Currently being dispatched (in the push RPC). Cleared on next
+  /// drain.
+  inFlight,
 
+  /// Last attempt failed transiently. Has [PushQueueItem.nextAttemptAt]
+  /// set; the drain loop will retry after that timestamp.
+  retry,
+
+  /// Last attempt failed definitively (auth expired, idempotency
+  /// mismatch, etc.). The drain loop will NOT retry; the user must
+  /// intervene.
+  failed,
+
+  /// The push RPC returned `casConflict`. The conflict resolver is
+  /// responsible for picking `keepLocal` / `keepRemote`. The drain
+  /// loop will NOT retry.
+  conflict,
+}
+
+/// Whether the local mutation was an upsert or a delete. Carried in
+/// [PushQueueItem.kind] so the drain loop dispatches the right RPC.
+enum PushQueueOperationKind {
+  /// Local side created or updated a record.
+  upsert,
+
+  /// Local side deleted a record.
+  delete,
+}
+
+/// One entry in the per-user push queue. Created from a
+/// [LocalVaultMutation] emitted by the vault repository, updated by
+/// the push service as dispatch progresses, removed when the
+/// mutation is applied (or abandoned) on the backend.
 class PushQueueItem {
+  /// Builds a [PushQueueItem]. [opId], [localRecordId],
+  /// [remoteRecordId], [kind], [status], [createdAt] and [updatedAt]
+  /// are required. The rest default to zero/empty/null and are
+  /// filled in by the push service as dispatch progresses.
   const PushQueueItem({
     required this.opId,
     required this.localRecordId,
@@ -318,25 +427,73 @@ class PushQueueItem {
     this.lastMessage,
   });
 
+  /// UUID identifying this specific push attempt. Stable across
+  /// retries (the same logical mutation keeps the same `opId`).
   final String opId;
+
+  /// Local vault record id.
   final String localRecordId;
+
+  /// Remote record id (after the local→remote mapping).
   final String remoteRecordId;
+
+  /// Upsert or delete.
   final PushQueueOperationKind kind;
+
+  /// Current lifecycle state.
   final PushQueueStatus status;
+
+  /// Version the push RPC claims the record has. CAS-checked on
+  /// the backend; a mismatch yields a `casConflict` and the
+  /// conflict resolver is invoked.
   final int? expectedVersion;
+
+  /// Base64 ciphertext. Null for deletes.
   final String? ciphertext;
+
+  /// Base64 nonce. Null for deletes.
   final String? nonce;
+
+  /// Base64 GCM auth tag. Null for deletes.
   final String? gcmTag;
+
+  /// DEK version. Used by the backend to know whether a rekey is
+  /// in flight.
   final int? keyVersion;
+
+  /// Stable per-mutation dedup key. Re-generated after a
+  /// `keepLocal` resolution so the re-attempt is treated as a new
+  /// logical operation.
   final String? idempotencyKey;
+
+  /// Total number of dispatch attempts (including retries).
   final int attemptCount;
+
+  /// Number of transient-failed retries. Reset to 0 after a
+  /// `keepLocal` resolution.
   final int retryCount;
+
+  /// Earliest timestamp at which the drain loop may retry this item.
+  /// Only meaningful when [status] is [PushQueueStatus.retry].
   final DateTime? nextAttemptAt;
+
+  /// Most recent backend result code (e.g. `cas_conflict`,
+  /// `idempotency_mismatch`). Useful for the conflict-resolver UI
+  /// and for triage.
   final String? lastResultCode;
+
+  /// Most recent backend message.
   final String? lastMessage;
+
+  /// When the item was first enqueued.
   final DateTime createdAt;
+
+  /// When the item was last touched (every dispatch bumps this).
   final DateTime updatedAt;
 
+  /// Returns a copy with the supplied fields replaced. The
+  /// [createdAt] is preserved (immutable after creation); [updatedAt]
+  /// is preserved unless explicitly supplied.
   PushQueueItem copyWith({
     PushQueueStatus? status,
     int? expectedVersion,
@@ -370,6 +527,9 @@ class PushQueueItem {
     );
   }
 
+  /// Builds a [PushQueueItem] from a [LocalVaultMutation]. Sets
+  /// [PushQueueItem.status] to [PushQueueStatus.pending] and copies
+  /// the encryption material from the mutation.
   factory PushQueueItem.fromMutation({
     required String opId,
     required String remoteRecordId,
@@ -392,6 +552,8 @@ class PushQueueItem {
     );
   }
 
+  /// Inverse of [toJson]. Accepts the legacy `aad` field name as
+  /// a fallback for [gcmTag] so old persisted items keep loading.
   factory PushQueueItem.fromJson(Map<String, dynamic> json) {
     return PushQueueItem(
       opId: json['opId'] as String,
@@ -417,6 +579,7 @@ class PushQueueItem {
     );
   }
 
+  /// Serializes the item for persistence in the push queue.
   Map<String, dynamic> toJson() {
     return {
       'opId': opId,

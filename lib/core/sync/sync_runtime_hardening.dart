@@ -2,12 +2,21 @@
 
 import 'package:flutter/foundation.dart';
 
+/// Callback signature that receives a [SyncDiagnosticEvent] when the
+/// sync layer emits one. The vault lifecycle wires this to surface
+/// sync issues in the settings screen; tests pass a recorder.
 typedef SyncDiagnosticsHook = void Function(SyncDiagnosticEvent event);
 
+/// Toggle for the `debugPrint` line emitted with each diagnostic
+/// event. Disabled by default to keep release builds quiet; enable
+/// during local development by running with
+/// `--dart-define=VAULTA_SYNC_DIAGNOSTICS_LOGS=true`.
 const bool syncDiagnosticsLoggingEnabled = bool.fromEnvironment(
   'VAULTA_SYNC_DIAGNOSTICS_LOGS',
 );
 
+/// Conditionally prints a sync diagnostic line. No-op when
+/// [syncDiagnosticsLoggingEnabled] is false.
 void syncDebugPrint(String message) {
   if (!syncDiagnosticsLoggingEnabled) {
     return;
@@ -16,7 +25,13 @@ void syncDebugPrint(String message) {
   debugPrint(message);
 }
 
+/// One structured event emitted by the sync layer when something
+/// goes wrong (or is about to be retried). Carries enough context
+/// for the lifecycle to render a useful message in the settings
+/// screen without re-fetching from the backend.
 class SyncDiagnosticEvent {
+  /// Builds a [SyncDiagnosticEvent]. The metadata map is shallow-
+  /// copied at the call site (no need to wrap it).
   const SyncDiagnosticEvent({
     required this.scope,
     required this.operation,
@@ -30,27 +45,65 @@ class SyncDiagnosticEvent {
     this.metadata = const <String, Object?>{},
   });
 
+  /// Coarse area: `pull`, `push`, `session`, `revocation`, etc.
   final String scope;
+
+  /// Specific operation within the scope: `fetch_changes`,
+  /// `dispatch`, `read_access_status`, etc.
   final String operation;
+
+  /// Stable status code from [SyncStatusCodes].
   final String code;
+
+  /// Human-readable, already-localized message.
   final String message;
+
+  /// True when the sync layer will retry on its own. False when the
+  /// failure is definitive and requires user intervention.
   final bool retriable;
+
+  /// When the event was emitted (UTC).
   final DateTime timestamp;
+
+  /// Retry attempt number (1-based) when applicable.
   final int? attempt;
+
+  /// Maximum number of attempts configured for this operation.
   final int? maxAttempts;
+
+  /// `runtimeType` of the originating error, useful for triage.
   final String? errorType;
+
+  /// Free-form structured context (e.g. `afterOpId`, `recordId`).
   final Map<String, Object?> metadata;
 }
 
+/// Stable status codes returned by [classifySyncError] and
+/// [syncErrorCode]. Stored verbatim in [SyncDiagnosticEvent.code].
 final class SyncStatusCodes {
+  /// Backend rejected the push because `expectedVersion` was stale.
   static const casConflict = 'cas_conflict';
+
+  /// Backend saw a different `idempotencyKey` for the same op.
   static const idempotencyMismatch = 'idempotency_mismatch';
+
+  /// Session or device was revoked remotely; the user must
+  /// re-authenticate.
   static const revokedSessionOrDevice = 'revoked_session_or_device';
+
+  /// Network is down or the server is unreachable.
   static const offlineNetworkError = 'offline_network_error';
+
+  /// Generic transport-level failure (timeout, socket reset, etc.).
   static const transportError = 'transport_error';
+
+  /// Catch-all for unclassified failures.
   static const unknown = 'unknown';
 }
 
+/// Maps a [SyncStatusCodes] value to its localized, user-facing
+/// message. Falls back to [fallback] (or a generic phrase) when the
+/// code is unrecognized.
 String syncMessageForCode(String code, {String? fallback}) {
   return switch (code) {
     SyncStatusCodes.casConflict =>
@@ -67,8 +120,21 @@ String syncMessageForCode(String code, {String? fallback}) {
   };
 }
 
-enum SyncErrorDisposition { transient, definitive }
+/// Coarse classification of a sync error. Drives whether the layer
+/// retries, surfaces to the UI, or both.
+enum SyncErrorDisposition {
+  /// Worth retrying (network blip, server 5xx, 429, etc.).
+  transient,
 
+  /// Will not succeed on retry without user intervention (auth
+  /// expired, device revoked, idempotency mismatch, etc.).
+  definitive,
+}
+
+/// Classifies an arbitrary error as [SyncErrorDisposition.transient]
+/// or [SyncErrorDisposition.definitive]. The heuristic inspects the
+/// HTTP status code (if any) and the error text/type for known
+/// transient hints ("offline", "network", "timeout", ...).
 SyncErrorDisposition classifySyncError(Object error) {
   if (_looksDefinitive(error)) {
     return SyncErrorDisposition.definitive;
@@ -79,6 +145,9 @@ SyncErrorDisposition classifySyncError(Object error) {
   return SyncErrorDisposition.definitive;
 }
 
+/// Maps an arbitrary error to a [SyncStatusCodes] value. The
+/// classification is the same as [classifySyncError] but the output
+/// is a stable string suitable for diagnostics and the UI.
 String syncErrorCode(Object error) {
   if (_looksRevocation(error)) {
     return SyncStatusCodes.revokedSessionOrDevice;
@@ -89,6 +158,10 @@ String syncErrorCode(Object error) {
   return SyncStatusCodes.transportError;
 }
 
+/// Emits a [SyncDiagnosticEvent] via the optional [hook] and prints
+/// a one-line `debugPrint` when [syncDiagnosticsLoggingEnabled] is
+/// true. The [metadata] map is shallow-copied; callers can pass
+/// read-only maps.
 void emitSyncDiagnostic({
   required String scope,
   required String operation,

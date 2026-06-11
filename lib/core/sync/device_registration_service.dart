@@ -13,10 +13,16 @@ import 'device_session_revocation_service.dart';
 import 'sync_conflict_resolver.dart';
 import 'sync_runtime_hardening.dart';
 
+/// Abstraction over "what version of the app is running?". Lets
+/// tests substitute a stub without pulling in `package_info_plus`.
 abstract interface class AppVersionProvider {
+  /// Returns the user-visible app version string, e.g. `1.0.21+22`.
   Future<String> readAppVersion();
 }
 
+/// Production [AppVersionProvider] backed by `package_info_plus`.
+/// Returns `'unknown'` when the platform channel fails so the
+/// device-registration call can still go through with a sentinel.
 class PackageInfoAppVersionProvider implements AppVersionProvider {
   @override
   Future<String> readAppVersion() async {
@@ -33,21 +39,32 @@ class PackageInfoAppVersionProvider implements AppVersionProvider {
   }
 }
 
+/// Abstraction over "who is this device?". Lets tests substitute
+/// deterministic device ids without touching secure storage.
 abstract interface class DeviceIdentityService {
+  /// Returns the locally-persisted device id, generating and storing
+  /// a new UUID v4 the first time it is called.
   Future<String> getOrCreateDeviceId();
 
+  /// Returns the user-visible device name (`Vaulta-<platform>-<id6>`).
   Future<String> readDeviceName();
 
+  /// Returns the platform string (`android`, `ios`, `windows`, etc.).
+  /// Synchronous because it just maps `defaultTargetPlatform`.
   String readPlatform();
 }
 
+/// Production [DeviceIdentityService] backed by secure storage.
 class LocalDeviceIdentityService implements DeviceIdentityService {
+  /// Builds a [LocalDeviceIdentityService]. The optional [uuid] is
+  /// for tests; production code uses the default secure source.
   LocalDeviceIdentityService({
     required SecureStorageService storage,
     Uuid? uuid,
   }) : _storage = storage,
        _uuid = uuid ?? const Uuid();
 
+  /// Secure storage key for the locally-persisted device id.
   static const deviceIdKey = 'vault_sync_device_id';
 
   final SecureStorageService _storage;
@@ -91,7 +108,14 @@ class LocalDeviceIdentityService implements DeviceIdentityService {
   }
 }
 
+/// Service that adapts the [DeviceRegistrationRepository] (low-level
+/// RPCs) to the lifecycle's vocabulary (register, heartbeat,
+/// read-status). The lifecycle calls these three methods at well-
+/// defined moments.
 class DeviceRegistrationService {
+  /// Builds a [DeviceRegistrationService]. [repository] is the
+  /// backend adapter; [identityService] resolves the device id;
+  /// [appVersionProvider] reads the running app version.
   DeviceRegistrationService({
     required DeviceRegistrationRepository repository,
     required DeviceIdentityService identityService,
@@ -107,6 +131,10 @@ class DeviceRegistrationService {
   final AppVersionProvider _appVersionProvider;
   final DateTime Function() _now;
 
+  /// Registers the current device with the backend. Idempotent
+  /// server-side; safe to call repeatedly. Returns the resulting
+  /// [DeviceAccessStatus] so the lifecycle can decide whether to
+  /// gate the unlock.
   Future<DeviceAccessStatus> registerCurrentDevice() async {
     final metadata = await _readMetadata();
     return _repository.registerDevice(
@@ -118,6 +146,9 @@ class DeviceRegistrationService {
     );
   }
 
+  /// Sends a heartbeat to refresh the device's `lastSeenAt`. Returns
+  /// the resulting [DeviceAccessStatus]; the lifecycle watches for
+  /// revocations in the response and reacts.
   Future<DeviceAccessStatus> sendHeartbeat() async {
     final metadata = await _readMetadata();
     return _repository.sendHeartbeat(
@@ -129,6 +160,9 @@ class DeviceRegistrationService {
     );
   }
 
+  /// Reads the current device's [DeviceAccessStatus] without
+  /// performing any mutation. Used by the lifecycle to gate the
+  /// unlock flow.
   Future<DeviceAccessStatus> readCurrentDeviceAccessStatus() async {
     final deviceId = await _identityService.getOrCreateDeviceId();
     return _repository.readDeviceAccessStatus(deviceId: deviceId);
@@ -149,7 +183,19 @@ class DeviceRegistrationService {
   }
 }
 
+/// Higher-level orchestrator that ties together device registration,
+/// heartbeat, push/pull sync, conflict resolution, and revocation.
+/// The app constructs one of these at startup and calls
+/// [onSessionStarted] / [onAppResumed] from the app-lifecycle hook.
 class DeviceSyncLifecycle {
+  /// Builds a [DeviceSyncLifecycle]. All collaborators are
+  /// required except the optional [pullSyncService] / [pushSyncService]
+  /// (when omitted, the corresponding sync path is a no-op),
+  /// [conflictResolver] (when omitted, conflicts are still
+  /// persisted but not exposed in the UI), [mutationSink] (when
+  /// omitted, local mutations are not enqueued for push), and
+  /// [onCurrentDeviceRevoked] (when omitted, revocation is logged
+  /// but does not trigger any user-facing action).
   DeviceSyncLifecycle({
     required DeviceRegistrationService service,
     required this.revocationService,
@@ -172,16 +218,37 @@ class DeviceSyncLifecycle {
        _now = now ?? DateTime.now;
 
   final DeviceRegistrationService _service;
+
+  /// Service that owns the device-management screen and the
+  /// "log out everywhere else" flow.
   final DeviceSessionRevocationService revocationService;
   final IncrementalPullSyncService? _pullSyncService;
   final IncrementalPushSyncService? _pushSyncService;
+
+  /// Resolver exposed to the UI for the user to pick
+  /// `keepLocal` / `keepRemote` on a conflict.
   final SyncConflictResolver? conflictResolver;
   final RelayLocalVaultMutationSink? _mutationSink;
+
+  /// Callback invoked when the backend reports the current device
+  /// was revoked. The app uses this to lock the vault and surface
+  /// a "device revoked" message.
   final Future<void> Function(DeviceAccessStatus status)?
   onCurrentDeviceRevoked;
+
+  /// Maximum number of retry attempts for the session-validation
+  /// RPCs. 0 disables retries entirely.
   final int maxRetryAttempts;
+
+  /// Initial backoff between retries. Doubles on each attempt.
   final Duration baseRetryDelay;
+
+  /// How often [onAppResumed] sends a heartbeat (when the device is
+  /// idle in the foreground).
   final Duration heartbeatInterval;
+
+  /// Optional hook that receives a [SyncDiagnosticEvent] for every
+  /// session-related failure. Used by the settings screen.
   final SyncDiagnosticsHook? diagnosticsHook;
   final Future<void> Function(Duration delay) _delay;
   final DateTime Function() _now;
@@ -189,6 +256,11 @@ class DeviceSyncLifecycle {
   DateTime? _lastHeartbeatAt;
   bool _registered = false;
 
+  /// Hook for the app's session-start lifecycle event. Validates
+  /// the device with the backend, registers it if needed, and
+  /// triggers the first pull/push. Safe to call multiple times:
+  /// subsequent calls within the same session short-circuit the
+  /// registration step.
   Future<void> onSessionStarted() async {
     if (!await _ensureCurrentDeviceAccess()) {
       return;
@@ -217,6 +289,9 @@ class DeviceSyncLifecycle {
     await _pullSyncService?.onSessionStarted();
   }
 
+  /// Hook for the app's foreground-resume lifecycle event. Sends
+  /// a heartbeat if [heartbeatInterval] has elapsed, and triggers
+  /// a fresh pull/push.
   Future<void> onAppResumed() async {
     if (!await _ensureCurrentDeviceAccess()) {
       return;

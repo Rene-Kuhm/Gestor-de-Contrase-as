@@ -3,14 +3,36 @@ import 'remote_vault_sync_repository.dart';
 import 'sync_conflict.dart';
 import 'sync_runtime_hardening.dart';
 
+/// Outcome of a user-driven conflict resolution. Returned by
+/// [SyncConflictResolver.resolve] and rendered by the
+/// conflict-resolver UI.
 class SyncConflictResolveResult {
+  /// Builds a [SyncConflictResolveResult]. [ok] is true when the
+  /// resolution was applied; [message] is the localized, user-facing
+  /// outcome (suitable for a toast or a status line).
   const SyncConflictResolveResult({required this.ok, required this.message});
 
+  /// True when the resolution was applied.
   final bool ok;
+
+  /// Localized, user-facing outcome of the resolution.
   final String message;
 }
 
+/// Orchestrates the user side of the conflict resolution flow:
+/// reads pending conflicts from the local log, applies the user's
+/// choice (keep local / keep remote), updates the push queue
+/// accordingly, and removes the resolved conflict.
+///
+/// What this resolver does NOT do: detect new conflicts (that's
+/// the push service's job) or fetch remote snapshots (the push
+/// service attaches them when registering a conflict).
 class SyncConflictResolver {
+  /// Builds a [SyncConflictResolver]. [repository] is needed to
+  /// resolve the current user id; [localStore] is the conflict log
+  /// + push queue; [triggerPushSync] is an optional callback invoked
+  /// after a `keepLocal` resolution to drain the re-queued item
+  /// immediately instead of waiting for the next pull/push trigger.
   SyncConflictResolver({
     required RemoteVaultSyncRepository repository,
     required LocalRemoteVaultStore localStore,
@@ -26,6 +48,9 @@ class SyncConflictResolver {
   final Future<void> Function()? _triggerPushSync;
   final DateTime Function() _now;
 
+  /// Returns the current user's pending conflicts, sorted newest
+  /// first. Returns an empty list when the user is unauthenticated
+  /// or there are no conflicts.
   Future<List<SyncConflictRecord>> readPendingConflicts() async {
     final userId = await _readUserId();
     if (userId == null) {
@@ -37,6 +62,13 @@ class SyncConflictResolver {
     return conflicts;
   }
 
+  /// Applies the user's [resolution] to the conflict identified by
+  /// [conflictId]. For [SyncConflictResolution.keepRemote] the local
+  /// mutation is dropped and the remote version is accepted. For
+  /// [SyncConflictResolution.keepLocal] the push queue item is
+  /// rebuilt with the remote version as the new `expectedVersion`
+  /// (so the next push RPC passes CAS) and the push service is
+  /// triggered to drain it immediately.
   Future<SyncConflictResolveResult> resolve({
     required String conflictId,
     required SyncConflictResolution resolution,
