@@ -9,3 +9,8 @@ Este directorio documenta decisiones de arquitectura para destrabar la implement
 - [ADR-005: Hygiene de repositorio, lints y cobertura](./ADR-005-repo-hygiene.md)
 
 Estado inicial del pack: aprobado para implementacion por lotes.
+
+## Otros documentos de arquitectura
+
+- [CRYPTO.md](./CRYPTO.md) — entry point para un audit externo de criptografia. Indice de fuentes, contrato criptografico, y lista de preguntas para el auditor.
+- [THREAT_MODEL.md](./THREAT_MODEL.md) — modelo de amenaza honesto: que defendemos, que NO defendemos, y los riesgos residuales que el usuario acepta al elegir Vaulta.
