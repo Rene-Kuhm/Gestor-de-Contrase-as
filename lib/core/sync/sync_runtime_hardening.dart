@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_dynamic_calls
+
 import 'package:flutter/foundation.dart';
 
 typedef SyncDiagnosticsHook = void Function(SyncDiagnosticEvent event);

@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_const_constructors
+
 // Widget test that exercises the UpdateSection "Check for updates"
 // button end-to-end. Verifies the button changes the visible state
 // (spinner, success banner, or error banner) so a "silent no-op" can

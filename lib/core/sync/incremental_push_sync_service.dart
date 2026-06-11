@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_const_declarations
+
 import 'package:uuid/uuid.dart';
 
 import 'local_remote_vault_store.dart';

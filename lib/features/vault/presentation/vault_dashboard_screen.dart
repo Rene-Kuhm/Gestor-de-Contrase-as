@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_const_constructors, unawaited_futures
+
 import 'package:flutter/material.dart';
 
 import '../../../app/design_system/app_components.dart';
