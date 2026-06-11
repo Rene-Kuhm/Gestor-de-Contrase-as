@@ -152,3 +152,69 @@ El orden de tareas prioriza lo que NO tiene riesgo de romper el build:
   `flutter analyze` y supresiones graduadas.
 - **Lote 3 (riesgo bajo)**: T4 (coverage step en CI) una vez que el
   umbral inicial esta calibrado contra la cobertura actual.
+
+## Status (2026-06-11)
+
+Este ADR se ejecutó en el change `vaulta-hygiene-hardening`
+(commits `58fc984`, `1f9a52d`, `e6ac2c3`, `8d63eee`), y las
+políticas aquí documentadas se extendieron o se cumplieron
+en tres changes posteriores que también están cerradas en
+openspec:
+
+### Política de lints
+
+- `public_member_api_docs` ya **NO se difiere**. Se activó
+  en el change `vaulta-public-api-docs` (commits `69b4291`,
+  `7312114`, `c3c2f8e`, `1459f20`, `fad7adc`, `2b32dd8`) con
+  scope `lib/core/**` y severidad `warning`, y se extendió a
+  todo `lib/**` en `vaulta-public-api-docs-extended`
+  (commits `11c7191`, `3bc0e12`, `09b072c`, `f4632aa`,
+  `320ad09`, `e5d2d16`).
+- La deuda de 276 docstrings en `lib/app/` y `lib/features/`
+  se cerró siguiendo la estrategia gradual: 4 commits
+  separados por subárbol + 1 commit final de reactivación de
+  la regla.
+- 2 archivos de design tokens
+  (`lib/app/theme/app_colors.dart`,
+  `lib/app/theme/app_spacing.dart`) usan
+  `// ignore_for_file: public_member_api_docs` con
+  justificación ADR-005 explícita. La supresión está
+  prohibida relajar para nuevos tokens sin actualizar este
+  ADR.
+
+### Política de cobertura
+
+- Cobertura actual de `lib/core/security/`: **50.7%** (504 +
+  11 líneas cubiertas con el test de
+  `AesGcmVaultCryptoService` agregado en `320ad09`).
+- Plan trimestral vigente (medido desde el baseline 52.4%
+  del 2026-06-11):
+  - Q3 2026 (jul-sep): 55% — pendiente.
+  - Q4 2026 (oct-dic): 60% — pendiente.
+  - Q1 2027 (ene-mar): 65% — pendiente.
+  - Q2 2027 (abr-jun): 70% — pendiente.
+- El coverage gate de CI se ejecuta en cada push a `master`
+  via `.github/workflows/flutter-ci.yml` →
+  `analyze-test` job → `Check core coverage threshold` step
+  → `scripts/check_coverage.sh` con umbral 50%.
+- El gate mide solo `lib/core/security/` (no global), según
+  la decisión de esta política. La cobertura de las demás
+  áreas se imprime en el log para visibilidad pero no
+  bloquea. Expandir el gate a `lib/core/sync/` o
+  `lib/core/update/` queda como follow-up.
+
+### Política de artefactos locales
+
+- `.gitignore` raíz ignora: `/vaulta.apk`, `*.apk`, `*.aab`,
+  `*.exe`, `*.dmg`, `*.pkg`, `*.msi`,
+  `key.properties`, `*.jks`, `*.keystore`. Adicionalmente se
+  ignoró `/.engram/` (tooling local de Engram, regenerado
+  por el CLI en cada host) en el commit `d49e19c`.
+
+### Criterios de aceptación
+
+Todos los criterios originales de este ADR se cumplen al
+2026-06-11. `flutter analyze` retorna `No issues found!`,
+`flutter test` retorna 95/95 verde, y los criterios
+específicos de gitignore / cobertura / widget tests se
+verifican en cada push.
