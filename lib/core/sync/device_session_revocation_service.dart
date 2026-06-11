@@ -26,6 +26,11 @@ class DeviceSessionView {
   final DateTime? revokedAt;
 }
 
+/// Internal service that wraps revocation RPCs over a
+/// [DeviceRegistrationRepository]. Lives next to its backend adapter
+/// inside `lib/core/sync/`. Features must not import this directly;
+/// if you need to display device state, go through the public sync
+/// APIs wired by [DeviceSyncLifecycle].
 class DeviceSessionRevocationService {
   DeviceSessionRevocationService({
     required DeviceRegistrationRepository repository,

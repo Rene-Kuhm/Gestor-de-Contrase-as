@@ -9,6 +9,12 @@ import 'remote_vault_sync_repository.dart';
 import 'sync_conflict.dart';
 import 'sync_runtime_hardening.dart';
 
+/// Use [BidirectionalSyncService] instead. This class is kept only
+/// for the migration window defined in
+/// `openspec/changes/vaulta-sync-surface-reduction/`. It will be
+/// removed in a subsequent change.
+@Deprecated('Use BidirectionalSyncService instead. Will be removed in a '
+    'subsequent change.')
 class IncrementalPushSyncService implements LocalVaultMutationSink {
   IncrementalPushSyncService({
     required RemoteVaultSyncRepository repository,

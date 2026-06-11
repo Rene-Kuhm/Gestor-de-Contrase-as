@@ -1,3 +1,9 @@
+/// Internal contract for backend-backed device registration and
+/// revocation. Implementations live in `lib/core/sync/` and talk to
+/// Supabase (or any future backend). Features must not import this
+/// directly: depend on the higher-level [DeviceRegistrationService]
+/// exposed via [DeviceSyncLifecycle]. This interface is re-exported by
+/// `sync_internal.dart` for backend adapters that genuinely need it.
 abstract interface class DeviceRegistrationRepository {
   Future<DeviceAccessStatus> registerDevice({
     required String deviceId,
