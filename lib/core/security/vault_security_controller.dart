@@ -41,7 +41,7 @@ class VaultSecurityController extends ChangeNotifier {
   static const autoLockOnBackgroundEnabledKey =
       'vault_auto_lock_on_background_enabled';
   static const idleTimeoutSecondsKey = 'vault_idle_timeout_seconds';
-  static const defaultIdleTimeoutSeconds = 300;
+  static const defaultIdleTimeoutSeconds = 900;
   static const _interactionResetThrottle = Duration(milliseconds: 750);
 
   final SecureStorageService _storage;

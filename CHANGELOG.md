@@ -4,6 +4,28 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project aims to follow [Semantic Versioning](https://semver.org/).
 
+## [1.0.20] - 2026-06-10
+
+### Changed
+
+- **Longer idle auto-lock window.** The default idle timeout before
+  the vault auto-locks raised from 5 minutes (`300s`) to 15 minutes
+  (`900s`). This gives users more breathing room during flows that
+  take a while — for example, picking a Bitwarden file, comparing
+  it in a spreadsheet, then coming back to the import screen. Users
+  who want the old window can change it from
+  *Ajustes > Seguridad > Bloqueo automatico por inactividad*.
+
+  > **Note on background auto-lock.** This change does NOT affect the
+  > separate `autoLockOnBackground` setting, which still locks the
+  > vault the moment the app loses foreground (for example, when the
+  > system file picker takes over the screen). Long flows like
+  > import that go through a system UI therefore still get locked
+  > the moment the foreground switches. If that becomes a problem,
+  > the workaround is *Ajustes > Seguridad > Auto-lock al ir a
+  > background* turned off while importing, or moving the import
+  > flow into a self-contained in-app picker.
+
 ## [1.0.19] - 2026-06-10
 
 ### Fixed
