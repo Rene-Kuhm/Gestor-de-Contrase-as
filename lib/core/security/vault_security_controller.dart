@@ -12,15 +12,50 @@ import 'native_biometric_auth_service.dart';
 import 'secure_storage_service.dart';
 import 'vault_session.dart';
 
+/// Function signature for the repository rekey hook. The controller
+/// calls this when the master password changes so every entry can be
+/// re-encrypted under the new DEK.
 typedef VaultRekeyEntries =
     Future<void> Function({
       required VaultSession sourceSession,
       required VaultSession targetSession,
     });
 
-enum VaultSecurityStage { loading, onboarding, locked, unlocked }
+/// Top-level UI state of the vault. Drives which screen the
+/// [SecurityGate] renders.
+enum VaultSecurityStage {
+  /// Transient state while the controller reads persisted state.
+  loading,
 
+  /// No master password record on disk; show the create-vault flow.
+  onboarding,
+
+  /// Record exists but no in-memory session; show the unlock screen.
+  locked,
+
+  /// Session is active; show the app shell.
+  unlocked,
+}
+
+/// Single source of truth for vault unlock state, biometric toggle,
+/// idle auto-lock, and lifecycle hooks. UI widgets listen to this
+/// via [ChangeNotifier] and render accordingly.
+///
+/// Construct once at app startup, run [initialize] before mounting
+/// the UI. From then on, all mutations go through this controller.
 class VaultSecurityController extends ChangeNotifier {
+  /// Builds a [VaultSecurityController]. All collaborators are
+  /// required except the optional [biometricUnlockService] (when
+  /// omitted, biometric unlock is not available).
+  ///
+  /// [storage] persists the master password record and preferences.
+  /// [masterPasswordService] runs the KDF and record lifecycle.
+  /// [biometricAuthService] probes the platform's biometric gate.
+  /// [rekeyEntries] is the repository hook invoked on master password
+  /// change to re-encrypt every entry. [biometricEnvelopeService]
+  /// wraps the DEK for biometric unlock; defaults to a service built
+  /// from [storage]. [biometricUnlockService] is the runtime unlock
+  /// orchestrator.
   VaultSecurityController({
     required SecureStorageService storage,
     required MasterPasswordService masterPasswordService,
@@ -36,11 +71,21 @@ class VaultSecurityController extends ChangeNotifier {
            BiometricKeyEnvelopeService(storage: storage),
        _biometricUnlockService = biometricUnlockService;
 
+  /// Secure storage key for the serialized [MasterPasswordRecord].
   static const masterPasswordRecordKey = 'vault_master_password_record';
+
+  /// Secure storage key for the user biometric-enabled preference.
   static const biometricEnabledKey = 'vault_biometric_enabled';
+
+  /// Secure storage key for the auto-lock-on-background preference.
   static const autoLockOnBackgroundEnabledKey =
       'vault_auto_lock_on_background_enabled';
+
+  /// Secure storage key for the configured idle timeout (seconds).
   static const idleTimeoutSecondsKey = 'vault_idle_timeout_seconds';
+
+  /// Default idle timeout in seconds (15 minutes) used when no
+  /// stored preference is present.
   static const defaultIdleTimeoutSeconds = 900;
   static const _interactionResetThrottle = Duration(milliseconds: 750);
 
@@ -89,10 +134,13 @@ class VaultSecurityController extends ChangeNotifier {
   /// without having to hit the secure storage on every build.
   bool _envelopeEnrolled = false;
 
+  /// Current UI stage (loading / onboarding / locked / unlocked).
   VaultSecurityStage get stage => _stage;
 
+  /// Last-known biometric availability snapshot from the platform.
   BiometricAvailability get biometricAvailability => _biometricAvailability;
 
+  /// True when the user has biometric unlock turned on.
   bool get biometricEnabled => _biometricEnabled;
 
   /// True when the wrapped-DEK envelope is currently persisted. The
@@ -102,8 +150,11 @@ class VaultSecurityController extends ChangeNotifier {
   /// envelope is missing — the two conditions are not the same.
   bool get isBiometricEnvelopeEnrolled => _envelopeEnrolled;
 
+  /// True while a long-running unlock / rekey operation is in flight.
   bool get busy => _busy;
 
+  /// Latest human-readable status message (success or error). Cleared
+  /// on the next user action.
   String? get message => _message;
 
   /// Heuristic tone for the current [message]. The controller itself
@@ -139,17 +190,24 @@ class VaultSecurityController extends ChangeNotifier {
     return false;
   }
 
+  /// Active in-memory vault session, or `null` when locked.
   VaultSession? get vaultSession => _vaultSession;
 
+  /// True when the vault locks the moment the app goes to background.
   bool get autoLockOnBackgroundEnabled => _autoLockOnBackgroundEnabled;
 
+  /// Configured idle timeout in seconds (0 means disabled).
   int get idleTimeoutSeconds => _idleTimeoutSeconds;
 
+  /// Configured idle timeout as a [Duration], or `null` when disabled.
   Duration? get idleTimeout =>
       _idleTimeoutSeconds <= 0 ? null : Duration(seconds: _idleTimeoutSeconds);
 
+  /// True when the vault is currently unlocked.
   bool get isUnlocked => _stage == VaultSecurityStage.unlocked;
 
+  /// True when the device can offer the biometric toggle (hardware
+  /// present + biometric enrolled).
   bool get canOfferBiometricToggle =>
       _biometricAvailability.canAuthenticate &&
       _biometricAvailability.hasEnrolledBiometrics;
@@ -238,6 +296,10 @@ class VaultSecurityController extends ChangeNotifier {
     return false;
   }
 
+  /// Loads the persisted master password record and biometric
+  /// preferences, then transitions the stage from [VaultSecurityStage.loading]
+  /// to either [VaultSecurityStage.onboarding] (no record) or
+  /// [VaultSecurityStage.locked]. Call once at app startup.
   Future<void> initialize() async {
     _setBusy(true);
     _message = null;
@@ -286,6 +348,9 @@ class VaultSecurityController extends ChangeNotifier {
     }
   }
 
+  /// First-run flow: validates the password, creates a new
+  /// [MasterPasswordRecord], derives the DEK, and transitions to
+  /// [VaultSecurityStage.unlocked]. Returns true on success.
   Future<bool> createMasterPassword({
     required String password,
     required String confirmation,
@@ -333,6 +398,9 @@ class VaultSecurityController extends ChangeNotifier {
     });
   }
 
+  /// Recovers the DEK from the wrapped envelope in the persisted
+  /// record using [password]. On success, transitions to
+  /// [VaultSecurityStage.unlocked] and returns true.
   Future<bool> unlockWithPassword(String password) async {
     return _runBusy(() async {
       final record = await _readRecord();
@@ -414,6 +482,11 @@ class VaultSecurityController extends ChangeNotifier {
     });
   }
 
+  /// Triggers a biometric unlock. Returns true on success (DEK
+  /// recovered, session active). Returns false (without throwing)
+  /// on any structured failure: user cancel, no envelope on disk,
+  /// platform rejection. The caller should check the message
+  /// afterwards for the reason.
   Future<bool> unlockWithBiometrics() async {
     final unlocker = _biometricUnlockService;
     if (unlocker == null) {
@@ -471,6 +544,10 @@ class VaultSecurityController extends ChangeNotifier {
     });
   }
 
+  /// Toggles the biometric unlock preference. When enabling, the
+  /// vault must be unlocked (so we can wrap the current DEK with a
+  /// fresh envelope). When disabling, the existing envelope and
+  /// platform key slot are wiped.
   Future<void> setBiometricEnabled(bool enabled) async {
     if (enabled && !canOfferBiometricToggle) {
       _message = 'No hay biometria configurada en este dispositivo.';
@@ -495,6 +572,9 @@ class VaultSecurityController extends ChangeNotifier {
     });
   }
 
+  /// Drops the in-memory [VaultSession] and transitions to
+  /// [VaultSecurityStage.locked]. The optional [reason] is shown in
+  /// the lock screen (e.g. "auto-lock on background", "idle timeout").
   Future<void> lock({String? reason}) async {
     _cancelIdleTimer();
     _lastInteractionAt = null;
@@ -509,6 +589,7 @@ class VaultSecurityController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Toggles the auto-lock-on-background preference and persists it.
   Future<void> setAutoLockOnBackgroundEnabled(bool enabled) async {
     await _runBusy(() async {
       _autoLockOnBackgroundEnabled = enabled;
@@ -520,6 +601,8 @@ class VaultSecurityController extends ChangeNotifier {
     });
   }
 
+  /// Sets the idle timeout in seconds. Use 0 to disable. Persists to
+  /// secure storage and restarts the idle timer.
   Future<void> setIdleTimeoutSeconds(int seconds) async {
     if (seconds < 0) {
       return;
@@ -540,6 +623,9 @@ class VaultSecurityController extends ChangeNotifier {
     });
   }
 
+  /// Call from any user interaction (tap, keystroke) to reset the
+  /// idle auto-lock timer. Throttled internally so a stream of
+  /// events doesn't fire [notifyListeners] constantly.
   void registerUserInteraction() {
     if (!isUnlocked || _idleTimeoutSeconds == 0) {
       return;
@@ -556,6 +642,10 @@ class VaultSecurityController extends ChangeNotifier {
     _restartIdleTimer();
   }
 
+  /// Replaces the current master password. Verifies the current
+  /// password, derives a new KEK, generates a new DEK, re-encrypts
+  /// every entry via the supplied [rekeyEntries] hook, and persists
+  /// the new record. Returns true on success.
   Future<bool> changeMasterPassword({
     required String currentPassword,
     required String newPassword,
@@ -681,6 +771,10 @@ class VaultSecurityController extends ChangeNotifier {
     });
   }
 
+  /// Hook for [WidgetsBindingObserver.didChangeAppLifecycleState].
+  /// Locks the vault when the app loses foreground if
+  /// [autoLockOnBackgroundEnabled] is on; otherwise resets the idle
+  /// timer when the app comes back to foreground.
   Future<void> handleAppLifecycleState(AppLifecycleState state) async {
     if (!isUnlocked) {
       return;

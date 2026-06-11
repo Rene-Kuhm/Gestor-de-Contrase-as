@@ -13,6 +13,9 @@ import 'package:cryptography/cryptography.dart';
 /// the default constructor in production code. The default constructor
 /// is kept only for deserialization paths (e.g. tests of legacy data).
 class VaultSession {
+  /// Direct constructor. Prefer [VaultSession.v1] or [VaultSession.v2]
+  /// in production code; the default constructor stays for legacy
+  /// deserialization paths where [kdf]/[dekWrap] may be absent.
   const VaultSession({
     required this.keyId,
     required this.secretKey,
@@ -56,13 +59,22 @@ class VaultSession {
     return VaultSession(keyId: keyId, secretKey: secretKey);
   }
 
+  /// Identifier of the key this session was built with. Used by the
+  /// crypto service at decrypt time to detect rekeying.
   final String keyId;
 
   /// v2: random per-vault DEK. Legacy v1 sessions may still hold the
   /// password-derived key until the next unlock/rekey migration completes.
   final SecretKey secretKey;
+
+  /// KDF parameters used to derive the KEK (Argon2id memory, iterations,
+  /// parallelism, salt). Non-null for v2 sessions, `null` for v1.
   final Map<String, dynamic>? kdf;
+
+  /// Wrapped DEK envelope (ciphertext + nonce + tag of the DEK under
+  /// the KEK). Non-null for v2 sessions, `null` for v1.
   final Map<String, dynamic>? dekWrap;
 
+  /// True if this session is the v2 shape (both kdf and dekWrap set).
   bool get isV2 => kdf != null && dekWrap != null;
 }

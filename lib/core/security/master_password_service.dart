@@ -6,7 +6,17 @@ import 'package:cryptography/cryptography.dart';
 
 import 'master_password_record.dart';
 
+/// Owns the master-password key derivation (Argon2id) and the
+/// master-password record lifecycle (create / verify / rekey).
+///
+/// Production code constructs it with the default parameters. Tests
+/// use [MasterPasswordService.test] for a fast, low-iteration KDF
+/// that asserts on `FLUTTER_TEST=true`.
 class MasterPasswordService {
+  /// Builds a [MasterPasswordService] with the supplied parameters.
+  /// Defaults match `docs/architecture/ADR-001-crypto.md` (Argon2id
+  /// 64 MiB, 3 iterations, parallelism 1). [useFastTestKdf] is gated
+  /// to the test runner via an assertion.
   MasterPasswordService({
     int verifierIterations = _defaultIterations,
     int encryptionIterations = _defaultIterations,
@@ -24,6 +34,9 @@ class MasterPasswordService {
         _argon2Parallelism = argon2Parallelism,
         _useFastTestKdf = useFastTestKdf;
 
+  /// Test-only factory: uses a 1-iteration, 1 MiB KDF so the suite
+  /// stays fast. The `useFastTestKdf` flag inside the constructor
+  /// asserts that this is only constructed under `flutter_test`.
   factory MasterPasswordService.test() {
     return MasterPasswordService(
       verifierIterations: 1,
@@ -33,6 +46,8 @@ class MasterPasswordService {
     );
   }
 
+  /// Minimum length for an accepted master password (NIST SP 800-63B
+  /// + project policy). The UI uses this to drive the strength meter.
   static const minimumLength = 12;
   static const _recordVersion = 2;
   static const _defaultIterations = 3;
@@ -57,6 +72,10 @@ class MasterPasswordService {
   final int _argon2Parallelism;
   final bool _useFastTestKdf;
 
+  /// Returns `null` if [password] meets policy (length + class
+  /// diversity), or a user-facing hint explaining what's missing.
+  /// Cheap check used by the onboarding screen before the expensive
+  /// KDF runs.
   String? validate(String password) {
     if (password.length < minimumLength) {
       return 'Usa al menos $minimumLength caracteres.';
@@ -74,6 +93,10 @@ class MasterPasswordService {
     return null;
   }
 
+  /// Creates a fresh [MasterPasswordRecord] for a brand new vault.
+  /// Derives the verifier and the KEK, generates a random 32-byte
+  /// DEK, and writes the wrapped DEK envelope into the record.
+  /// Call once at onboarding.
   Future<MasterPasswordRecord> createRecord(String password) async {
     final verifierSalt = _randomBytes(16);
     final kekSalt = _randomBytes(16);
@@ -115,6 +138,9 @@ class MasterPasswordService {
     );
   }
 
+  /// Verifies [password] against the stored verifier in [record] using
+  /// a constant-time compare. Returns true on match. Does NOT derive
+  /// the vault key; pair with [deriveVaultKey] on a positive result.
   Future<bool> verify({
     required MasterPasswordRecord record,
     required String password,
@@ -134,6 +160,9 @@ class MasterPasswordService {
     return _constantTimeEquals(verifier, base64Decode(record.verifier));
   }
 
+  /// Derives the in-memory [SecretKey] (v2: the DEK; v1 legacy: the
+  /// password-derived key itself) from [password] and the wrapped-DEK
+  /// metadata in [record]. Throws if the record is inconsistent.
   Future<SecretKey> deriveVaultKey({
     required MasterPasswordRecord record,
     required String password,
@@ -174,6 +203,8 @@ class MasterPasswordService {
     );
   }
 
+  /// Returns a base64url-encoded 32-byte random seed used as the
+  /// salt for [VaultSession.keyId] uniqueness.
   String generateSessionSeed() {
     return base64UrlEncode(_randomBytes(32));
   }

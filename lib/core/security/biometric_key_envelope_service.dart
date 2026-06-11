@@ -32,6 +32,9 @@ import 'secure_storage_service.dart';
 ///     decrypt it on demand. The provider hides the difference behind
 ///     the same `SecretKey` surface.
 class BiometricKeyEnvelopeService {
+  /// Uses the supplied [storage] as the persistence backend for the
+  /// wrapped envelope. The optional [random] is for tests; production
+  /// code should let it default to [Random.secure].
   BiometricKeyEnvelopeService({
     required SecureStorageService storage,
     Random? random,

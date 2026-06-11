@@ -11,9 +11,25 @@ import 'vault_crypto_service.dart';
 import 'vault_repository.dart';
 import 'vault_session.dart';
 
+/// Function shape that returns the active [VaultSession] (or `null`
+/// when the vault is locked). Injected into the repository so it can
+/// read the DEK without holding a direct reference to the controller.
 typedef VaultSessionReader = VaultSession? Function();
 
+/// Production [VaultRepository] backed by an on-device encrypted
+/// store. The DEK is held only in memory (in the active
+/// [VaultSession]); on disk the items are stored as a single AES-256-GCM
+/// blob keyed by that DEK.
+///
+/// The repository also coordinates rekeying when the master password
+/// changes: it stages a new encrypted blob in a separate key and only
+/// swaps the live key when the rekey completes, so an interrupted
+/// rekey never leaves the vault half-encrypted.
 class LocalEncryptedVaultRepository implements VaultRepository {
+  /// Builds a [LocalEncryptedVaultRepository]. The [readSession] is
+  /// called on every read/write to get the current DEK; the optional
+  /// [mutationSink] receives local upsert/delete notifications so the
+  /// sync layer can drain them.
   LocalEncryptedVaultRepository({
     required SecureStorageService storage,
     required VaultCryptoService cryptoService,
@@ -24,11 +40,21 @@ class LocalEncryptedVaultRepository implements VaultRepository {
        _readSession = readSession,
        _mutationSink = mutationSink;
 
+  /// Secure storage key for the live encrypted vault blob.
   static const encryptedVaultItemsKey = 'vault_encrypted_items_v1';
+
+  /// Secure storage key for the staging blob used during rekeying.
+  /// Holds the new encrypted vault while the rekey is in flight; if
+  /// the rekey is interrupted, recovery reads from this key.
   static const encryptedVaultItemsStagingKey =
       'vault_encrypted_items_v1_staging';
+
+  /// Secure storage key for the "rekey in progress" flag.
   static const rekeyInProgressKey = 'vault_rekey_in_progress_v1';
 
+  /// Capability snapshot for the security screen. Marks vault
+  /// encryption as ready and explicitly notes that biometrics are
+  /// UX-only (not crypto-binding) on Android.
   static const securityPlan = PlatformSecurityPlan(
     secureStorage: true,
     biometricUnlock: false,
@@ -170,6 +196,9 @@ class LocalEncryptedVaultRepository implements VaultRepository {
     );
   }
 
+  /// Re-encrypts every item from [sourceSession] (old key) under
+  /// [targetSession] (new key), atomically swapping the live blob.
+  /// Safe to call only when both sessions are valid v2 sessions.
   Future<void> rekeyEntries({
     required VaultSession sourceSession,
     required VaultSession targetSession,
@@ -272,6 +301,11 @@ class LocalEncryptedVaultRepository implements VaultRepository {
     );
   }
 
+  /// Applies a batch of remote snapshots to the local vault, fed by
+  /// the pull sync path. Each snapshot is decrypted with the active
+  /// session, re-encrypted if its key version is stale, and the
+  /// resulting vault is written back. Idempotent: applying the same
+  /// snapshots twice yields the same vault.
   Future<void> applyRemoteSnapshots({
     required Iterable<RemoteVaultBlobSnapshot> snapshots,
   }) async {

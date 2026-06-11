@@ -2,7 +2,13 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'secure_storage_service.dart';
 
+/// Production [SecureStorageService] backed by `flutter_secure_storage`.
+/// On Android the values land in the EncryptedSharedPreferences
+/// (Keystore-wrapped); on iOS in the Keychain; on Windows in the
+/// Credential Manager. Linux uses libsecret.
 class FlutterSecureStorageService implements SecureStorageService {
+  /// Optional [storage] override for tests. Defaults to a platform
+  /// default [FlutterSecureStorage] instance.
   FlutterSecureStorageService({FlutterSecureStorage? storage})
     : _storage = storage ?? const FlutterSecureStorage();
 

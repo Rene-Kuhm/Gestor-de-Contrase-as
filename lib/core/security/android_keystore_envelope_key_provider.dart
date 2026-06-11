@@ -28,6 +28,9 @@ import 'secure_storage_service.dart';
 /// enrollment so the unlock side can hand it back to the platform.
 class AndroidKeystoreEnvelopeKeyProvider
     implements BiometricEnvelopeKeyProvider, BiometricEnvelopeKeyInvalidator {
+  /// Uses [storage] for the encrypted seed persistence, plus optional
+  /// [keystoreChannel] and [biometricChannel] (defaults to the bundled
+  /// `MethodChannel`s) and an optional [random] for tests.
   AndroidKeystoreEnvelopeKeyProvider({
     required SecureStorageService storage,
     MethodChannel? keystoreChannel,
@@ -40,7 +43,10 @@ class AndroidKeystoreEnvelopeKeyProvider
            biometricChannel ?? const MethodChannel(biometricChannelName),
        _random = random ?? Random.secure();
 
+  /// MethodChannel name for the Android KeyStore native side.
   static const keystoreChannelName = 'com.insyd.vaulta/keystore';
+
+  /// MethodChannel name for the Android BiometricPrompt native side.
   static const biometricChannelName = 'com.insyd.vaulta/biometric';
   static const _encryptedSeedKey = 'vaulta_biometric_envelope_seed_v1';
 
@@ -231,6 +237,9 @@ class AndroidKeystoreEnvelopeKeyProvider
     await _storage.delete(_encryptedSeedKey);
   }
 
+  /// Asks the native side to RSA-OAEP-encrypt [plaintext] with the
+  /// hardware-backed public key. Returns the ciphertext or `null` on
+  /// any platform failure (or when not running on Android).
   Future<Uint8List?> rsaEncryptSeed(Uint8List plaintext) async {
     if (!Platform.isAndroid) return null;
     try {
@@ -289,11 +298,13 @@ class AndroidKeystoreEnvelopeKeyProvider
         message.contains('IllegalBlockSizeException');
   }
 
+  /// Base64-encodes [encryptedSeed] for persistence. Test-only.
   @visibleForTesting
   static String encodeEncryptedSeedForStorage(Uint8List encryptedSeed) {
     return base64Encode(encryptedSeed);
   }
 
+  /// Reverses [encodeEncryptedSeedForStorage]. Test-only.
   @visibleForTesting
   static Uint8List decodeEncryptedSeedFromStorage(String stored) {
     return Uint8List.fromList(base64Decode(stored));

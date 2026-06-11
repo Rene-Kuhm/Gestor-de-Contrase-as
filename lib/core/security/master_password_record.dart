@@ -1,6 +1,17 @@
 import 'dart:convert';
 
+/// Persisted record describing how the master password protects a
+/// vault. Stored encrypted at rest via [SecureStorageService] (which
+/// goes through Android Keystore / Windows Credential Manager / etc).
+///
+/// v1 records only carry the verifier triple (verifier + salt +
+/// iterations) used to check the master password without keeping the
+/// derived key. v2 records add the KDF and DEK wrap so the biometric
+/// unlock path can recover the DEK without re-prompting the master
+/// password.
 class MasterPasswordRecord {
+  /// Builds a [MasterPasswordRecord]. [kdf] and [dekWrap] are required
+  /// for v2 records; leave both null for legacy v1 records.
   const MasterPasswordRecord({
     required this.version,
     required this.verifierIterations,
@@ -14,17 +25,45 @@ class MasterPasswordRecord {
     this.dekWrap,
   });
 
+  /// Record version (1 = legacy, 2 = current with DEK wrap).
   final int version;
+
+  /// Argon2id iterations used to derive the verifier key from the
+  /// master password.
   final int verifierIterations;
+
+  /// Salt for the verifier derivation (random per user).
   final String verifierSalt;
+
+  /// Base64 hash of (verifier_salt + master_password) under the
+  /// verifier KDF. Checked at unlock time before deriving the
+  /// encryption key.
   final String verifier;
+
+  /// Argon2id iterations used to derive the encryption key. May
+  /// differ from [verifierIterations] in older records (was the
+  /// case in v1, fixed in v2).
   final int encryptionIterations;
+
+  /// Salt for the encryption key derivation.
   final String encryptionSalt;
+
+  /// Identifier of the current vault key, used by the crypto service
+  /// to detect rekeying.
   final String keyId;
+
+  /// When this record was first created. Used to decide when the
+  /// parameters are old enough to warrant a migration.
   final DateTime createdAt;
+
+  /// KDF parameters for the DEK wrap. Present only on v2 records.
   final Map<String, dynamic>? kdf;
+
+  /// Wrapped DEK envelope. Present only on v2 records.
   final Map<String, dynamic>? dekWrap;
 
+  /// Serializes the record to a plain `Map<String, dynamic>` for
+  /// storage. v2-only fields are included only when present.
   Map<String, dynamic> toJson() {
     return {
       'version': version,
@@ -40,6 +79,9 @@ class MasterPasswordRecord {
     };
   }
 
+  /// Inverse of [toJson]. Accepts both the current `verifierSalt`/
+  /// `encryptionSalt` field names and the legacy `salt`/`iterations`
+  /// pair for backward compatibility with pre-v2 persisted data.
   factory MasterPasswordRecord.fromJson(Map<String, dynamic> json) {
     final verifierIterations =
         (json['verifierIterations'] ?? json['iterations']) as int;
@@ -62,8 +104,10 @@ class MasterPasswordRecord {
     );
   }
 
+  /// Convenience: [toJson] then JSON-encode.
   String encode() => jsonEncode(toJson());
 
+  /// Convenience: [decode] from a JSON string. Inverse of [encode].
   factory MasterPasswordRecord.decode(String source) {
     return MasterPasswordRecord.fromJson(
       jsonDecode(source) as Map<String, dynamic>,

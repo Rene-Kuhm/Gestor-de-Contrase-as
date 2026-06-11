@@ -10,6 +10,9 @@ import 'biometric_auth_service.dart';
 /// right now?". Mirrors the map returned by
 /// `MainActivity.probeAvailability()` on Android.
 class NativeBiometricCapability {
+  /// Builds a [NativeBiometricCapability] from a native probe
+  /// response. Tests usually pass [NativeBiometricCapability.empty]
+  /// or hand-built fixtures.
   const NativeBiometricCapability({
     required this.canUseStrong,
     required this.canUseWeak,
@@ -45,8 +48,14 @@ class NativeBiometricCapability {
   /// Raw platform code for the strong probe. Stable across releases
   /// (these are the BiometricManager.* constants on Android).
   final int strongErrorCode;
+
+  /// Raw platform code for the weak biometric probe.
   final int weakErrorCode;
+
+  /// Raw platform code for the "strong or credential" probe.
   final int strongOrCredentialErrorCode;
+
+  /// Raw platform code for the "device credential" probe.
   final int deviceCredentialErrorCode;
 
   /// The most actionable code that explains why the user cannot
@@ -71,6 +80,9 @@ class NativeBiometricCapability {
           strongErrorCode == 11 ||
           weakErrorCode == 11);
 
+  /// Sentinel value returned when the platform probe is unavailable
+  /// (e.g. when running on a non-Android target). All flags are
+  /// `false` and all error codes are `-1`.
   static const empty = NativeBiometricCapability(
     canUseStrong: false,
     canUseWeak: false,
@@ -103,6 +115,9 @@ class NativeBiometricCapability {
 /// `local_auth` prompt followed by a second `BiometricPrompt` for
 /// the KeyStore operation.
 class NativeBiometricAuthService implements BiometricAuthService {
+  /// Builds a [NativeBiometricAuthService] using the supplied
+  /// [biometricChannel] (defaults to `com.insyd.vaulta/biometric`)
+  /// for probing the platform.
   NativeBiometricAuthService({
     MethodChannel? biometricChannel,
   }) : _channel = biometricChannel ??

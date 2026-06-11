@@ -12,14 +12,17 @@ import 'vault_session.dart';
 
 /// Result of asking the platform for an envelope key. Carries
 /// either the [SecretKey] we wanted or a human-readable
-/// [failureReason] explaining why the platform could not produce
-/// one right now. The controller surfaces that reason in the unlock
+/// [failureReason] explaining why the platform could not produce one
+/// right now. The controller surfaces that reason in the unlock
 /// screen so the user can tell us *what* went wrong, not just that
 /// something did.
 class BiometricEnvelopeKeyResult {
+  /// Success branch: a usable [SecretKey].
   const BiometricEnvelopeKeyResult.success(SecretKey this.key)
     : failureReason = null;
 
+  /// Unavailable branch: a stable, human-readable reason explaining
+  /// why the platform could not produce a key.
   const BiometricEnvelopeKeyResult.unavailable(String this.failureReason)
     : key = null;
 
@@ -91,18 +94,37 @@ sealed class BiometricUnlockOutcome {
   const BiometricUnlockOutcome();
 }
 
+/// Successful biometric unlock. The wrapped DEK was recovered and
+/// turned into a v2 [VaultSession] the same shape a password unlock
+/// would produce.
 class BiometricUnlockSuccess extends BiometricUnlockOutcome {
+  /// Builds a success outcome with the freshly built [session].
   const BiometricUnlockSuccess(this.session);
+
+  /// The unlocked v2 vault session. Feed it into the rest of the
+  /// app exactly like a password-derived session.
   final VaultSession session;
 }
 
+/// The user (or the platform) rejected the biometric prompt. The
+/// caller should fall back to the master password flow.
 class BiometricUnlockRejected extends BiometricUnlockOutcome {
+  /// Builds a rejection outcome with a human-readable [reason].
   const BiometricUnlockRejected(this.reason);
+
+  /// Why the prompt was rejected (canceled, lockout, platform
+  /// refused, etc.). Suitable for surfacing in the unlock UI.
   final String reason;
 }
 
+/// The biometric path is not usable on this device or in this state.
+/// The caller should fall back to the master password flow.
 class BiometricUnlockUnavailable extends BiometricUnlockOutcome {
+  /// Builds an "unavailable" outcome with a human-readable [reason].
   const BiometricUnlockUnavailable(this.reason);
+
+  /// Why biometrics can't be tried right now (no hardware, no
+  /// enrolled biometric, OS-level block, etc.).
   final String reason;
 }
 
@@ -114,6 +136,7 @@ class BiometricUnlockUnavailable extends BiometricUnlockOutcome {
 /// single, non-redundant hint instead of a generic "biometrics
 /// unavailable" message.
 class BiometricUnlockNeedsPasswordFirst extends BiometricUnlockUnavailable {
+  /// Forwards [reason] to [BiometricUnlockUnavailable].
   const BiometricUnlockNeedsPasswordFirst(super.reason);
 }
 
@@ -130,6 +153,9 @@ class BiometricUnlockNeedsPasswordFirst extends BiometricUnlockUnavailable {
 /// "biometrics not available on this target" without exposing the
 /// caller to a native plugin they cannot load.
 class BiometricUnlockService {
+  /// Wires the unlock service. All dependencies are required; the
+  /// optional [envelopeKeyProvider] defaults to a no-op (always
+  /// reports "platform not supported") for non-Android targets.
   BiometricUnlockService({
     required SecureStorageService storage,
     required BiometricAuthService biometricAuthService,
@@ -140,6 +166,8 @@ class BiometricUnlockService {
        _envelopeService = envelopeService,
        _envelopeKeyProvider = envelopeKeyProvider ?? _defaultKeyProvider;
 
+  /// Secure storage key for the platform KeyStore alias reference
+  /// (used to invalidate cleanly when biometrics are turned off).
   static const envelopeKeySlotKey = 'vault_biometric_envelope_key_slot_v1';
 
   final SecureStorageService _storage;
@@ -275,7 +303,11 @@ class BiometricUnlockService {
       _NoopEnvelopeKeyProvider();
 }
 
+/// Side-channel interface implemented by providers that can wipe
+/// their own platform key (e.g. the Android KeyStore RSA alias).
 abstract interface class BiometricEnvelopeKeyInvalidator {
+  /// Asks the platform to delete the hardware-backed key and any
+  /// associated state. Idempotent: safe to call when no key exists.
   Future<void> deleteKey();
 }
 

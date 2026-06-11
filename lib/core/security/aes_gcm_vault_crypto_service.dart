@@ -5,7 +5,13 @@ import 'package:cryptography/cryptography.dart';
 import 'vault_session.dart';
 import 'vault_crypto_service.dart';
 
+/// AES-256-GCM implementation of [VaultCryptoService] for vault item
+/// payloads. Supports the v1 and v2 envelope shapes defined in
+/// `docs/architecture/ADR-001-crypto.md`; v2 is the current format and
+/// carries the KDF and DEK wrap metadata needed to re-derive keys.
 class AesGcmVaultCryptoService implements VaultCryptoService {
+  /// Optional [algorithm] override for tests. Production code should
+  /// use the default 256-bit AES-GCM.
   AesGcmVaultCryptoService({AesGcm? algorithm})
     : _algorithm = algorithm ?? AesGcm.with256bits();
 
