@@ -127,6 +127,7 @@ class _AppShellState extends State<AppShell> {
       VaultDashboardScreen(
         repository: widget.repository,
         conflictResolver: widget.conflictResolver,
+        securityController: widget.securityController,
       ),
       AccessScreen(
         securityController: widget.securityController,

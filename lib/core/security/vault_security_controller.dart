@@ -65,6 +65,23 @@ class VaultSecurityController extends ChangeNotifier {
   int _idleTimeoutSeconds = defaultIdleTimeoutSeconds;
   Timer? _idleTimer;
   DateTime? _lastInteractionAt;
+  /// Stack of "long-running flows" that need the auto-lock to stand
+  /// down. Each call to [beginLongRunningFlow] pushes onto the stack
+  /// and each call to [endLongRunningFlow] pops. While the stack is
+  /// non-empty, the [handleAppLifecycleState] branch that locks the
+  /// vault when the app loses foreground is skipped, so flows like
+  /// the import picker (which inevitably hands the foreground to the
+  /// system file picker) do not get the user kicked back to the
+  /// unlock screen mid-flow.
+  ///
+  /// Using a stack rather than a single bool means two features can
+  /// each take a pause independently and the controller only resumes
+  /// normal auto-lock when *all* of them are done. The previous
+  /// one-flag design leaked: a screen that requested a pause and
+  /// crashed before releasing it left the vault permanently
+  /// un-lockable by background, which is exactly the kind of silent
+  /// footgun this kind of state always turns into.
+  int _longRunningFlowCount = 0;
   /// Cached state of the wrapped-DEK envelope on disk. Refreshed on
   /// initialize, after every successful enrollment, and after every
   /// successful biometric unlock. The unlock screen uses this to
@@ -484,6 +501,11 @@ class VaultSecurityController extends ChangeNotifier {
     _vaultSession = null;
     _stage = VaultSecurityStage.locked;
     _message = reason ?? 'Vaulta bloqueada.';
+    // Safety net: if a screen died without releasing its long-running
+    // flow counter, we do not want the next unlock to inherit a stuck
+    // pause. The user explicitly chose to lock the vault, so the
+    // auto-lock is allowed to fire again on the next foreground loss.
+    _longRunningFlowCount = 0;
     notifyListeners();
   }
 
@@ -670,6 +692,14 @@ class VaultSecurityController extends ChangeNotifier {
       case AppLifecycleState.paused:
       case AppLifecycleState.detached:
         _cancelIdleTimer();
+        if (_longRunningFlowCount > 0) {
+          // A feature explicitly asked us to stand down on the
+          // background auto-lock for the duration of a flow that
+          // necessarily hands the foreground to a system UI (the
+          // import file picker is the canonical case). We do not
+          // notify the user and we do not touch the session.
+          return;
+        }
         if (_autoLockOnBackgroundEnabled) {
           await lock(
             reason:
@@ -680,6 +710,39 @@ class VaultSecurityController extends ChangeNotifier {
       case AppLifecycleState.resumed:
         _restartIdleTimer();
         return;
+    }
+  }
+
+  /// Marks the start of a flow that should not get the vault
+  /// auto-locked when the app temporarily leaves the foreground.
+  ///
+  /// MUST be paired with a matching [endLongRunningFlow] call. The
+  /// pairing is stack-based: nested calls are fine, the auto-lock
+  /// only re-enables once every flow has called its end.
+  ///
+  /// Typical use: the import screen pushes before opening the
+  /// `FilePicker` (which takes the foreground), and pops when the
+  /// user either confirms the import or backs out of the screen.
+  void beginLongRunningFlow() {
+    _longRunningFlowCount++;
+    if (_longRunningFlowCount == 1) {
+      // The first time a flow starts, make sure the idle timer
+      // does not fire while we are inside it. The user could be
+      // doing nothing in Flutter land because the system picker
+      // owns the foreground, so an idle-based lock would be
+      // indistinguishable from a background lock.
+      _cancelIdleTimer();
+    }
+  }
+
+  /// Counterpart to [beginLongRunningFlow]. If a flow that began was
+  /// never ended (for example, the screen was disposed mid-flow
+  /// because the user backed out of the whole app), the stack is
+  /// clamped back to zero on the next [lock] call so the system
+  /// recovers gracefully. See [lock].
+  void endLongRunningFlow() {
+    if (_longRunningFlowCount > 0) {
+      _longRunningFlowCount--;
     }
   }
 

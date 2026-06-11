@@ -9,6 +9,7 @@ import '../../../app/design_system/app_panel.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../core/security/vault_repository.dart';
+import '../../../core/security/vault_security_controller.dart';
 import '../application/vault_duplicate_detector.dart';
 import '../application/vault_import_models.dart';
 import '../application/vault_import_parser.dart';
@@ -21,12 +22,20 @@ class VaultImportScreen extends StatefulWidget {
     required this.existingItems,
     VaultImportParser? parser,
     this.initialPreview,
+    this.securityController,
   }) : parser = parser ?? const _DefaultVaultImportParser._();
 
   final VaultRepository repository;
   final List<VaultItem> existingItems;
   final VaultImportParser parser;
   final VaultImportPreview? initialPreview;
+
+  /// Optional controller. When provided, the screen asks it to stand
+  /// down on the background auto-lock while the user is browsing
+  /// the system file picker (which necessarily takes the foreground).
+  /// The pause is released when the import finishes or the user
+  /// backs out of the screen.
+  final VaultSecurityController? securityController;
 
   @override
   State<VaultImportScreen> createState() => _VaultImportScreenState();
@@ -45,6 +54,18 @@ class _VaultImportScreenState extends State<VaultImportScreen> {
   void initState() {
     super.initState();
     _preview = widget.initialPreview;
+  }
+
+  @override
+  void dispose() {
+    // Safety net for the rare case where the user backgrounds the app
+    // or the screen is unmounted while a long-running flow counter is
+    // still open. The controller's `lock()` already clamps the stack
+    // to zero, but here we release eagerly so the very next
+    // foreground loss resumes the normal auto-lock policy without
+    // waiting for the user to lock the vault manually.
+    widget.securityController?.endLongRunningFlow();
+    super.dispose();
   }
 
   @override
@@ -174,6 +195,14 @@ class _VaultImportScreenState extends State<VaultImportScreen> {
       _error = null;
     });
 
+    // The system file picker takes the foreground away from Flutter,
+    // which trips the controller's `handleAppLifecycleState(inactive)`
+    // branch and locks the vault mid-flow. We pause the auto-lock
+    // for the duration of the pick so the user comes back to a
+    // still-unlocked session. The pause is released by the finally
+    // block below no matter how the pick ends.
+    widget.securityController?.beginLongRunningFlow();
+
     FilePickerResult? result;
     try {
       result = await FilePicker.pickFiles(
@@ -188,6 +217,8 @@ class _VaultImportScreenState extends State<VaultImportScreen> {
         _error = 'No pudimos abrir el selector de archivos: $error';
       });
       return;
+    } finally {
+      widget.securityController?.endLongRunningFlow();
     }
 
     if (!mounted) return;

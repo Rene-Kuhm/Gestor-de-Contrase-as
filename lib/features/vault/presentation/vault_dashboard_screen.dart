@@ -12,6 +12,7 @@ import '../../../core/sync/sync_conflict_resolver.dart';
 import '../../sync/presentation/sync_conflicts_sheet.dart';
 import '../application/vault_import_models.dart';
 import '../domain/vault_item.dart';
+import '../../../core/security/vault_security_controller.dart';
 import '../domain/vault_summary.dart';
 import 'vault_entry_detail_screen.dart';
 import 'vault_entry_editor_screen.dart';
@@ -22,10 +23,12 @@ class VaultDashboardScreen extends StatefulWidget {
     super.key,
     required this.repository,
     this.conflictResolver,
+    this.securityController,
   });
 
   final VaultRepository repository;
   final SyncConflictResolver? conflictResolver;
+  final VaultSecurityController? securityController;
 
   @override
   State<VaultDashboardScreen> createState() => _VaultDashboardScreenState();
@@ -247,6 +250,7 @@ class _VaultDashboardScreenState extends State<VaultDashboardScreen> {
         builder: (_) => VaultImportScreen(
           repository: widget.repository,
           existingItems: existingItems,
+          securityController: widget.securityController,
         ),
       ),
     );

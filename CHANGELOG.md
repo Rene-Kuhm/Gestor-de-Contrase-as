@@ -4,6 +4,25 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project aims to follow [Semantic Versioning](https://semver.org/).
 
+## [1.0.21] - 2026-06-10
+
+### Fixed
+
+- **Import flow was getting the vault locked mid-pick.** Opening
+  the system file picker from the import screen takes the
+  foreground away from Flutter, which the security controller
+  treated as a "user left the app" signal and auto-locked the
+  vault. The user came back to the SecurityGate and the import
+  preview was lost, with no clear explanation. The import screen
+  now asks the controller to stand down on the background
+  auto-lock for the duration of the pick, and restores it as soon
+  as the picker resolves (or the screen is disposed). The
+  controller exposes `beginLongRunningFlow` / `endLongRunningFlow`
+  as a stack so future flows can request the same courtesy
+  independently. `lock()` clamps the stack back to zero so a
+  screen that died without releasing the counter cannot leave the
+  vault permanently un-lockable.
+
 ## [1.0.20] - 2026-06-10
 
 ### Changed
