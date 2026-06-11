@@ -5,8 +5,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:uuid/uuid.dart';
 
 import '../security/secure_storage_service.dart';
-import 'incremental_pull_sync_service.dart';
-import 'incremental_push_sync_service.dart';
+import 'bidirectional_sync_service.dart';
 import 'local_vault_mutation.dart';
 import 'device_registration_repository.dart';
 import 'device_session_revocation_service.dart';
@@ -184,23 +183,23 @@ class DeviceRegistrationService {
 }
 
 /// Higher-level orchestrator that ties together device registration,
-/// heartbeat, push/pull sync, conflict resolution, and revocation.
-/// The app constructs one of these at startup and calls
-/// [onSessionStarted] / [onAppResumed] from the app-lifecycle hook.
+/// heartbeat, push/pull sync (via the single [BidirectionalSyncService]),
+/// conflict resolution, and revocation. The app constructs one of
+/// these at startup and calls [onSessionStarted] / [onAppResumed]
+/// from the app-lifecycle hook.
 class DeviceSyncLifecycle {
   /// Builds a [DeviceSyncLifecycle]. All collaborators are
-  /// required except the optional [pullSyncService] / [pushSyncService]
-  /// (when omitted, the corresponding sync path is a no-op),
-  /// [conflictResolver] (when omitted, conflicts are still
-  /// persisted but not exposed in the UI), [mutationSink] (when
-  /// omitted, local mutations are not enqueued for push), and
-  /// [onCurrentDeviceRevoked] (when omitted, revocation is logged
-  /// but does not trigger any user-facing action).
+  /// required except the optional [syncService] (when omitted, the
+  /// sync paths are a no-op), [conflictResolver] (when omitted,
+  /// conflicts are still persisted but not exposed in the UI),
+  /// [mutationSink] (when omitted, local mutations are not enqueued
+  /// for push), and [onCurrentDeviceRevoked] (when omitted,
+  /// revocation is logged but does not trigger any user-facing
+  /// action).
   DeviceSyncLifecycle({
     required DeviceRegistrationService service,
     required this.revocationService,
-    IncrementalPullSyncService? pullSyncService,
-    IncrementalPushSyncService? pushSyncService,
+    BidirectionalSyncService? syncService,
     this.conflictResolver,
     RelayLocalVaultMutationSink? mutationSink,
     this.onCurrentDeviceRevoked,
@@ -211,8 +210,7 @@ class DeviceSyncLifecycle {
     Future<void> Function(Duration delay)? delay,
     DateTime Function()? now,
   }) : _service = service,
-       _pullSyncService = pullSyncService,
-       _pushSyncService = pushSyncService,
+       _syncService = syncService,
        _mutationSink = mutationSink,
        _delay = delay ?? Future<void>.delayed,
        _now = now ?? DateTime.now;
@@ -222,8 +220,12 @@ class DeviceSyncLifecycle {
   /// Service that owns the device-management screen and the
   /// "log out everywhere else" flow.
   final DeviceSessionRevocationService revocationService;
-  final IncrementalPullSyncService? _pullSyncService;
-  final IncrementalPushSyncService? _pushSyncService;
+
+  /// Single bidirectional sync service. Replaces the previous
+  /// split `IncrementalPullSyncService` + `IncrementalPushSyncService`
+  /// pair (see ADR-004, T4). When `null`, the sync paths in
+  /// [onSessionStarted] / [onAppResumed] are no-ops.
+  final BidirectionalSyncService? _syncService;
 
   /// Resolver exposed to the UI for the user to pick
   /// `keepLocal` / `keepRemote` on a conflict.
@@ -258,9 +260,9 @@ class DeviceSyncLifecycle {
 
   /// Hook for the app's session-start lifecycle event. Validates
   /// the device with the backend, registers it if needed, and
-  /// triggers the first pull/push. Safe to call multiple times:
-  /// subsequent calls within the same session short-circuit the
-  /// registration step.
+  /// triggers the first pull/push via the [syncService]. Safe to
+  /// call multiple times: subsequent calls within the same session
+  /// short-circuit the registration step.
   Future<void> onSessionStarted() async {
     if (!await _ensureCurrentDeviceAccess()) {
       return;
@@ -280,18 +282,17 @@ class DeviceSyncLifecycle {
 
     _registered = true;
     _lastHeartbeatAt = _now();
-    final pushSyncService = _pushSyncService;
+    final syncService = _syncService;
     final mutationSink = _mutationSink;
-    if (pushSyncService != null && mutationSink != null) {
-      mutationSink.attach(pushSyncService);
+    if (syncService != null && mutationSink != null) {
+      mutationSink.attach(syncService);
     }
-    await pushSyncService?.onSessionStarted();
-    await _pullSyncService?.onSessionStarted();
+    await syncService?.onSessionStarted();
   }
 
   /// Hook for the app's foreground-resume lifecycle event. Sends
   /// a heartbeat if [heartbeatInterval] has elapsed, and triggers
-  /// a fresh pull/push.
+  /// a fresh pull/push via the [syncService].
   Future<void> onAppResumed() async {
     if (!await _ensureCurrentDeviceAccess()) {
       return;
@@ -321,8 +322,7 @@ class DeviceSyncLifecycle {
       _lastHeartbeatAt = _now();
     }
 
-    await _pushSyncService?.onAppResumed();
-    await _pullSyncService?.onAppResumed();
+    await _syncService?.onAppResumed();
   }
 
   Future<bool> _ensureCurrentDeviceAccess() async {

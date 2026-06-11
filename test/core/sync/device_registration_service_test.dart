@@ -1,9 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:gestor_contrasenas/core/security/secure_storage_service.dart';
+import 'package:gestor_contrasenas/core/sync/bidirectional_sync_service.dart';
 import 'package:gestor_contrasenas/core/sync/device_registration_repository.dart';
 import 'package:gestor_contrasenas/core/sync/device_registration_service.dart';
 import 'package:gestor_contrasenas/core/sync/device_session_revocation_service.dart';
+import 'package:gestor_contrasenas/core/sync/local_vault_mutation.dart';
+import 'package:gestor_contrasenas/core/sync/sync_runtime_hardening.dart';
 
 void main() {
   group('LocalDeviceIdentityService', () {
@@ -104,6 +107,60 @@ void main() {
 
       expect(repository.registerCalls, 0);
       expect(repository.readStatusCalls, 2);
+    });
+
+    test('wires syncService.onSessionStarted on session start', () async {
+      final repository = _FakeDeviceRegistrationRepository();
+      final service = DeviceRegistrationService(
+        repository: repository,
+        identityService: _FakeDeviceIdentityService(),
+        appVersionProvider: const _FakeAppVersionProvider('1.0.4+5'),
+      );
+      final syncService = _FakeBidirectionalSyncService();
+      final mutationSink = _FakeMutationSink();
+
+      final lifecycle = DeviceSyncLifecycle(
+        service: service,
+        revocationService: DeviceSessionRevocationService(
+          repository: repository,
+          identityService: _FakeDeviceIdentityService(),
+        ),
+        syncService: syncService,
+        mutationSink: mutationSink,
+      );
+
+      await lifecycle.onSessionStarted();
+
+      expect(syncService.onSessionStartedCalls, 1);
+      expect(mutationSink.attachedDelegate, isNotNull);
+      expect(mutationSink.attachedDelegate, same(syncService));
+    });
+
+    test('wires syncService.onAppResumed on foreground resume', () async {
+      final repository = _FakeDeviceRegistrationRepository();
+      final service = DeviceRegistrationService(
+        repository: repository,
+        identityService: _FakeDeviceIdentityService(),
+        appVersionProvider: const _FakeAppVersionProvider('1.0.4+5'),
+      );
+      final syncService = _FakeBidirectionalSyncService();
+      final mutationSink = _FakeMutationSink();
+
+      final lifecycle = DeviceSyncLifecycle(
+        service: service,
+        revocationService: DeviceSessionRevocationService(
+          repository: repository,
+          identityService: _FakeDeviceIdentityService(),
+        ),
+        syncService: syncService,
+        mutationSink: mutationSink,
+      );
+
+      await lifecycle.onSessionStarted();
+      expect(syncService.onAppResumedCalls, 0);
+
+      await lifecycle.onAppResumed();
+      expect(syncService.onAppResumedCalls, 1);
     });
 
     test('locks session when heartbeat reports revocation', () async {
@@ -263,4 +320,45 @@ class _FakeAppVersionProvider implements AppVersionProvider {
 
   @override
   Future<String> readAppVersion() async => _version;
+}
+
+/// Test fake for [BidirectionalSyncService] that records how many
+/// times each lifecycle hook was called.
+class _FakeBidirectionalSyncService implements BidirectionalSyncService {
+  int onSessionStartedCalls = 0;
+  int onAppResumedCalls = 0;
+
+  @override
+  Future<void> onSessionStarted() async {
+    onSessionStartedCalls += 1;
+  }
+
+  @override
+  Future<void> onAppResumed() async {
+    onAppResumedCalls += 1;
+  }
+
+  @override
+  Future<void> pullNow({bool force = false}) async {}
+
+  @override
+  Future<void> runNow() async {}
+
+  @override
+  Future<void> onLocalMutation(LocalVaultMutation mutation) async {}
+
+  @override
+  final SyncDiagnosticsHook? diagnosticsHook = null;
+}
+
+class _FakeMutationSink implements RelayLocalVaultMutationSink {
+  LocalVaultMutationSink? attachedDelegate;
+
+  @override
+  void attach(LocalVaultMutationSink delegate) {
+    attachedDelegate = delegate;
+  }
+
+  @override
+  Future<void> onLocalMutation(LocalVaultMutation mutation) async {}
 }
