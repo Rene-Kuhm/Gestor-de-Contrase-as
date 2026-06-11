@@ -2,11 +2,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../security/local_encrypted_vault_repository.dart';
 import '../security/secure_storage_service.dart';
+import 'bidirectional_sync_service.dart';
 import 'device_registration_repository.dart';
 import 'device_registration_service.dart';
 import 'device_session_revocation_service.dart';
-import 'incremental_pull_sync_service.dart';
-import 'incremental_push_sync_service.dart';
 import 'local_remote_vault_store.dart';
 import 'local_vault_mutation.dart';
 import 'supabase_device_registration_repository.dart';
@@ -20,8 +19,9 @@ import 'sync_conflict_resolver.dart';
 /// call site.
 ///
 /// When non-null, the returned lifecycle is fully operational:
-/// device registration, heartbeat, push/pull sync, conflict
-/// resolution, and revocation RPCs are all wired.
+/// device registration, heartbeat, push/pull sync (via the single
+/// [BidirectionalSyncService]), conflict resolution, and revocation
+/// RPCs are all wired.
 Future<DeviceSyncLifecycle?> buildDeviceSyncLifecycle({
   /// Backing store for the local device id and the local sync state
   /// (cursor, last-pull timestamp, push queue, conflict log).
@@ -32,10 +32,10 @@ Future<DeviceSyncLifecycle?> buildDeviceSyncLifecycle({
   /// state (no vault items changed).
   LocalEncryptedVaultRepository? vaultRepository,
 
-  /// Local sink that the controller attaches to the push service so
+  /// Local sink that the controller attaches to the sync service so
   /// local mutations get drained. Pass-through is intentional: the
   /// sink has a slot for the delegate and the bootstrap wires the
-  /// push service into it.
+  /// sync service into it.
   RelayLocalVaultMutationSink? mutationSink,
 
   /// Called when the backend reports the current device has been
@@ -69,7 +69,12 @@ Future<DeviceSyncLifecycle?> buildDeviceSyncLifecycle({
     repository: repository,
     identityService: identityService,
   );
-  final pullSyncService = IncrementalPullSyncService(
+  // Single bidirectional sync service replaces the previous split
+  // pull + push pair (T4 of ADR-004). The service implements
+  // `LocalVaultMutationSink` so the mutationSink wiring targets it
+  // directly, and exposes `runNow` for the conflict resolver's
+  // post-resolution drain.
+  final syncService = BidirectionalSyncService(
     repository: pullRepository,
     localStore: localStore,
     readDeviceId: identityService.getOrCreateDeviceId,
@@ -78,23 +83,17 @@ Future<DeviceSyncLifecycle?> buildDeviceSyncLifecycle({
         : (snapshots) =>
               vaultRepository.applyRemoteSnapshots(snapshots: snapshots),
   );
-  final pushSyncService = IncrementalPushSyncService(
-    repository: pullRepository,
-    localStore: localStore,
-    readDeviceId: identityService.getOrCreateDeviceId,
-  );
   final conflictResolver = SyncConflictResolver(
     repository: pullRepository,
     localStore: localStore,
-    triggerPushSync: pushSyncService.runNow,
+    triggerPushSync: syncService.runNow,
   );
-  mutationSink?.attach(pushSyncService);
+  mutationSink?.attach(syncService);
 
   return DeviceSyncLifecycle(
     service: service,
     revocationService: revocationService,
-    pullSyncService: pullSyncService,
-    pushSyncService: pushSyncService,
+    syncService: syncService,
     conflictResolver: conflictResolver,
     mutationSink: mutationSink,
     onCurrentDeviceRevoked: onCurrentDeviceRevoked,
