@@ -9,11 +9,19 @@ import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../domain/vault_item.dart';
 
+/// Form screen used both to create a new [VaultItem] and to edit an
+/// existing one. Includes a built-in password generator with
+/// character-class toggles and a length slider.
 class VaultEntryEditorScreen extends StatefulWidget {
   const VaultEntryEditorScreen({super.key, this.initialItem});
 
+  /// When `null`, the screen is in "create" mode; otherwise the
+  /// fields are pre-filled with this entry's data.
   final VaultItem? initialItem;
 
+  /// `true` when the screen is editing an existing entry (i.e.
+  /// [initialItem] is not `null`). Drives the AppBar title and the
+  /// primary button label.
   bool get isEditing => initialItem != null;
 
   @override

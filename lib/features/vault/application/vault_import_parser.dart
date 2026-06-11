@@ -6,6 +6,15 @@ import '../domain/vault_item.dart';
 import 'vault_duplicate_detector.dart';
 import 'vault_import_models.dart';
 
+/// Parses password-manager export files (CSV or JSON) from several
+/// common vendors and produces a [VaultImportPreview] the UI can
+/// display for user confirmation.
+///
+/// Detection of the source format is best-effort: the parser uses
+/// file name hints (for example, "bitwarden") and content shape
+/// (JSON object/array vs CSV). The constructor accepts injectable
+/// dependencies so tests can pin a deterministic [Uuid] and a
+/// custom [VaultDuplicateDetector].
 class VaultImportParser {
   const VaultImportParser({Uuid? uuid, VaultDuplicateDetector? duplicates})
     : _uuid = uuid ?? const Uuid(),
@@ -14,6 +23,17 @@ class VaultImportParser {
   final Uuid _uuid;
   final VaultDuplicateDetector _duplicates;
 
+  /// Parses [content] as a [fileName]-keyed export.
+  ///
+  /// Steps:
+  /// 1. Detect the [VaultImportSource] from the file name and the
+  ///    first non-whitespace character of the content.
+  /// 2. Parse the body (CSV or JSON).
+  /// 3. For each parsed candidate, ask the duplicate detector
+  ///    whether it conflicts with any entry in [existingItems] or
+  ///    with a previously-accepted candidate in the same preview.
+  ///
+  /// Returns a [VaultImportPreview] the UI can summarize.
   VaultImportPreview parse({
     required String fileName,
     required String content,

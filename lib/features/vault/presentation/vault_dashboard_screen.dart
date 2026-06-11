@@ -20,6 +20,12 @@ import 'vault_entry_detail_screen.dart';
 import 'vault_entry_editor_screen.dart';
 import 'vault_import_screen.dart';
 
+/// Top-level "Vault" tab: shows the [VaultSummary] hero, the metric
+/// grid, quick actions, and the searchable/filterable entry list.
+///
+/// Owns the entry-creation, import, and detail flows via
+/// [Navigator.push]. Also surfaces the sync conflict count banner
+/// when [conflictResolver] is provided.
 class VaultDashboardScreen extends StatefulWidget {
   const VaultDashboardScreen({
     super.key,
@@ -28,8 +34,16 @@ class VaultDashboardScreen extends StatefulWidget {
     this.securityController,
   });
 
+  /// Vault repository used to load the summary, entries, and
+  /// persist new/edited entries.
   final VaultRepository repository;
+
+  /// Optional resolver for sync conflicts. When provided, the
+  /// dashboard shows a banner with the pending conflict count.
   final SyncConflictResolver? conflictResolver;
+
+  /// Optional controller used to pause auto-lock while a long
+  /// flow (import, biometric prompt) is in progress.
   final VaultSecurityController? securityController;
 
   @override

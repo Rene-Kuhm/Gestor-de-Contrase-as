@@ -11,6 +11,11 @@ import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../domain/vault_item.dart';
 
+/// Read-only detail view for a single [VaultItem].
+///
+/// Allows the user to reveal the secret, copy it to the clipboard
+/// (auto-cleared after 30s), and either edit or delete the entry
+/// through the optional [onEdit] / [onDelete] callbacks.
 class VaultEntryDetailScreen extends StatefulWidget {
   const VaultEntryDetailScreen({
     super.key,
@@ -19,8 +24,16 @@ class VaultEntryDetailScreen extends StatefulWidget {
     this.onDelete,
   });
 
+  /// The entry being shown. The screen does not mutate it directly;
+  /// edits flow through the [onEdit] callback.
   final VaultItem item;
+
+  /// Invoked when the user taps the edit action. The returned
+  /// `true` value signals the dashboard that the entry changed and
+  /// the list should be refreshed.
   final Future<bool> Function()? onEdit;
+
+  /// Invoked when the user confirms the delete action.
   final Future<void> Function()? onDelete;
 
   @override

@@ -1,23 +1,50 @@
 import '../domain/vault_item.dart';
 
+/// Known import formats that [VaultImportParser] can detect and parse.
 enum VaultImportSource {
+  /// Plain CSV with no vendor-specific layout.
   genericCsv('CSV generico'),
+
+  /// CSV exported from Notion databases.
   notionCsv('Notion CSV'),
+
+  /// CSV exported from Chrome's built-in password manager.
   chromeCsv('Chrome CSV'),
+
+  /// Unencrypted Bitwarden CSV export.
   bitwardenCsv('Bitwarden CSV'),
+
+  /// Bitwarden JSON export.
   bitwardenJson('Bitwarden JSON'),
+
+  /// CSV exported from 1Password.
   onePasswordCsv('1Password CSV'),
+
+  /// CSV exported from LastPass.
   lastPassCsv('LastPass CSV'),
+
+  /// CSV exported from KeePass.
   keepassCsv('KeePass CSV'),
+
+  /// Generic JSON object or array of credentials.
   json('JSON');
 
   const VaultImportSource(this.label);
 
+  /// Human-readable label for the source (Spanish UI copy).
   final String label;
 }
 
-enum VaultImportIssueSeverity { warning, error }
+/// Severity level for a [VaultImportIssue] surfaced during a preview.
+enum VaultImportIssueSeverity {
+  /// The row was kept but the user should review the issue.
+  warning,
 
+  /// The row cannot be imported safely.
+  error,
+}
+
+/// Single validation issue found while parsing an imported row.
 class VaultImportIssue {
   const VaultImportIssue({
     required this.message,
@@ -25,11 +52,19 @@ class VaultImportIssue {
     this.row,
   });
 
+  /// Human-readable description (Spanish UI copy).
   final String message;
+
+  /// How serious the issue is.
   final VaultImportIssueSeverity severity;
+
+  /// 1-based row number from the source file, or `null` if it does not
+  /// apply (for example, a file-level decoding error).
   final int? row;
 }
 
+/// One candidate [VaultItem] extracted from an import file, plus the
+/// metadata needed to decide whether the user should confirm it.
 class VaultImportCandidate {
   const VaultImportCandidate({
     required this.item,
@@ -40,17 +75,34 @@ class VaultImportCandidate {
     this.duplicateReason,
   });
 
+  /// The vault item that would be created if the user confirms.
   final VaultItem item;
+
+  /// The import source this candidate was parsed from.
   final VaultImportSource source;
+
+  /// 1-based row number from the source file.
   final int row;
+
+  /// Validation issues found while parsing this row. Empty means the
+  /// row is well-formed.
   final List<VaultImportIssue> issues;
+
+  /// `true` if [VaultDuplicateDetector] flagged the candidate as a
+  /// duplicate of an existing vault entry.
   final bool isDuplicate;
+
+  /// Spanish explanation of why the candidate is a duplicate, or
+  /// `null` when [isDuplicate] is `false`.
   final String? duplicateReason;
 
+  /// `true` if the user can safely import this candidate: it is not a
+  /// duplicate and it has no [VaultImportIssueSeverity.error] issues.
   bool get canImport =>
       !isDuplicate &&
       issues.every((issue) => issue.severity != VaultImportIssueSeverity.error);
 
+  /// Returns a copy of this candidate with the given fields replaced.
   VaultImportCandidate copyWith({
     VaultItem? item,
     VaultImportSource? source,
@@ -70,6 +122,8 @@ class VaultImportCandidate {
   }
 }
 
+/// The full result of running [VaultImportParser.parse]: every parsed
+/// candidate plus the issues that could not even produce a candidate.
 class VaultImportPreview {
   const VaultImportPreview({
     required this.source,
@@ -77,25 +131,40 @@ class VaultImportPreview {
     required this.rejected,
   });
 
+  /// Source format that was detected for the imported file.
   final VaultImportSource source;
+
+  /// Parsed candidates, each tagged with any issues or duplicate
+  /// markers from the validation pass.
   final List<VaultImportCandidate> candidates;
+
+  /// File-level or row-level issues that prevented producing a
+  /// candidate at all.
   final List<VaultImportIssue> rejected;
 
+  /// Number of [candidates] whose [VaultImportCandidate.canImport]
+  /// is `true`.
   int get importableCount =>
       candidates.where((candidate) => candidate.canImport).length;
 
+  /// Number of [candidates] flagged as duplicates.
   int get duplicateCount =>
       candidates.where((candidate) => candidate.isDuplicate).length;
 
+  /// Number of [rejected] issues.
   int get rejectedCount => rejected.length;
 }
 
+/// Summary of what happened when the user confirmed an import.
 class VaultImportResult {
   const VaultImportResult({
     required this.imported,
     required this.skippedDuplicates,
   });
 
+  /// Number of candidates that were persisted as new vault entries.
   final int imported;
+
+  /// Number of duplicates the user chose to skip instead of importing.
   final int skippedDuplicates;
 }

@@ -17,6 +17,9 @@ import '../application/vault_import_models.dart';
 import '../application/vault_import_parser.dart';
 import '../domain/vault_item.dart';
 
+/// Modal screen that lets the user pick a CSV/JSON export from disk
+/// and review the parsed [VaultImportPreview] before persisting the
+/// new entries to the [VaultRepository].
 class VaultImportScreen extends StatefulWidget {
   const VaultImportScreen({
     super.key,
@@ -27,9 +30,16 @@ class VaultImportScreen extends StatefulWidget {
     this.securityController,
   }) : parser = parser ?? const _DefaultVaultImportParser._();
 
+  /// Vault repository used to persist confirmed candidates.
   final VaultRepository repository;
+
+  /// Items already in the vault; used for duplicate detection.
   final List<VaultItem> existingItems;
+
+  /// Parser implementation. Defaults to a stock [VaultImportParser].
   final VaultImportParser parser;
+
+  /// Optional precomputed preview (for example, from a test harness).
   final VaultImportPreview? initialPreview;
 
   /// Optional controller. When provided, the screen asks it to stand

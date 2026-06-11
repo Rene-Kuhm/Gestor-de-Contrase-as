@@ -1,15 +1,29 @@
 import 'package:flutter/material.dart';
 
+/// High-level grouping used to pick a default icon and accent color
+/// for a [VaultItem].
 enum VaultCategory {
+  /// Work-related credentials (work tools, internal apps).
   work('Work'),
+
+  /// Banking, payments, and other financial services.
   finance('Finance'),
+
+  /// Personal accounts that do not fit the other categories.
   personal('Personal'),
+
+  /// Infrastructure access (SSH keys, servers, cloud consoles).
   infrastructure('Infrastructure');
 
   const VaultCategory(this.label);
 
+  /// English label used in the legacy UI surface.
   final String label;
 
+  /// Resolves a category by its [Enum.name], falling back to
+  /// [VaultCategory.personal] when [value] does not match any
+  /// known category (for example, when reading a record that was
+  /// written by an older version of the app).
   static VaultCategory fromName(String value) {
     return VaultCategory.values.firstWhere(
       (category) => category.name == value,
@@ -18,6 +32,8 @@ enum VaultCategory {
   }
 }
 
+/// A single password vault entry. Immutable; edits are performed via
+/// [copyWith] and persisted through the vault repository layer.
 class VaultItem {
   const VaultItem({
     required this.id,
@@ -32,17 +48,43 @@ class VaultItem {
     this.updatedAt,
   });
 
+  /// Stable identifier (UUID v4) used to reference the entry across
+  /// the repository, sync layer, and import preview.
   final String id;
+
+  /// Display name for the entry (for example, "GitHub").
   final String title;
+
+  /// Username, email, or login handle associated with the entry.
   final String username;
+
+  /// The actual secret: a password, API token, or recovery code.
   final String secret;
+
+  /// High-level grouping used for the icon and accent color.
   final VaultCategory category;
+
+  /// Estimated strength of [secret] in the 5..100 range, produced by
+  /// [estimatePasswordStrength].
   final int strengthScore;
+
+  /// Pre-formatted "updated …" string for display in the dashboard
+  /// and entry tile. Generated via [formatVaultUpdatedLabel] so the
+  /// UI does not have to compute it on every build.
   final String lastUpdatedLabel;
+
+  /// Origin website or URL, or `null` if the entry has none.
   final String? website;
+
+  /// Free-form user notes, or `null` if the entry has none.
   final String? notes;
+
+  /// Timestamp of the last edit, used to recompute
+  /// [lastUpdatedLabel]. `null` only for entries created by older
+  /// versions of the app.
   final DateTime? updatedAt;
 
+  /// Material icon that represents [category] in the dashboard tile.
   IconData get icon => switch (category) {
     VaultCategory.work => Icons.design_services_rounded,
     VaultCategory.finance => Icons.account_balance_wallet_rounded,
@@ -50,6 +92,7 @@ class VaultItem {
     VaultCategory.infrastructure => Icons.dns_rounded,
   };
 
+  /// Accent color used in chips, banners, and the entry tile.
   Color get accentColor => switch (category) {
     VaultCategory.work => const Color(0xFF1C6E8C),
     VaultCategory.finance => const Color(0xFF2D936C),
@@ -57,6 +100,8 @@ class VaultItem {
     VaultCategory.infrastructure => const Color(0xFFD1495B),
   };
 
+  /// Serializes the entry to a plain JSON map. The inverse is
+  /// [fromJson]. Used by the export feature and by tests.
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -72,6 +117,10 @@ class VaultItem {
     };
   }
 
+  /// Rebuilds a [VaultItem] from a JSON map produced by [toJson].
+  /// The `category` field is matched via [VaultCategory.fromName] and
+  /// therefore falls back to [VaultCategory.personal] for unknown
+  /// values.
   factory VaultItem.fromJson(Map<String, dynamic> json) {
     return VaultItem(
       id: json['id'] as String,
@@ -89,6 +138,8 @@ class VaultItem {
     );
   }
 
+  /// Returns a copy of this entry with the given fields replaced.
+  /// Used by the editor screen and by import preview confirmations.
   VaultItem copyWith({
     String? id,
     String? title,
@@ -116,6 +167,11 @@ class VaultItem {
   }
 }
 
+/// Computes a coarse strength score in the 5..100 range for [secret].
+///
+/// The heuristic rewards length (>=8 and >=12 characters), uppercase,
+/// lowercase, digits, and symbols, then clamps the result so the
+/// weakest possible password still scores above the minimum.
 int estimatePasswordStrength(String secret) {
   var score = 0;
   final trimmed = secret.trim();
@@ -142,6 +198,11 @@ int estimatePasswordStrength(String secret) {
   return score.clamp(5, 100);
 }
 
+/// Renders the "Updated …" label shown next to a vault entry.
+///
+/// Rounds down to minutes/hours/days and falls back to literal
+/// "yesterday" for the 1-day window. [now] is injectable so tests can
+/// pin a reference time.
 String formatVaultUpdatedLabel(DateTime updatedAt, {DateTime? now}) {
   final reference = now ?? DateTime.now();
   final difference = reference.difference(updatedAt);
