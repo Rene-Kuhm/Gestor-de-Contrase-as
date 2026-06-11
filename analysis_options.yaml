@@ -18,12 +18,16 @@ include: package:flutter_lints/flutter.yaml
 # `openspec/changes/vaulta-public-api-docs/` for the rollout.
 analyzer:
   errors:
-    public_member_api_docs: warning
+    # `public_member_api_docs` is scoped to `lib/**` (initially was
+    # just `lib/core/**`; extended to the whole library in
+    # `vaulta-public-api-docs-extended`). Severity is `info` because
+    # `lib/app/` and `lib/features/` still have undocumented public
+    # members; tightening to `warning` is the explicit goal once
+    # `flutter analyze` reports 0 issues across the whole `lib/`.
+    public_member_api_docs: info
   exclude:
     - "**/*.g.dart"
     - "**/*.freezed.dart"
-    - "lib/app/**"
-    - "lib/features/**"
 
 linter:
   # The lint rules applied to this project can be customized in the
