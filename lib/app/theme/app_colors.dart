@@ -1,3 +1,15 @@
+// Design tokens are intentionally NOT individually documented via
+// `///` per the project policy (ADR-005 "lint-discipline"). The
+// tokens are grouped under `// --- Brand ---`, `// --- Dark
+// surfaces ---`, etc. comments, and each constant is named after
+// its semantic role (e.g. `crimson`, `glassDarkMid`, `textPrimaryDark`).
+// Adding one-line `///` per Color would add 42 docstrings that
+// duplicate the group context without adding information. The
+// suppression is intentional and scoped to this file; new tokens
+// must still match the existing naming.
+//
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter/material.dart';
 
 /// Vaulta design tokens.

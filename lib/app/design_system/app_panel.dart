@@ -17,6 +17,11 @@ import '../theme/app_spacing.dart';
 /// is the only place that knows how to render a glass card. New
 /// variants go here, not in screen files.
 class AppGlassSurface extends StatelessWidget {
+  /// Builds a blurred [AppGlassSurface] that wraps [child] in a
+  /// tinted glass surface. On dark backgrounds the surface uses a
+  /// [BackdropFilter] blur (24px sigma) for the editorial look.
+  /// Use [AppGlassSurface.solid] when the parent stack is too
+  /// expensive to wrap in a blur.
   const AppGlassSurface({
     super.key,
     required this.child,
@@ -39,11 +44,25 @@ class AppGlassSurface extends StatelessWidget {
     this.border = true,
   }) : _blurred = false;
 
+  /// The widget tree the glass surface wraps.
   final Widget child;
+
+  /// Inset of the content inside the glass surface.
   final EdgeInsetsGeometry padding;
+
+  /// Border radius of the glass surface.
   final double borderRadius;
+
+  /// Glass tint driving fill and stroke.
   final AppGlassTint tint;
+
+  /// When `true`, a 1px hairline border is rendered. Set to `false`
+  /// when stacking multiple glass surfaces tightly (borderlines
+  /// stack visually).
   final bool border;
+
+  /// Internal flag distinguishing the blurred constructor from
+  /// the [AppGlassSurface.solid] constructor.
   final bool _blurred;
 
   @override
@@ -85,13 +104,13 @@ class AppGlassSurface extends StatelessWidget {
   Color _resolveFill(bool isDark) {
     if (isDark) {
       return switch (tint) {
-        AppGlassTint.subtle => AppColors.glassDarkLow,
+        AppGlassTint.sutil => AppColors.glassDarkLow,
         AppGlassTint.regular => AppColors.glassDarkMid,
         AppGlassTint.strong => AppColors.glassDarkHigh,
       };
     }
     return switch (tint) {
-      AppGlassTint.subtle => AppColors.surfaceLight,
+      AppGlassTint.sutil => AppColors.surfaceLight,
       AppGlassTint.regular => AppColors.surfaceLight,
       AppGlassTint.strong => AppColors.surfaceLightHigh,
     };
@@ -102,11 +121,24 @@ class AppGlassSurface extends StatelessWidget {
   }
 }
 
-enum AppGlassTint { subtle, regular, strong }
+/// Glass tint driving the fill of an [AppGlassSurface].
+enum AppGlassTint {
+  /// Barely visible. Used for ambient surfaces.
+  sutil,
+
+  /// Default. Used for cards and dialogs.
+  regular,
+
+  /// More visible. Used for hero surfaces.
+  strong,
+}
 
 /// Convenience for screens that still want the old "panel" affordance
 /// but get the new visual language for free.
 class AppPanel extends StatelessWidget {
+  /// Builds a panel that wraps its [child] in a tinted glass surface.
+  /// Convenience for screens that want the new visual language
+  /// without going through the full [AppGlassSurface] API.
   const AppPanel({
     super.key,
     required this.child,
@@ -115,9 +147,17 @@ class AppPanel extends StatelessWidget {
     this.tint = AppGlassTint.regular,
   });
 
+  /// The widget tree the panel wraps.
   final Widget child;
+
+  /// Inset of the content inside the glass surface.
   final EdgeInsetsGeometry padding;
+
+  /// Optional override for the glass surface's border radius.
+  /// When `null`, falls back to [AppSpacing.radiusLg].
   final double? borderRadius;
+
+  /// Glass tint driving fill and stroke. See [AppGlassSurface].
   final AppGlassTint tint;
 
   @override

@@ -9,6 +9,9 @@ import '../theme/app_spacing.dart';
 /// dashboard can read at a glance (status / sync state / weak
 /// passwords) without changing the wording.
 class AppPill extends StatelessWidget {
+  /// Builds an [AppPill] with the supplied [label], optional leading
+  /// [icon], and [tint] semantic. [compact] shrinks the horizontal
+  /// padding for use inside dense lists (e.g. the vault entry tiles).
   const AppPill({
     super.key,
     required this.label,
@@ -17,9 +20,18 @@ class AppPill extends StatelessWidget {
     this.compact = false,
   });
 
+  /// Text the pill displays. Short, sentence-case.
   final String label;
+
+  /// Optional leading icon, rendered before the label.
   final IconData? icon;
+
+  /// Semantic tint driving fill, stroke, and foreground color.
   final AppPillTint tint;
+
+  /// When true, the pill uses tighter horizontal/vertical padding.
+  /// Use inside dense lists where the default size would crowd the
+  /// row.
   final bool compact;
 
   @override
@@ -104,7 +116,26 @@ class AppPill extends StatelessWidget {
   }
 }
 
-enum AppPillTint { neutral, crimson, success, warning, danger }
+/// Semantic tint driving the visual treatment of an [AppPill].
+enum AppPillTint {
+  /// Default neutral. Used for static labels and category chips.
+  neutral,
+
+  /// Brand crimson. Used for "needs attention" or "selected"
+  /// states.
+  crimson,
+
+  /// Desaturated teal. Success states (sync OK, no conflicts).
+  success,
+
+  /// Desaturated amber. Warnings (sync paused, device not seen
+  /// recently).
+  warning,
+
+  /// Reuses the crimson token. Destructive actions (revoke device,
+  /// delete vault item).
+  danger,
+}
 
 class _PillColors {
   const _PillColors({
@@ -121,6 +152,10 @@ class _PillColors {
 /// "warning" / "danger" messaging. Replaces the dozen ad-hoc
 /// `Container` banners that used to live in each screen.
 class AppBanner extends StatelessWidget {
+  /// Builds an [AppBanner] with the supplied [message] and
+  /// semantic [tone]. [icon] overrides the default tone icon when
+  /// supplied; [action] is rendered as a trailing button (e.g. a
+  /// "Retry" pill).
   const AppBanner({
     super.key,
     required this.message,
@@ -129,9 +164,19 @@ class AppBanner extends StatelessWidget {
     this.action,
   });
 
+  /// Primary text the banner shows.
   final String message;
+
+  /// Optional leading icon. When `null`, the tone's default icon
+  /// is rendered (info / check / warning / error).
   final IconData? icon;
+
+  /// Semantic tone driving fill, stroke, foreground, and default
+  /// icon.
   final AppBannerTone tone;
+
+  /// Optional trailing widget — typically a [FilledButton] or
+  /// [TextButton] for a "Retry" / "Learn more" CTA.
   final Widget? action;
 
   @override
@@ -199,7 +244,22 @@ class AppBanner extends StatelessWidget {
   }
 }
 
-enum AppBannerTone { info, success, warning, danger }
+/// Semantic tone of an [AppBanner]. Drives fill, stroke,
+/// foreground, and the default icon.
+enum AppBannerTone {
+  /// Informational. Default tone.
+  info,
+
+  /// Operation succeeded.
+  success,
+
+  /// User-facing warning, non-blocking.
+  warning,
+
+  /// Failure. The banner stays on screen until the user
+  /// acknowledges.
+  danger,
+}
 
 class _BannerColors {
   const _BannerColors({
@@ -217,6 +277,11 @@ class _BannerColors {
 /// Section header used on every screen. Replaces the dozen ad-hoc
 /// `Row` headers with a title + optional trailing action.
 class AppSectionHeader extends StatelessWidget {
+  /// Builds a header with [title] as the main line. [eyebrow] is
+  /// rendered above it in uppercase, crimson, letter-spaced (e.g.
+  /// "SECURITY"); [subtitle] is rendered below in the muted text
+  /// color; [trailing] is a widget (typically a [TextButton] or
+  /// [IconButton]) placed at the right.
   const AppSectionHeader({
     super.key,
     required this.title,
@@ -225,9 +290,17 @@ class AppSectionHeader extends StatelessWidget {
     this.trailing,
   });
 
+  /// Main heading text. Renders as the dominant type style.
   final String title;
+
+  /// Optional uppercase label above [title]. Used to label the
+  /// section category (e.g. "SETTINGS", "ABOUT").
   final String? eyebrow;
+
+  /// Optional supporting text below [title].
   final String? subtitle;
+
+  /// Optional widget placed at the right (e.g. an action button).
   final Widget? trailing;
 
   @override
@@ -281,12 +354,17 @@ class AppSectionHeader extends StatelessWidget {
 /// Hero surface used on the login / onboarding / lock screens. Owns
 /// the dark gradient + ambient orbs so every gate looks consistent.
 class AppHeroBackground extends StatelessWidget {
+  /// Builds a hero background that wraps [child] in the dark gradient
+  /// + ambient orbs used on the login / onboarding / lock screens.
+  /// Use [AppHeroGrid] on top to add the dot texture.
   const AppHeroBackground({
     super.key,
     required this.child,
     this.intensity = 1.0,
   });
 
+  /// The widget tree the hero is wrapping. Stays interactive; the
+  /// hero is a [DecoratedBox] + [Stack] of orbs.
   final Widget child;
 
   /// 0..1. Lets the dashboard dial the ambient orbs down vs the
@@ -364,7 +442,12 @@ class _Orb extends StatelessWidget {
 /// Subtle grid of dots drawn over the hero surface to add texture
 /// without competing with content. Optional.
 class AppHeroGrid extends StatelessWidget {
+  /// Builds a subtle dot grid meant to be layered on top of an
+  /// [AppHeroBackground]. Purely decorative — wrapped in
+  /// [IgnorePointer] so it never absorbs taps.
   const AppHeroGrid({super.key, this.opacity = 0.05});
+
+  /// Alpha of the dot fill, 0..1. Default 0.05 is barely-there.
   final double opacity;
 
   @override
@@ -404,13 +487,21 @@ class _GridPainter extends CustomPainter {
 /// given size. Tints follow the brand: crimson body, paper shackle
 /// in dark mode, ink shackle in light mode, gold accent.
 class VaultaLogomark extends StatelessWidget {
+  /// Builds a square [VaultaLogomark] of side [size]. Use
+  /// [backgroundColor] to override the default surface fill
+  /// (e.g. to drop the logomark onto a hero gradient); defaults
+  /// to the theme surface.
   const VaultaLogomark({
     super.key,
     this.size = 56,
     this.backgroundColor,
   });
 
+  /// Side length of the square in logical pixels.
   final double size;
+
+  /// Optional background fill. When `null`, falls back to the
+  /// current theme's surface (dark or light).
   final Color? backgroundColor;
 
   @override

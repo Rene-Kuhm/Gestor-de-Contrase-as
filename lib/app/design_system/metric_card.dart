@@ -9,6 +9,10 @@ import 'app_panel.dart';
 /// new one uses a subtle glass surface so it sits well in the dark
 /// gradient hero behind it.
 class MetricCard extends StatelessWidget {
+  /// Builds a [MetricCard] with a colored [icon] tile, a [value]
+  /// (the big number), and a [label] (the small caption). The
+  /// optional [tint] is the color used for the icon tile and the
+  /// icon glyph.
   const MetricCard({
     super.key,
     required this.label,
@@ -17,9 +21,17 @@ class MetricCard extends StatelessWidget {
     required this.tint,
   });
 
+  /// Small caption underneath the big number, e.g. "Items",
+  /// "Devices", "Score".
   final String label;
+
+  /// Big number, e.g. "42", "7", "98". Pre-formatted by the caller.
   final String value;
+
+  /// Icon shown inside the tinted tile in the top-left of the card.
   final IconData icon;
+
+  /// Color used for the icon tile background and the icon glyph.
   final Color tint;
 
   @override

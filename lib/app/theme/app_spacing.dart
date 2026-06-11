@@ -1,3 +1,14 @@
+// Design tokens are intentionally NOT individually documented per
+// the project policy (ADR-005 "lint-discipline"). Each token is
+// named after its semantic role (e.g. `xxs`, `radiusMd`, `screenPadding`)
+// and the file is organized so related tokens are grouped under a
+// `// ---` comment. Adding one-line `///` per `double` would add 23
+// docstrings that duplicate the surrounding context without adding
+// information. The suppression is intentional and scoped to this
+// file; new tokens must still match the existing naming.
+//
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter/widgets.dart';
 
 abstract final class AppSpacing {

@@ -24,6 +24,11 @@ import '../../features/home/presentation/app_shell.dart';
 import '../../features/security/presentation/security_gate.dart';
 import '../theme/app_theme.dart';
 
+/// Bootstraps the app: wires the security layer, the locale
+/// controller, the encrypted vault, and (when configured) the
+/// Supabase sync layer, then mounts [PasswordManagerApp]. Called from
+/// `main.dart`; tests that don't need a real platform channel
+/// build a different widget tree directly.
 Future<void> runPasswordManagerApp() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -140,7 +145,13 @@ class _NullEnvelopeKeyProvider implements BiometricEnvelopeKeyProvider {
   }
 }
 
+/// Root widget of the app. Wires the [MaterialApp] (theme,
+/// localizations, locale) and mounts the [SecurityGate] over the
+/// [AppShell]. All collaborators are required; the secure [storage]
+/// is passed down so screens can read locale / preferences without
+/// each holding their own reference.
 class PasswordManagerApp extends StatelessWidget {
+  /// Builds the root widget. All collaborators are required.
   const PasswordManagerApp({
     super.key,
     required this.repository,
@@ -150,10 +161,24 @@ class PasswordManagerApp extends StatelessWidget {
     this.deviceSyncLifecycle,
   });
 
+  /// Encrypted vault repository. Injected so the [AppShell] can
+  /// re-key without holding its own reference.
   final VaultRepository repository;
+
+  /// Single source of truth for vault lock state. Drives the
+  /// [SecurityGate].
   final VaultSecurityController securityController;
+
+  /// Locale preference controller. The [MaterialApp.locale] is
+  /// wired to [AppLocaleController.locale].
   final AppLocaleController localeController;
+
+  /// Secure storage handle. Passed down for screens that need
+  /// direct read access to locale / preferences.
   final SecureStorageService secureStorage;
+
+  /// Optional device sync lifecycle. When non-null, the [AppShell]
+  /// picks up the conflict resolver and revocation service from it.
   final DeviceSyncLifecycle? deviceSyncLifecycle;
 
   @override
@@ -177,18 +202,18 @@ class PasswordManagerApp extends StatelessWidget {
             GlobalWidgetsLocalizations.delegate,
           ],
           supportedLocales: AppLocalizations.supportedLocales,
-      home: SecurityGate(
-        controller: securityController,
-        deviceSyncLifecycle: deviceSyncLifecycle,
-        child: AppShell(
-          repository: repository,
-          securityController: securityController,
-          localeController: localeController,
-          conflictResolver: deviceSyncLifecycle?.conflictResolver,
-          revocationService: deviceSyncLifecycle?.revocationService,
-          secureStorage: secureStorage,
-        ),
-      ),
+          home: SecurityGate(
+            controller: securityController,
+            deviceSyncLifecycle: deviceSyncLifecycle,
+            child: AppShell(
+              repository: repository,
+              securityController: securityController,
+              localeController: localeController,
+              conflictResolver: deviceSyncLifecycle?.conflictResolver,
+              revocationService: deviceSyncLifecycle?.revocationService,
+              secureStorage: secureStorage,
+            ),
+          ),
         );
       },
     );
