@@ -223,8 +223,9 @@ class DeviceSyncLifecycle {
 
   /// Single bidirectional sync service. Replaces the previous
   /// split `IncrementalPullSyncService` + `IncrementalPushSyncService`
-  /// pair (see ADR-004, T4). When `null`, the sync paths in
-  /// [onSessionStarted] / [onAppResumed] are no-ops.
+  /// pair (removed in T5 of ADR-004; see T4 for the consumer
+  /// migration). When `null`, the sync paths in [onSessionStarted] /
+  /// [onAppResumed] are no-ops.
   final BidirectionalSyncService? _syncService;
 
   /// Resolver exposed to the UI for the user to pick

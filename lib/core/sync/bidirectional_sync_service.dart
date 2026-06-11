@@ -10,10 +10,11 @@ import 'sync_conflict.dart';
 import 'sync_runtime_hardening.dart';
 
 /// Bidirectional sync coordinator: single owner of the local cursor
-/// (pull) and the local push queue (push). Replaces the split
-/// `IncrementalPullSyncService` + `IncrementalPushSyncService` pair
-/// without changing the on-disk contract (queue items, cursor, conflict
-/// records are all the same shape).
+/// (pull) and the local push queue (push). Replaces the historical
+/// split `IncrementalPullSyncService` + `IncrementalPushSyncService`
+/// pair (removed in T5 of ADR-004) without changing the on-disk
+/// contract (queue items, cursor, conflict records are all the same
+/// shape).
 ///
 /// Lifecycle: [onSessionStarted] is the bootstrap hook (called once per
 /// session). [onAppResumed] is the foreground-resume hook. [runNow]

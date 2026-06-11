@@ -84,9 +84,10 @@ enum LocalVaultMutationKind {
 }
 
 /// Consumer of local vault mutations. Implemented by
-/// [IncrementalPushSyncService] (and its replacement
-/// [BidirectionalSyncService]) to receive the stream of upserts and
-/// deletes as they happen, so they can be drained to the remote.
+/// [BidirectionalSyncService] (the previous [IncrementalPushSyncService]
+/// implementation was removed in T5 of ADR-004) to receive the
+/// stream of upserts and deletes as they happen, so they can be
+/// drained to the remote.
 abstract interface class LocalVaultMutationSink {
   /// Hands a [LocalVaultMutation] to the sink. The sink should
   /// enqueue + trigger an async drain; the call site doesn't wait.
