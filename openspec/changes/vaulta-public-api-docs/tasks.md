@@ -1,80 +1,130 @@
 # Tasks: vaulta-public-api-docs
 
-## T1 — Activar la regla con scope + baseline de violaciones
+> Change cerrado. Los 4 commits principales del plan se
+> aplicaron en orden, más 2 commits de scaffolding de los
+> artifacts. Severidad final: `warning`. CI retorna success,
+> 92 tests verdes, coverage gate verde.
 
-- **Spec**: REQ-PAD-001
-- **File**: `analysis_options.yaml`
-- **Approach**: agregar `public_member_api_docs: true` al linter rules,
-  agregar `analyzer.exclude` para `lib/app/**` y `lib/features/**`.
-- **Verify**: `flutter analyze` lista violaciones SOLO en `lib/core/`.
-- **Estado**: COMPLETO. Regla activa con scope `lib/core/**` y
-  `analyzer.exclude` cubriendo `lib/app/**` y `lib/features/**`.
-  Severidad: `info` (no `warning`) — ver desviacion T3.
+## Estado: COMPLETO (2026-06-11)
 
-## T2 — Docstrings en `lib/core/security/`
+## Commits del change (en orden cronológico)
 
-- **Spec**: REQ-PAD-002, REQ-PAD-003
-- **Files**: 13 archivos en `lib/core/security/`
-- **Approach**: dry-run con la regla activa, leer cada violacion,
-  agregar docstring consistente. Iterar hasta `flutter analyze` 0
-  issues.
-- **Verify**: `git diff --stat lib/core/security/` muestra solo lineas
-  que empiezan con `///`. `flutter analyze` 0 issues.
-- **Estado**: COMPLETO. `flutter analyze lib/core/security/`
-  retorna `No issues found!`.
+| # | Commit | Mensaje | Cubre |
+|---|--------|---------|-------|
+| 1 | `69b4291` | `docs(security): add public API docstrings` | T1 (security), activación inicial con `info` |
+| 2 | `7312114` | `docs(core): add public API docstrings to sync and update subtrees` | T2 (sync + update) |
+| 3 | `c3c2f8e` | `docs(adr): scaffold vaulta-public-api-docs change artifact` | Scaffolding |
+| 4 | `1459f20` | `docs(adr): reflect partial state of vaulta-public-api-docs` | tasks.md update |
+| 5 | `fad7adc` | `docs(sync): add public API docstrings to remaining sync files` | T2 (resto de sync) |
+| 6 | `2b32dd8` | `chore(lint): restore public_member_api_docs warning severity and mark change complete` | T3 (restore warning) |
 
-## T3 — Docstrings en `lib/core/sync/`
+## Tasks por spec
 
-- **Spec**: REQ-PAD-002, REQ-PAD-003
-- **Files**: 16 archivos en `lib/core/sync/`
-- **Approach**: mismo patron que T2.
-- **Estado**: **COMPLETO**. Todos los 16 archivos tienen docstrings
-  consistentes en sus miembros publicos. Archivos documentados
-  (ordenados por tamano de la deuda): `local_remote_vault_store.dart`
-  (52), `device_registration_repository.dart` (40),
-  `sync_conflict.dart` (35), `remote_vault_blob_change.dart` (29),
-  `sync_runtime_hardening.dart` (29),
-  `device_registration_service.dart` (26),
-  `device_session_revocation_service.dart` (19),
-  `incremental_pull_sync_service.dart` (8),
-  `incremental_push_sync_service.dart` (8),
-  `sync_conflict_resolver.dart` (8),
-  `bidirectional_sync_service.dart` (6), y los 6 que ya estaban
-  completos del commit anterior.
-- **Notas**: en `incremental_push_sync_service.dart` se agrego
+### T1 — Activar la regla con scope + docstrings en `lib/core/security/`
+
+- **Spec**: REQ-PAD-001, REQ-PAD-002, REQ-PAD-003
+  (subsección `lib/core/security/`)
+- **Files**: 13 archivos en `lib/core/security/`,
+  `analysis_options.yaml`
+- **Approach**:
+  - Agregar `public_member_api_docs: true` a `linter.rules`.
+  - Agregar `analyzer.exclude` para `lib/app/**` y
+    `lib/features/**`.
+  - Severidad inicial: `info` (no `warning`) para
+    dimensionar la deuda sin romper CI.
+  - Dry-run con la regla activa, leer cada violación, agregar
+    docstring consistente. Iterar hasta `flutter analyze` 0
+    issues.
+- **Verify**:
+  - `flutter analyze lib/core/security/` retorna
+    `No issues found!`.
+  - `git diff --stat lib/core/security/` muestra solo líneas
+    que empiezan con `///`.
+- **Estado**: COMPLETO en `69b4291`.
+
+### T2 — Docstrings en `lib/core/sync/` y `lib/core/update/`
+
+- **Spec**: REQ-PAD-002, REQ-PAD-003 (subsecciones
+  `lib/core/sync/` y `lib/core/update/`)
+- **Files**: 16 archivos en `lib/core/sync/`, 1 archivo en
+  `lib/core/update/update_service.dart`
+- **Approach**: mismo patrón que T1. Iterar hasta 0 issues
+  con `flutter analyze lib/core/sync/ lib/core/update/`.
+- **Archivos documentados en `lib/core/sync/`** (ordenados
+  por tamaño de la deuda):
+  - `local_remote_vault_store.dart` (52)
+  - `device_registration_repository.dart` (40)
+  - `sync_conflict.dart` (35)
+  - `remote_vault_blob_change.dart` (29)
+  - `sync_runtime_hardening.dart` (29)
+  - `device_registration_service.dart` (26)
+  - `device_session_revocation_service.dart` (19)
+  - `incremental_pull_sync_service.dart` (8)
+  - `incremental_push_sync_service.dart` (8)
+  - `sync_conflict_resolver.dart` (8)
+  - `bidirectional_sync_service.dart` (6)
+  - y los 5 archivos que ya estaban completos del commit
+    anterior.
+- **Gotcha**: `incremental_push_sync_service.dart` requirió
   `// ignore_for_file: depend_on_referenced_packages` para
-  silenciar el lint de `meta` (mismo patron que
+  silenciar el lint de `meta` (mismo patrón que
   `bidirectional_sync_service.dart`).
+- **Verify**:
+  - `flutter analyze lib/core/sync/ lib/core/update/`
+    retorna 0 issues de `public_member_api_docs`.
+- **Estado**: COMPLETO en `7312114` (grueso) + `fad7adc`
+  (resto).
 
-## T4 — Docstrings en `lib/core/update/`
+### T3 — Restaurar `warning` y cerrar el change
 
-- **Spec**: REQ-PAD-002, REQ-PAD-003
-- **File**: `lib/core/update/update_service.dart` (unico archivo)
-- **Approach**: mismo patron que T2.
-- **Estado**: COMPLETO. `flutter analyze lib/core/update/` retorna 0
-  issues de `public_member_api_docs` para este archivo.
+- **Spec**: REQ-PAD-004
+- **File**: `analysis_options.yaml`
+- **Approach**:
+  - Cambiar `public_member_api_docs: info` a
+    `public_member_api_docs: warning` en
+    `analysis_options.yaml`.
+  - Actualizar `tasks.md` con el estado final y los
+    success criteria cumplidos.
+- **Verify**:
+  - `flutter analyze` retorna 0 issues con la severidad
+    `warning`.
+  - `flutter test` pasa 92/92.
+  - Coverage gate sigue en `OK: 52.4% >= 50%`.
+  - La regla se enforcea desde el próximo PR.
+- **Estado**: COMPLETO en `2b32dd8`.
 
-## Resumen de commits
+## Verificación final
 
-1. `docs(security): add public API docstrings` (security/ + cambio a
-   `info` severity)
-2. `docs(core): add public API docstrings to sync and update subtrees`
-   (sub-subarbol sync/, archivo unico update/)
-3. `docs(adr): scaffold vaulta-public-api-docs change artifact`
-4. (Este commit) `docs(sync): add public API docstrings to remaining
-   sync files` + restaurar `public_member_api_docs: warning`.
-
-## Estado final
-
-- `flutter analyze` retorna `No issues found!` con la regla activa
+- `flutter analyze`: `No issues found!` con la regla activa
   como `warning` y todos los docstrings en su lugar.
-- `flutter test` pasa 92/92.
-- Coverage gate sigue verde (52.4% en `lib/core/security/`).
-- La regla se enforcea desde el proximo PR: cualquier API publica
-  nueva en `lib/core/**` sin docstring rompe CI.
+- `flutter test`: 92/92 tests verdes.
+- Coverage gate: `OK: 52.4% >= 50% umbral` sobre
+  `lib/core/security/`.
+- CI workflow `Flutter CI`: success.
+- 6 commits en master (4 principales + 2 de scaffolding)
+  con mensajes conventional.
 
-## Trabajo downstream
+## Lecciones aprendidas
 
-- Considerar extender la regla a `lib/app/` y `lib/features/` en
-  un follow-up aparte (con su propio scoping y plan gradual, dado
-  que la deuda actual alli es mucho mayor que en `lib/core/`).
+- **Activación con `info` severity es útil para dimensionar
+  deuda sin romper CI**: permite iterar sobre docstrings
+  sin que CI parpadee rojo. Al final, con la deuda cerrada,
+  se restaura a `warning` en un commit aparte.
+- **Rollout por subfolder (security/ → sync/ + update/)**:
+  cada commit es reviewable independientemente, con scope
+  acotado.
+- **El `// ignore_for_file: depend_on_referenced_packages`**
+  es un patrón conocido en este proyecto (se usa en
+  `bidirectional_sync_service.dart`,
+  `incremental_push_sync_service.dart`). No es deuda, es
+  patrón intencional para dependencias transitivas.
+- **El lint no exige docstrings en overrides**: miembros
+  heredados de `Object` (==, hashCode, toString) no
+  requieren docs.
+
+## Trabajo downstream (posterior, en otros changes)
+
+- Extender la regla a `lib/app/` y `lib/features/`. Esto
+  es `vaulta-public-api-docs-extended`, donde primero se
+  cierran los 276 docstrings por subárbol y luego se
+  reactiva la regla con scope `lib/**`.
