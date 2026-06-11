@@ -203,4 +203,4 @@ TecnoDespegue desarrolla software fullstack, apps moviles multiplataforma y auto
 
 ## Licencia
 
-Proyecto privado/publico de portafolio tecnico de TecnoDespegue. Definir una licencia formal antes de aceptar contribuciones externas o distribuir el codigo como open source.
+Este proyecto se distribuye bajo la **Licencia MIT** (Copyright 2026 Rene Kuhm). Ver el archivo [`LICENSE`](./LICENSE) en la raiz para el texto completo.

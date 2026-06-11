@@ -44,6 +44,17 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
+# Local build artifacts that should NEVER enter the repo
+# (these can show up in the working tree from local `flutter build` runs
+# or manual copies; keep them ignored to prevent accidental `git add`)
+/vaulta.apk
+/*.apk
+/*.aab
+/*.exe
+/*.dmg
+/*.pkg
+/*.msi
+
 # Android release signing secrets
 /android/key.properties
 key.properties
