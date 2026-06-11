@@ -26,3 +26,11 @@ jobs:
 
       - name: Test
         run: flutter test
+
+      - name: Test with coverage
+        run: flutter test --coverage
+
+      - name: Check core coverage threshold
+        # Baseline 52.4% (medido 2026-06-11). Umbral inicial 50% con plan
+        # trimestral de subida (ver docs/architecture/ADR-005-repo-hygiene.md).
+        run: bash scripts/check_coverage.sh coverage/lcov.info lib/core/security 50
