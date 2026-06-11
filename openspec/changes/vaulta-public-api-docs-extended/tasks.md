@@ -1,19 +1,30 @@
 # Tasks: vaulta-public-api-docs-extended
 
-## T1 — Extender el scope de la regla a `lib/app/` y `lib/features/`
+## Estado: ROLLBACK (este change revierte la activación)
+
+Este change fue creado con la intención de extender
+`public_member_api_docs` a `lib/app/` y `lib/features/`. La
+activación se hizo, pero **rompió CI** porque `flutter analyze`
+retorna exit code 1 con 276 violaciones `info`. Mi suposición
+original ("info no falla el build") era incorrecta.
+
+**Este commit revierte la activación** y deja la propuesta como
+downstream para una sesión futura, una vez que la deuda de las
+276 violaciones este cerrada.
+
+### T1 — Revertir la activación
 
 - **Spec**: REQ-PAD-001 (extension)
 - **File**: `analysis_options.yaml`
-- **Approach**: quitar `lib/app/**` y `lib/features/**` del
-  `analyzer.exclude`. Mantener severidad `info` (no `warning`)
-  porque la deuda es grande (276 violaciones vs 0 en `lib/core/`
-  ya documentado).
-- **Verify**: `flutter analyze` lista violaciones en `lib/app/`
-  y `lib/features/` ademas de las de `lib/core/`.
-- **Estado**: COMPLETO. Baseline medido: 276 violaciones en 20
-  archivos (ver distribucion abajo).
+- **Approach**: volver el `analyzer.exclude` a incluir
+  `lib/app/**` y `lib/features/**`. Cambiar
+  `public_member_api_docs: info` a
+  `public_member_api_docs: warning`.
+- **Verify**: `flutter analyze` retorna `No issues found!` con
+  exit code 0.
+- **Estado**: COMPLETO. Local verificado.
 
-### Baseline medido (2026-06-11)
+### Baseline medido durante la ventana de activación (2026-06-11)
 
 **`lib/app/` — 8 archivos, 152 violaciones**
 
@@ -29,7 +40,7 @@
 | `lib/app/design_system/vault_entry_tile.dart` | 5 |
 | `lib/app/localization/l10n.dart` | 2 |
 
-**`lib/features/` — 12 archivos, 125 violaciones**
+**`lib/features/` — 12 archivos, 124 violaciones**
 
 | Archivo | Violaciones |
 |---------|-------------|
@@ -49,14 +60,12 @@
 | `lib/features/vault/application/vault_import_parser.dart` | 3 |
 | `lib/features/sync/presentation/sync_conflicts_sheet.dart` | 1 |
 
-**Total: 277 violaciones en 20 archivos.** (Nota: 276 en
-`flutter analyze` summary — discrepancia de 1 por el formato del
-reporte, no significativo.)
+**Total: 276 violaciones en 20 archivos.**
 
-## T2 — Plan downstream explícito
+### T2 — Plan downstream (no en este change, queda para futuras sesiones)
 
-Trabajo futuro (no en este change) — estimado en 1-2 sesiones
-enfocadas, sin riesgo de regresion (los docstrings son aditivos):
+Para reactivar la regla, primero cerrar las 276 violaciones. El
+plan queda documentado en el proposal:
 
 1. **Commit 1: `docs(app): add public API docstrings`** — cierra
    `lib/app/` (8 archivos, 152 violaciones). Estimado: 30-45 min
@@ -68,15 +77,25 @@ enfocadas, sin riesgo de regresion (los docstrings son aditivos):
    security + home + access + settings + sync subtrees`** —
    cierra el resto de `lib/features/` (7 archivos, 33
    violaciones). Estimado: 15-20 min.
-4. **Commit 4: `chore(lint): restore public_member_api_docs warning
-   severity`** — subir la severidad de `info` a `warning` para
-   que la regla enforce desde el proximo PR.
+4. **Commit 4: `chore(lint): reactivate public_member_api_docs for
+   all lib`** — quitar `lib/app/**` y `lib/features/**` del
+   `analyzer.exclude` y subir a `warning`. Ahora si, con 0
+   violaciones en todo `lib/`, CI queda verde.
 
-## Estado final (de este change)
+### Lección aprendida
 
-- `flutter analyze` reporta 276 violaciones, todas como `info`.
-  No hay `error` ni `warning` -> CI verde.
-- `flutter test` pasa los 94 tests existentes.
-- Coverage gate sigue verde (52.4% en `lib/core/security/`).
-- `public_member_api_docs` ahora aplica a TODO `lib/`. El equipo
-  tiene visibilidad de la deuda restante y el plan para cerrarla.
+- **No extender una regla lint a un scope donde hay deuda
+  visible sin cerrar la deuda primero o sin un mecanismo
+  intermedio de suppressión.** `flutter analyze` cuenta `info`
+  como issue y retorna exit code 1, lo cual rompe CI sin que
+  parezca obvio.
+- El approach correcto sería haber agregado
+  `// ignore_for_file: public_member_api_docs` a cada archivo
+  de `lib/app/` y `lib/features/` ANTES de activar la regla, o
+  haber extendido la regla usando
+  `analyzer.exclude` con un archivo por carpeta (patron
+  incremental).
+- La sugerencia original de ADR-005 era esta: "agregar
+  documentacion por modulos en commits separados". Este
+  approach se sigue aplicando — la activación es el último
+  commit, no el primero.
