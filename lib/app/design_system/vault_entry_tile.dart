@@ -8,9 +8,17 @@ import 'app_components.dart';
 /// Rich card for one vault entry. It keeps the list scannable while
 /// making each saved credential feel like a distinct secured item.
 class VaultEntryTile extends StatelessWidget {
+  /// Builds a tile for [item]. [onTap] is fired when the user
+  /// taps anywhere on the tile; the typical handler navigates to
+  /// the entry detail screen.
   const VaultEntryTile({super.key, required this.item, this.onTap});
 
+  /// The vault entry this tile represents. The tile is purely a
+  /// function of [item] — no internal state.
   final VaultItem item;
+
+  /// Optional tap handler. When `null`, the tile is non-interactive
+  /// (no ripple) but still renders.
   final VoidCallback? onTap;
 
   @override
@@ -164,7 +172,6 @@ class _EntryMetaChip extends StatelessWidget {
     required this.label,
     required this.color,
   });
-
   final IconData icon;
   final String label;
   final Color color;
@@ -210,7 +217,13 @@ class _EntryMetaChip extends StatelessWidget {
 /// single colored dot. The previous "colored text + dot" was hard to
 /// scan when there were many items.
 class StrengthBadge extends StatelessWidget {
+  /// Builds a [StrengthBadge] for the given numeric [score] (0..100).
+  /// The badge is colored: green >= 80, amber >= 60, red otherwise.
   const StrengthBadge({super.key, required this.score});
+
+  /// Numeric strength score in the 0..100 range. The badge color is
+  /// derived from the value via the thresholds documented on the
+  /// constructor.
   final int score;
 
   @override

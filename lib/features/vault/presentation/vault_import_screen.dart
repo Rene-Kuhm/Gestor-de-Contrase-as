@@ -20,7 +20,15 @@ import '../domain/vault_item.dart';
 /// Modal screen that lets the user pick a CSV/JSON export from disk
 /// and review the parsed [VaultImportPreview] before persisting the
 /// new entries to the [VaultRepository].
+/// Modal screen that lets the user pick a CSV/JSON export from disk
+/// and review the parsed [VaultImportPreview] before persisting the
+/// new entries to the [VaultRepository].
 class VaultImportScreen extends StatefulWidget {
+  /// Builds the import screen. [repository] and [existingItems] are
+  /// required; [parser], [initialPreview], and [securityController]
+  /// are optional. The default [parser] is a stock [VaultImportParser];
+  /// [securityController] is needed to keep the auto-lock from
+  /// firing while the system file picker holds the foreground.
   const VaultImportScreen({
     super.key,
     required this.repository,

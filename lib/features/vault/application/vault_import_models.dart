@@ -45,7 +45,10 @@ enum VaultImportIssueSeverity {
 }
 
 /// Single validation issue found while parsing an imported row.
+/// Single validation issue found while parsing an imported row.
 class VaultImportIssue {
+  /// Creates a single import issue. [row] is `null` for file-level
+  /// issues that do not correspond to a specific row.
   const VaultImportIssue({
     required this.message,
     required this.severity,
@@ -65,7 +68,12 @@ class VaultImportIssue {
 
 /// One candidate [VaultItem] extracted from an import file, plus the
 /// metadata needed to decide whether the user should confirm it.
+/// One candidate [VaultItem] extracted from an import file, plus the
+/// metadata needed to decide whether the user should confirm it.
 class VaultImportCandidate {
+  /// Creates a candidate. [isDuplicate] and [duplicateReason] are
+  /// set by the duplicate detector; the parser only fills in
+  /// [item], [source], [row], and any [issues].
   const VaultImportCandidate({
     required this.item,
     required this.source,
@@ -124,7 +132,12 @@ class VaultImportCandidate {
 
 /// The full result of running [VaultImportParser.parse]: every parsed
 /// candidate plus the issues that could not even produce a candidate.
+/// The full result of running [VaultImportParser.parse]: every parsed
+/// candidate plus the issues that could not even produce a candidate.
 class VaultImportPreview {
+  /// Creates a preview. [candidates] and [rejected] are independent
+  /// lists: a rejected issue did not produce a candidate, so it does
+  /// not appear in [candidates].
   const VaultImportPreview({
     required this.source,
     required this.candidates,
@@ -156,7 +169,11 @@ class VaultImportPreview {
 }
 
 /// Summary of what happened when the user confirmed an import.
+/// Summary of what happened when the user confirmed an import.
 class VaultImportResult {
+  /// Creates a result. [imported] is the number of candidates
+  /// persisted as new vault entries; [skippedDuplicates] is the
+  /// number of candidates the user chose to skip.
   const VaultImportResult({
     required this.imported,
     required this.skippedDuplicates,

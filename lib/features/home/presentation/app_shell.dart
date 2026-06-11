@@ -27,6 +27,10 @@ import '../../vault/presentation/vault_dashboard_screen.dart';
 /// Silently checks for app updates on mount and shows a snackbar
 /// when a new build is available and has not been prompted.
 class AppShell extends StatefulWidget {
+  /// Builds the unlocked shell. The three required services are
+  /// forwarded to every child tab; the optional ones (conflict
+  /// resolver, revocation service, secure storage) are only rendered
+  /// by the children that actually need them.
   const AppShell({
     super.key,
     required this.repository,
@@ -291,6 +295,9 @@ class _AppNavDest {
 /// consistent across the app so users get the same placeholder
 /// treatment everywhere.
 class FeaturePlaceholderScreen extends StatelessWidget {
+  /// Builds a "feature coming soon" page. [bullets] and [eyebrow]
+  /// are optional; the rest of the visual identity is driven by
+  /// [icon], [title], and [subtitle].
   const FeaturePlaceholderScreen({
     super.key,
     required this.icon,

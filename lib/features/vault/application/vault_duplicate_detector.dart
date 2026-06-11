@@ -2,7 +2,12 @@ import '../domain/vault_item.dart';
 
 /// A match between a candidate [VaultItem] and an entry already in
 /// the vault. Returned by [VaultDuplicateDetector.findDuplicate].
+/// A match between a candidate [VaultItem] and an entry already in
+/// the vault. Returned by [VaultDuplicateDetector.findDuplicate].
 class VaultDuplicateMatch {
+  /// Builds a duplicate match. [item] is the conflicting existing
+  /// entry and [reason] is the Spanish explanation surfaced in the
+  /// import preview UI.
   const VaultDuplicateMatch({required this.item, required this.reason});
 
   /// The existing entry that conflicts with the candidate.
@@ -18,7 +23,14 @@ class VaultDuplicateMatch {
 /// 1. Same normalized title + username + website ("same entry").
 /// 2. Same secret + at least one of (username, website, title)
 ///    matching ("same credential").
+/// Detects whether a [VaultItem] being imported is already present
+/// in the vault, using two heuristics:
+/// 1. Same normalized title + username + website ("same entry").
+/// 2. Same secret + at least one of (username, website, title)
+///    matching ("same credential").
 class VaultDuplicateDetector {
+  /// Creates a stateless detector. The class is `const` because it
+  /// carries no state; instances are interchangeable.
   const VaultDuplicateDetector();
 
   /// Scans [existingItems] in order and returns the first conflict

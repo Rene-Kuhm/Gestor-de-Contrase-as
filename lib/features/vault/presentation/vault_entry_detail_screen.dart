@@ -16,7 +16,15 @@ import '../domain/vault_item.dart';
 /// Allows the user to reveal the secret, copy it to the clipboard
 /// (auto-cleared after 30s), and either edit or delete the entry
 /// through the optional [onEdit] / [onDelete] callbacks.
+/// Read-only detail view for a single [VaultItem].
+///
+/// Allows the user to reveal the secret, copy it to the clipboard
+/// (auto-cleared after 30s), and either edit or delete the entry
+/// through the optional [onEdit] / [onDelete] callbacks.
 class VaultEntryDetailScreen extends StatefulWidget {
+  /// Builds the detail screen. [item] is required; [onEdit] and
+  /// [onDelete] are optional so the screen is also usable as a
+  /// preview widget (for example, in onboarding screenshots).
   const VaultEntryDetailScreen({
     super.key,
     required this.item,

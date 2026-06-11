@@ -16,6 +16,9 @@ import '../../../l10n/app_localizations.dart';
 /// the in-app control center: it explains the setup, walks the
 /// user through the platform settings, and shows the unlock state.
 class AccessScreen extends StatelessWidget {
+  /// Creates the "Access & Autofill" tab. Both [securityController]
+  /// and [repository] are required so this tab never silently
+  /// no-ops when wired without them.
   const AccessScreen({
     super.key,
     required this.securityController,

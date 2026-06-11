@@ -34,7 +34,13 @@ enum VaultCategory {
 
 /// A single password vault entry. Immutable; edits are performed via
 /// [copyWith] and persisted through the vault repository layer.
+/// A single password vault entry. Immutable; edits are performed via
+/// [copyWith] and persisted through the vault repository layer.
 class VaultItem {
+  /// Creates an entry. All the named fields are required and must
+  /// be persisted as-is. [website], [notes], and [updatedAt] are
+  /// optional because older app versions and external imports may
+  /// not supply them.
   const VaultItem({
     required this.id,
     required this.title,

@@ -16,6 +16,10 @@ import '../../../core/sync/device_registration_service.dart';
 /// Top-level gate that swaps between loading / onboarding / locked
 /// / unlocked and animates the transition.
 class SecurityGate extends StatefulWidget {
+  /// Builds the gate. [controller] drives the [VaultSecurityStage]
+  /// machine and [child] is the unlocked subtree. [deviceSyncLifecycle]
+  /// is optional and only needed if the app is wired to a sync
+  /// backend.
   const SecurityGate({
     super.key,
     required this.controller,

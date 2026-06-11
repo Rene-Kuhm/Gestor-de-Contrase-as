@@ -29,6 +29,10 @@ import 'update_section.dart';
 /// secure storage) are only rendered when provided, so the screen
 /// stays usable in stripped-down configurations.
 class SettingsScreen extends StatefulWidget {
+  /// Builds the settings tab. [securityController] and
+  /// [localeController] are required; the other services are
+  /// optional and only enable their respective sections when
+  /// provided.
   const SettingsScreen({
     super.key,
     required this.securityController,

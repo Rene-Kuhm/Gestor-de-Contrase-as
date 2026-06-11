@@ -12,7 +12,13 @@ import '../domain/vault_item.dart';
 /// Form screen used both to create a new [VaultItem] and to edit an
 /// existing one. Includes a built-in password generator with
 /// character-class toggles and a length slider.
+/// Form screen used both to create a new [VaultItem] and to edit an
+/// existing one. Includes a built-in password generator with
+/// character-class toggles and a length slider.
 class VaultEntryEditorScreen extends StatefulWidget {
+  /// Builds the editor. When [initialItem] is `null`, the screen is
+  /// in "create" mode; otherwise the fields are pre-filled with the
+  /// entry's data.
   const VaultEntryEditorScreen({super.key, this.initialItem});
 
   /// When `null`, the screen is in "create" mode; otherwise the

@@ -1,5 +1,10 @@
 /// Aggregated metrics shown in the vault dashboard hero section.
+/// Aggregated metrics shown in the vault dashboard hero section.
 class VaultSummary {
+  /// Builds the summary. All fields are required; callers that do
+  /// not have a meaningful value for a metric (for example, the
+  /// connected device count before sync is enabled) should pass `0`
+  /// or `false` rather than leaving the field unset.
   const VaultSummary({
     required this.totalItems,
     required this.weakItems,

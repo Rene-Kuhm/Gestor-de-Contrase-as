@@ -15,7 +15,19 @@ import 'vault_import_models.dart';
 /// (JSON object/array vs CSV). The constructor accepts injectable
 /// dependencies so tests can pin a deterministic [Uuid] and a
 /// custom [VaultDuplicateDetector].
+/// Parses password-manager export files (CSV or JSON) from several
+/// common vendors and produces a [VaultImportPreview] the UI can
+/// display for user confirmation.
+///
+/// Detection of the source format is best-effort: the parser uses
+/// file name hints (for example, "bitwarden") and content shape
+/// (JSON object/array vs CSV). The constructor accepts injectable
+/// dependencies so tests can pin a deterministic [Uuid] and a
+/// custom [VaultDuplicateDetector].
 class VaultImportParser {
+  /// Builds a parser. [uuid] defaults to a real [Uuid] and
+  /// [duplicates] defaults to a stock [VaultDuplicateDetector].
+  /// Tests pass deterministic versions of both.
   const VaultImportParser({Uuid? uuid, VaultDuplicateDetector? duplicates})
     : _uuid = uuid ?? const Uuid(),
       _duplicates = duplicates ?? const VaultDuplicateDetector();

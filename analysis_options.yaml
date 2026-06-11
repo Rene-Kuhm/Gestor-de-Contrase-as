@@ -11,19 +11,17 @@ include: package:flutter_lints/flutter.yaml
 
 # Hygiene hardening per ADR-005.
 #
-# `public_member_api_docs` is active but scoped to `lib/core/**` via
-# `analyzer.exclude` below. The `lib/app/` and `lib/features/` trees
-# are excluded so the rule doesn't generate noise outside the
-# cryptographic and sync core. See ADR-005 for the rationale and
-# `openspec/changes/vaulta-public-api-docs/` for the rollout.
+# `public_member_api_docs` is now active across the entire `lib/`
+# tree. The roll-out closed the documentation debt in `lib/app/`
+# and `lib/features/` (see `openspec/changes/vaulta-public-api-docs-extended/`)
+# before re-enabling the rule, so the analyzer no longer needs to
+# exclude those paths. See ADR-005 for the rationale.
 analyzer:
   errors:
     public_member_api_docs: warning
   exclude:
     - "**/*.g.dart"
     - "**/*.freezed.dart"
-    - "lib/app/**"
-    - "lib/features/**"
 
 linter:
   # The lint rules applied to this project can be customized in the

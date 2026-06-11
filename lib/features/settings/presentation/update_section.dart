@@ -15,6 +15,9 @@ import '../../../l10n/app_localizations.dart';
 /// button, and renders the corresponding banners. Localized to the
 /// current locale via [l10n].
 class UpdateSection extends StatefulWidget {
+  /// Builds the update section. [service] is the only required
+  /// dependency; everything else is read from the [BuildContext]
+  /// and the [l10n] extension.
   const UpdateSection({super.key, required this.service});
 
   /// Service used to query the release feed, download the APK, and

@@ -26,7 +26,17 @@ import 'vault_import_screen.dart';
 /// Owns the entry-creation, import, and detail flows via
 /// [Navigator.push]. Also surfaces the sync conflict count banner
 /// when [conflictResolver] is provided.
+/// Top-level "Vault" tab: shows the [VaultSummary] hero, the metric
+/// grid, quick actions, and the searchable/filterable entry list.
+///
+/// Owns the entry-creation, import, and detail flows via
+/// [Navigator.push]. Also surfaces the sync conflict count banner
+/// when [conflictResolver] is provided.
 class VaultDashboardScreen extends StatefulWidget {
+  /// Builds the dashboard. [repository] is the only required
+  /// dependency. [conflictResolver] enables the conflict banner
+  /// and [securityController] allows the dashboard to pause the
+  /// auto-lock during long flows (import, biometric prompt).
   const VaultDashboardScreen({
     super.key,
     required this.repository,
