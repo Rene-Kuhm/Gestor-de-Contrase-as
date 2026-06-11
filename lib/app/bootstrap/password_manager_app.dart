@@ -166,7 +166,9 @@ class PasswordManagerApp extends StatelessWidget {
           debugShowCheckedModeBanner: false,
           theme: AppTheme.light(),
           darkTheme: AppTheme.dark(),
-          themeMode: ThemeMode.system,
+          themeMode: defaultTargetPlatform == TargetPlatform.windows
+              ? ThemeMode.dark
+              : ThemeMode.system,
           locale: localeController.locale,
           localizationsDelegates: const [
             AppLocalizations.delegate,
