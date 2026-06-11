@@ -1,117 +1,202 @@
 # Proposal: Vaulta hygiene hardening
 
+> Cierra 6 brechas de hygiene del repositorio Vaulta: ignores de
+> artefactos de build, coherencia del README con LICENSE, lints
+> adicionales, coverage gate en CI, decisión de roadmap para
+> `lib/core/sync/`, y widget tests para 3 pantallas presentation-level.
+
 ## Intent
 
-Cerrar seis brechas concretas de hygiene del proyecto Vaulta, todas con evidencia
-verificada en código/configs:
+Endurecer el repositorio en dimensiones concretas y medibles:
 
-1. Riesgo de `git add` accidental del binario `vaulta.apk` (57 MB) que vive en
-   la raíz sin regla de ignore.
-2. README línea 206 contradice al `LICENSE` real (MIT, Copyright 2026 Rene Kuhm).
-3. CI no mide cobertura; no se puede afirmar empíricamente qué tan cubierto está
-   el core de seguridad.
-4. `analysis_options.yaml` solo activa `flutter_lints` por defecto; no hay
-   endurecimiento adicional pese a ser una app de seguridad.
-5. La capa `lib/core/sync/` (11 archivos) es grande para algo etiquetado
-   "experimental"; la decisión de roadmap no está formalizada.
-6. Faltan tests de widget para `access_screen`, `app_shell` y
-   `sync_conflicts_sheet`.
-
-No cambia comportamiento de la app para el usuario final. Cambia hygiene de
-repositorio, CI, lints y cobertura de tests.
+1. **Repo hygiene**: los artefactos de build locales (APK de 57 MB,
+   EXE, DMG) no pueden entrar al repo vía `git add` accidental.
+2. **Documentación coherente**: el `README.md` no contradice al
+   `LICENSE` real (MIT, Copyright 2026 Rene Kuhm).
+3. **Lints activos**: `analysis_options.yaml` va más allá de
+   `flutter_lints` por defecto, adecuado a una app de seguridad.
+4. **Coverage gate**: CI mide cobertura en `lib/core/security/` con
+   umbral mínimo exigible.
+5. **Roadmap sync**: ADR-004 documenta la decisión binaria sobre
+   `lib/core/sync/` (reducir superficie, no promover ni congelar).
+6. **Widget test coverage**: las 3 pantallas presentation-level sin
+   test dedicado tienen al menos un testWidgets que ejercita el
+   path más común.
 
 ## Scope
 
 ### In Scope
-- Editar `.gitignore` raíz para cubrir `*.apk` y binarios comunes de build
-  locales.
-- Reescribir la sección "Licencia" del README para apuntar al `LICENSE` MIT.
-- Agregar step `flutter test --coverage` al workflow `flutter-ci.yml`, con
-  umbral mínimo exigido vía script.
-- Endurecer `analysis_options.yaml` con reglas adicionales.
-- Documentar decisión de roadmap para la capa sync (ADR nuevo o nota en
-  `docs/store-release-checklist.md`).
-- Crear 3 archivos de test de widget siguiendo el patrón existente
-  (fakes + in-memory services).
+
+- `.gitignore` raíz: patrones para `*.apk`, `*.exe`, `*.dmg`.
+- `README.md` sección Licencia: reescrita para apuntar a MIT.
+- `analysis_options.yaml`: 4 reglas adicionales
+  (`prefer_const_constructors`, `prefer_const_declarations`,
+  `unawaited_futures`, `avoid_dynamic_calls`).
+- `// ignore_for_file: <rule>` con justificación en 14 archivos
+  donde las reglas nuevas generan violaciones legítimas.
+- `.github/workflows/flutter-ci.yml`: step de coverage.
+- `scripts/check_coverage.sh`: script bash que valida
+  `coverage/lcov.info` contra umbral sobre `lib/core/security/`.
+- `docs/architecture/ADR-004-roadmap-sync.md`: decisión de roadmap.
+- `docs/architecture/ADR-005-repo-hygiene.md`: política de lints.
+- 3 tests de widget siguiendo el patrón de
+  `vault_dashboard_screen_test.dart`.
 
 ### Out of Scope
-- Cambios en lógica de cifrado o de unlock.
+
+- Cambios en la lógica de cifrado o de unlock.
 - Cambios en el vault format (v2 sigue intacto).
-- Refactor de la capa sync más allá de la decisión de roadmap.
-- iOS/macOS/web (siguen en master-password only, no entran acá).
-- Setup de OpenSpec/SDD a nivel repo (este change se monta ad-hoc en
-  `openspec/changes/` y se archiva al cerrar).
+- Refactor de la capa sync (eso es
+  `vaulta-sync-surface-reduction`, un change aparte basado en la
+  decisión de ADR-004).
+- Docstrings en APIs públicas de `lib/app/` o `lib/features/`
+  (eso es `vaulta-public-api-docs` y su follow-up
+  `vaulta-public-api-docs-extended`).
+- iOS / macOS / web (siguen en master-password only).
 
 ## Capabilities
 
 ### New Capabilities
-- `repo-hygiene`: reglas de ignore, README, y disciplina de no commitear
+
+- `repo-hygiene`: ignores, README, disciplina de no commitear
   artefactos de build locales.
-- `test-coverage-gate`: cobertura medida en CI con umbral mínimo.
-- `lint-discipline`: lints adicionales activos en `analysis_options.yaml`.
-- `widget-test-coverage`: cobertura de widget tests para todas las pantallas
-  presentation-level.
+- `test-coverage-gate`: cobertura medida en CI con umbral
+  configurable (default 50% sobre `lib/core/security/`, plan
+  trimestral para expandir).
+- `lint-discipline`: 4 reglas adicionales activas en
+  `analysis_options.yaml` con estrategia gradual documentada
+  (ADR-005).
+- `widget-test-coverage`: cobertura de widget tests para
+  `AccessScreen`, `AppShell`, `SyncConflictsSheet`.
 
 ### Modified Capabilities
-- `ci-pipeline` (implícita en `flutter-ci.yml`): agrega step de coverage.
+
+- `ci-pipeline` (implícita en `flutter-ci.yml`): agrega step de
+  coverage con validación de umbral.
 
 ## Approach
 
-| Punto | Approach | Riesgo |
-|---|---|---|
-| 1 | Agregar `/vaulta.apk`, `*.apk`, `*.exe`, `*.dmg` a `.gitignore` raíz | Bajo |
-| 2 | Reescribir sección Licencia del README; verificar que LICENSE apunte a MIT | Bajo |
-| 3 | Step `flutter test --coverage` + script bash con umbral sobre `lcov.info` | Medio (umbral a definir) |
-| 4 | Sumar reglas en `analysis_options.yaml` con estrategia **gradual** (`// ignore_for_file:` para violaciones existentes, regla exigida para código nuevo). **Nota**: `public_member_api_docs` se retir\u00f3 de este change por magnitud (739 violaciones en 50+ archivos) y queda como follow-up `vaulta-public-api-docs` | Alto (puede romper el build) |
-| 5 | ADR-004-roadmap-sync.md con decisión explícita del usuario | Bajo (doc) |
-| 6 | Tres archivos `*_test.dart` siguiendo `vault_dashboard_screen_test.dart` como template | Bajo |
+### Fase 1: repo hygiene (T1 + T2 + T6)
+
+- T1: `.gitignore` cubre `*.apk`, `*.exe`, `*.dmg`. El APK de 57 MB
+  preexistente queda ignorado retroactivamente.
+- T2: README sección Licencia reescrita. Frase obsoleta sobre
+  "definir licencia formal" eliminada.
+- T6: ADR-005 (`docs/architecture/ADR-005-repo-hygiene.md`)
+  documenta la política de lints gradual con
+  `// ignore_for_file:` y la estrategia de coverage gate.
+
+### Fase 2: lint discipline (T3)
+
+- 4 reglas agregadas a `analysis_options.yaml`.
+- 14 archivos reciben `// ignore_for_file: <rule>` con comentario
+  breve que justifica la deuda (las reglas son obligatorias
+  hacia adelante; las violaciones existentes se cierran
+  gradualmente en cambios posteriores).
+- `public_member_api_docs` (739 violaciones en 50+ archivos)
+  retirado de este change y diferido a
+  `vaulta-public-api-docs` por magnitud.
+
+### Fase 3: coverage gate (T4)
+
+- `flutter test --coverage` produce `coverage/lcov.info`.
+- `scripts/check_coverage.sh` valida el archivo contra umbral
+  sobre `lib/core/security/`.
+- Baseline medido: 52.4% (532/1015 líneas en 13 archivos).
+- Umbral conservador: 50% inicial, plan trimestral para
+  expandir.
+
+### Fase 4: roadmap sync (T5)
+
+- ADR-004 creado con decisión **(b) Reducir superficie**.
+- Alternativas (a) promover y (c) congelar documentadas con
+  motivos de descarte.
+- Tareas downstream (consolidación de pull/push en
+  `BidirectionalSyncService`, marcado de `device_registration_*`
+  como internal) listadas como follow-up, no como trabajo de
+  este change.
+
+### Fase 5: widget tests (T7 + T8 + T9)
+
+- 3 tests siguiendo el patrón de
+  `test/features/vault/presentation/vault_dashboard_screen_test.dart`
+  (fakes + in-memory services, sin platform channels reales).
+- Viewport 1080x4000 necesario para AccessScreen (el CTA "Lock
+  vault now" está debajo del fold por default).
+- `_SyncConflictsSheet` es privada; el test dispara la API
+  pública `showSyncConflictsSheet` con un fake resolver.
 
 ## Affected Areas
 
 | Area | Impact | Description |
 |------|--------|-------------|
-| `.gitignore` | Modified | +4 patrones de ignore |
+| `.gitignore` | Modified | +11 patrones de ignore |
 | `README.md` | Modified | Sección Licencia reescrita |
+| `analysis_options.yaml` | Modified | +4 reglas de lint |
+| 14 archivos en `lib/**` y `test/**` | Modified | `// ignore_for_file: <rule>` con justificación |
 | `.github/workflows/flutter-ci.yml` | Modified | +1 step de coverage |
-| `analysis_options.yaml` | Modified | +N reglas de lint |
-| `docs/architecture/ADR-004-roadmap-sync.md` | New | Decisión de roadmap sync |
-| `test/features/access/presentation/access_screen_test.dart` | New | Widget test |
-| `test/features/home/presentation/app_shell_test.dart` | New | Widget test |
-| `test/features/sync/presentation/sync_conflicts_sheet_test.dart` | New | Widget test |
+| `scripts/check_coverage.sh` | New | 58 líneas, valida `lcov.info` con awk |
+| `docs/architecture/ADR-004-roadmap-sync.md` | New | 110 líneas, decisión de roadmap sync |
+| `docs/architecture/ADR-005-repo-hygiene.md` | New | 154 líneas, política de hygiene |
+| `test/features/access/presentation/access_screen_test.dart` | New | 108 líneas, widget test |
+| `test/features/home/presentation/app_shell_test.dart` | New | 118 líneas, widget test |
+| `test/features/sync/presentation/sync_conflicts_sheet_test.dart` | New | 61 líneas, widget test |
 
 ## Risks
 
-| Risk | Likelihood | Mitigation |
-|------|------------|------------|
-| Lints nuevos rompen CI con muchas violaciones | Medium | Dry-run con `flutter analyze` antes; decidir rollout (ver pregunta bloqueante) |
-| Umbral de coverage mal calibrado (muy alto bloquea, muy bajo no agrega valor) | Medium | Empezar con floor conservador en `lib/core/security/`, expandir gradualmente |
-| Tests nuevos flaky por async/dependencias platforma | Low | Seguir patrón de fakes ya usado en `widget_test.dart` |
-| El APK en root se commitea entre el merge y el próximo `git pull` | Low | Push inmediato del `.gitignore` actualizado |
+| Risk | Mitigation aplicada |
+|------|---------------------|
+| Lints nuevos rompen CI con muchas violaciones | Rollout gradual con `// ignore_for_file:` por archivo. Las reglas quedan activas inmediatamente. |
+| Umbral de coverage mal calibrado | Baseline real medido (52.4%). Umbral conservador 50% inicial. Plan trimestral en ADR-005. |
+| Tests nuevos flaky por async / platform channels | Patrón de fakes ya usado en `widget_test.dart`. Sin platform channels reales. |
+| El APK en root se commitea entre el merge y el próximo `git pull` | Push inmediato del `.gitignore` actualizado. |
+| `// ignore_for_file:` se relaja en un commit futuro | ADR-005 prohíbe explícitamente relajar la supresión para código nuevo sin documentar. |
 
 ## Rollback Plan
 
-- `.gitignore`, `README.md`, `flutter-ci.yml`, `analysis_options.yaml`: revert
-  del commit del change.
-- ADRs: borrar archivo (no rompe nada).
-- Tests nuevos: borrar archivos (no rompe nada; el resto del coverage se
-  mantiene).
-
-## Dependencies
-
-- `flutter --version` confirmó 3.44.1 estable disponible.
-- `dart` disponible en PATH. `lcov`/`genhtml` NO están instalados en el host
-  Windows; el coverage usa el `lcov.info` crudo que produce `flutter test
-  --coverage` y se valida por suma de líneas, no por HTML.
+- `.gitignore`, `README.md`, `analysis_options.yaml`,
+  `.github/workflows/flutter-ci.yml`: revert del commit del change.
+- `scripts/check_coverage.sh`, `docs/architecture/ADR-004*.md`,
+  `docs/architecture/ADR-005*.md`: borrar archivos (no rompen
+  nada).
+- Tests nuevos: borrar archivos (no rompen nada; el resto del
+  coverage se mantiene).
 
 ## Success Criteria
 
-- [ ] `git check-ignore vaulta.apk` retorna el path.
-- [ ] `flutter analyze` sigue limpio con las reglas nuevas (o se documenta
-      estrategia de rollout si hay violaciones). `public_member_api_docs`
-      queda diferido a `vaulta-public-api-docs`.
-- [ ] CI corre `flutter test --coverage` y falla si la cobertura de
-      `lib/core/security/` cae bajo el umbral.
-- [ ] README sección Licencia referencia MIT correctamente.
-- [ ] ADR-004-roadmap-sync.md existe y tiene una decisión binaria
-      (promover / reducir / congelar).
-- [ ] Los 3 tests de widget nuevos corren y pasan con `flutter test`.
+- [x] `git check-ignore vaulta.apk` retorna el path con patrón
+      matched.
+- [x] `flutter analyze` retorna `No issues found!` con las 4
+      reglas nuevas activas.
+- [x] CI corre `flutter test --coverage` y valida umbral sobre
+      `lib/core/security/`.
+- [x] README sección Licencia referencia MIT correctamente.
+- [x] ADR-004-roadmap-sync.md existe con decisión binaria
+      documentada.
+- [x] 3 tests de widget nuevos pasan con `flutter test`.
+- [x] 86 tests verdes (eran 83, +3 nuevos).
+- [x] Coverage gate en `OK: 52.4% >= 50% umbral`.
+
+## Commits del change
+
+1. `58fc984` — `chore(repo): ignore build artifacts, fix license
+   section, scaffold hygiene ADRs` (T1, T2, T5, T6)
+2. `1f9a52d` — `chore(lint): enable stricter rules with gradual
+   ignore_for_file rollout` (T3)
+3. `e6ac2c3` — `ci(coverage): add threshold gate on
+   lib/core/security with quarterly plan` (T4)
+4. `8d63eee` — `test(widget): cover access, shell, and sync
+   conflicts screens` (T7, T8, T9)
+
+## Trabajo downstream (posterior, en otros changes)
+
+- Cerrar las 739 violaciones de `public_member_api_docs` por
+  subfolder → `vaulta-public-api-docs` →
+  `vaulta-public-api-docs-extended`.
+- Reducir la superficie de `lib/core/sync/` →
+  `vaulta-sync-surface-reduction` (T1, T2, T3 de ADR-004).
+- Migrar los consumers de los servicios viejos de sync al
+  `BidirectionalSyncService` → `vaulta-sync-migration` (T4 de
+  ADR-004).
+- Borrar los servicios viejos de sync → T5 de ADR-004 (parte de
+  `vaulta-public-api-docs-extended` o change aparte).
