@@ -22,7 +22,14 @@ class AccessScreen extends StatelessWidget {
     required this.repository,
   });
 
+  /// Security controller used to render the unlocked/locked pill
+  /// and to trigger an explicit lock from this screen.
   final VaultSecurityController securityController;
+
+  /// Vault repository. Currently unused at the UI layer but kept on
+  /// the constructor for parity with the other tabs and so future
+  /// entries (for example, "recently autofilled") can read it
+  /// without a refactor.
   final VaultRepository repository;
 
   @override

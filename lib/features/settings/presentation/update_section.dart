@@ -10,9 +10,15 @@ import '../../../app/theme/app_spacing.dart';
 import '../../../core/update/update_service.dart';
 import '../../../l10n/app_localizations.dart';
 
+/// Settings subsection that owns the in-app update flow: queries
+/// [UpdateService] for a new build, exposes a download + install
+/// button, and renders the corresponding banners. Localized to the
+/// current locale via [l10n].
 class UpdateSection extends StatefulWidget {
   const UpdateSection({super.key, required this.service});
 
+  /// Service used to query the release feed, download the APK, and
+  /// open the platform install prompt.
   final UpdateService service;
 
   @override

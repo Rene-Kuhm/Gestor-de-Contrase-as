@@ -20,6 +20,12 @@ import '../../../features/access/presentation/access_screen.dart';
 import '../../settings/presentation/settings_screen.dart';
 import '../../vault/presentation/vault_dashboard_screen.dart';
 
+/// Top-level unlocked shell: a [ScaffoldMessenger] hosting a
+/// 3-tab [IndexedStack] (Vault, Access, Settings) and the rounded
+/// bottom navigation bar.
+///
+/// Silently checks for app updates on mount and shows a snackbar
+/// when a new build is available and has not been prompted.
 class AppShell extends StatefulWidget {
   const AppShell({
     super.key,
@@ -31,11 +37,27 @@ class AppShell extends StatefulWidget {
     this.secureStorage,
   });
 
+  /// Vault repository forwarded to the [VaultDashboardScreen] and
+  /// the [AccessScreen].
   final VaultRepository repository;
+
+  /// Security controller forwarded to every child tab. Children
+  /// listen to it to react to lock/unlock transitions.
   final VaultSecurityController securityController;
+
+  /// Locale controller forwarded to the [SettingsScreen] for the
+  /// in-app language switcher.
   final AppLocaleController localeController;
+
+  /// Optional sync conflict resolver forwarded to the dashboard
+  /// (banner) and the settings screen (full list).
   final SyncConflictResolver? conflictResolver;
+
+  /// Optional device session revocation service forwarded to the
+  /// settings screen.
   final DeviceSessionRevocationService? revocationService;
+
+  /// Optional secure storage used by the in-app [UpdateService].
   final SecureStorageService? secureStorage;
 
   @override
@@ -278,10 +300,21 @@ class FeaturePlaceholderScreen extends StatelessWidget {
     this.eyebrow,
   });
 
+  /// Hero icon for the placeholder.
   final IconData icon;
+
+  /// Screen title (Spanish UI copy).
   final String title;
+
+  /// Subtitle under the title, typically a one-sentence summary of
+  /// why the feature is not yet available.
   final String subtitle;
+
+  /// Optional list of bullet points, rendered as a panel below the
+  /// header. Defaults to an empty list.
   final List<String> bullets;
+
+  /// Optional small uppercase eyebrow shown above [title].
   final String? eyebrow;
 
   @override

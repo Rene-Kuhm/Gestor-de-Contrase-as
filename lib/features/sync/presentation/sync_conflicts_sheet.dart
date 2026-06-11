@@ -8,6 +8,10 @@ import '../../../app/theme/app_spacing.dart';
 import '../../../core/sync/sync_conflict.dart';
 import '../../../core/sync/sync_conflict_resolver.dart';
 
+/// Shows the modal bottom sheet that lists pending [SyncConflictRecord]s
+/// from [resolver] and lets the user pick `keep local` or
+/// `keep remote` for each one. Resolves to `void`; the sheet is
+/// dismissed by the user or by completing the empty state.
 Future<void> showSyncConflictsSheet({
   required BuildContext context,
   required SyncConflictResolver resolver,

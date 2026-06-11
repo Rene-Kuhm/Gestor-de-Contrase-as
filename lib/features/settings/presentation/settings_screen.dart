@@ -20,6 +20,14 @@ import '../../../core/sync/device_session_revocation_service.dart';
 import '../../../core/update/update_service.dart';
 import 'update_section.dart';
 
+/// "Settings" tab: local unlock posture (biometric toggle, idle
+/// timeout, lock now, change master password), sync conflict list,
+/// connected device list with revocation, update section, language
+/// selector, and about/roadmap footer.
+///
+/// All optional services (conflict resolver, revocation service,
+/// secure storage) are only rendered when provided, so the screen
+/// stays usable in stripped-down configurations.
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({
     super.key,
@@ -30,11 +38,24 @@ class SettingsScreen extends StatefulWidget {
     this.secureStorage,
   });
 
+  /// Controller that owns the local unlock posture toggles
+  /// (biometric enable, auto-lock, idle timeout, master password).
   final VaultSecurityController securityController;
+
+  /// Locale controller for the in-app language switcher.
   final AppLocaleController localeController;
 
+  /// Optional resolver used to list and resolve pending sync
+  /// conflicts.
   final SyncConflictResolver? conflictResolver;
+
+  /// Optional service that lists and revokes registered device
+  /// sessions.
   final DeviceSessionRevocationService? revocationService;
+
+  /// Optional secure storage used by the embedded
+  /// [UpdateService] to remember which build has already been
+  /// prompted.
   final SecureStorageService? secureStorage;
 
   @override

@@ -23,8 +23,18 @@ class SecurityGate extends StatefulWidget {
     this.deviceSyncLifecycle,
   });
 
+  /// Controller that owns the [VaultSecurityStage] transition
+  /// machine. The gate rebuilds whenever the controller notifies its
+  /// listeners.
   final VaultSecurityController controller;
+
+  /// The widget subtree shown once the stage reaches
+  /// [VaultSecurityStage.unlocked] (typically the [AppShell]).
   final Widget child;
+
+  /// Optional lifecycle hook fired on session start and on app
+  /// resume. Used by the sync layer to refresh device state without
+  /// coupling the gate to a specific implementation.
   final DeviceSyncLifecycle? deviceSyncLifecycle;
 
   @override
