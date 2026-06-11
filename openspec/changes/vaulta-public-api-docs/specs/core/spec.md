@@ -53,3 +53,24 @@ class PasswordStrengthEstimator { ... }
 **Given** el cambio no toca logica
 **When** se corre `flutter test`
 **Then** los 92 tests existentes siguen verde.
+
+### REQ-PAD-004: Severidad final es `warning`
+
+**Given** la activación inicial de la regla fue con
+`public_member_api_docs: info` para dimensionar la deuda sin
+romper CI
+**And** la deuda se cerró en los 3 commits de Fase 2
+**When** se aplica el commit `2b32dd8`
+**Then** la severidad en `analysis_options.yaml` se restaura
+a `warning`
+**And** la regla queda enforceada para código nuevo.
+
+#### Scenario: la regla rompe CI para código nuevo
+
+- **Given** `analysis_options.yaml` con
+  `public_member_api_docs: warning`
+- **When** un nuevo miembro público en `lib/core/` se
+  commitea sin docstring
+- **Then** `flutter analyze` retorna exit code 1
+- **And** el CI workflow `Flutter CI` falla en el step
+  `analyze-test`
