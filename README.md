@@ -11,7 +11,7 @@
 <p align="center">
   <a href="https://github.com/Rene-Kuhm/Gestor-de-Contrase-as/releases/download/dev-latest/vaulta.apk">Descargar APK (Android)</a>
   ·
-  <a href="https://github.com/Rene-Kuhm/Gestor-de-Contrase-as/releases/download/dev-latest/vaulta.exe">Descargar EXE (Windows)</a>
+  <a href="https://github.com/Rene-Kuhm/Gestor-de-Contrase-as/releases/download/dev-latest/vaulta-windows-bundle.zip">Descargar bundle Windows</a>
   ·
   <a href="https://github.com/Rene-Kuhm/Gestor-de-Contrase-as/releases/tag/dev-latest">Ver release</a>
   ·
@@ -126,11 +126,16 @@ Ajustes > Buscar actualizaciones
 
 ## Instalacion Windows
 
-Descargar el binario x64 firmado desde el release actual:
+Descargar el bundle completo desde el release actual:
 
-[vaulta.exe](https://github.com/Rene-Kuhm/Gestor-de-Contrase-as/releases/download/dev-latest/vaulta.exe)
+[vaulta-windows-bundle.zip](https://github.com/Rene-Kuhm/Gestor-de-Contrase-as/releases/download/dev-latest/vaulta-windows-bundle.zip)
 
-Una vez descargado, ejecutar `vaulta.exe`. La primera vez que se abra, Windows SmartScreen puede pedir confirmacion ("Mas informacion" -> "Ejecutar de todas formas") porque el binario todavia no tiene firma EV de code signing empresarial; la app funciona normalmente despues de aprobarlo.
+Una vez descargado:
+
+1. Extraer todo el contenido del ZIP en una carpeta, por ejemplo `C:\Program Files\Vaulta\`. El paquete incluye `vaulta.exe`, todas las DLLs de runtime de Flutter, los plugins de Windows y la carpeta `data/` con assets.
+2. Ejecutar `vaulta.exe`. La primera vez que se abra, Windows SmartScreen puede pedir confirmacion ("Mas informacion" -> "Ejecutar de todas formas") porque el binario todavia no tiene firma EV de code signing empresarial; la app funciona normalmente despues de aprobarlo.
+
+> Importante: el ejecutable no se distribuye suelto porque necesita todas las DLLs y la carpeta `data/` en el mismo directorio. Si movés solo `vaulta.exe` a otra carpeta, la aplicacion no va a arrancar.
 
 El vault se persiste en el perfil de usuario con cifrado AES-256-GCM y la master key se guarda en Windows Credential Manager via `flutter_secure_storage_windows`.
 
