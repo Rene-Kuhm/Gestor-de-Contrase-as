@@ -73,7 +73,7 @@ class _AppShellState extends State<AppShell> {
   final _scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
   late final UpdateService _updateService = UpdateService(
     owner: 'Rene-Kuhm',
-    repo: 'Gestor-de-Contrase-as',
+    repo: 'vaulta',
     storage: widget.secureStorage,
   );
 
