@@ -439,7 +439,14 @@ class BidirectionalSyncService implements LocalVaultMutationSink {
   }) async {
     try {
       final response = await _sendToRemote(deviceId: deviceId, item: item);
-      return _interpretResponse(userId: userId, item: item, response: response);
+      // 'await' is required here: without it the Future escapes the try
+      // block and an async failure inside _interpretResponse would bypass
+      // the catch below instead of being classified as a sync error.
+      return await _interpretResponse(
+        userId: userId,
+        item: item,
+        response: response,
+      );
     } catch (error) {
       final disposition = classifySyncError(error);
       final code = syncErrorCode(error);
