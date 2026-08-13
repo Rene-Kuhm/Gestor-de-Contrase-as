@@ -61,14 +61,14 @@ if (-not [System.IO.Path]::IsPathRooted($storeFile)) {
   $storeFile = Join-Path (Resolve-Path android).Path $storeFile
 }
 [Convert]::ToBase64String([System.IO.File]::ReadAllBytes($storeFile)) |
-  gh secret set VAULTA_UPLOAD_KEYSTORE_BASE64 --repo Rene-Kuhm/Gestor-de-Contrase-as
-$props['storePassword'] | gh secret set VAULTA_UPLOAD_STORE_PASSWORD --repo Rene-Kuhm/Gestor-de-Contrase-as
-$props['keyAlias'] | gh secret set VAULTA_UPLOAD_KEY_ALIAS --repo Rene-Kuhm/Gestor-de-Contrase-as
-$props['keyPassword'] | gh secret set VAULTA_UPLOAD_KEY_PASSWORD --repo Rene-Kuhm/Gestor-de-Contrase-as
+  gh secret set VAULTA_UPLOAD_KEYSTORE_BASE64 --repo Rene-Kuhm/vaulta
+$props['storePassword'] | gh secret set VAULTA_UPLOAD_STORE_PASSWORD --repo Rene-Kuhm/vaulta
+$props['keyAlias'] | gh secret set VAULTA_UPLOAD_KEY_ALIAS --repo Rene-Kuhm/vaulta
+$props['keyPassword'] | gh secret set VAULTA_UPLOAD_KEY_PASSWORD --repo Rene-Kuhm/vaulta
 ```
 
 Verify only names/timestamps, never values:
 
 ```bash
-gh secret list --repo Rene-Kuhm/Gestor-de-Contrase-as
+gh secret list --repo Rene-Kuhm/vaulta
 ```

@@ -167,7 +167,7 @@ class _StubUpdateService implements UpdateService {
   String get owner => 'Rene-Kuhm';
 
   @override
-  String get repo => 'Gestor-de-Contrase-as';
+  String get repo => 'vaulta';
 
   @override
   Future<UpdateInfo> checkForUpdate() async {
@@ -214,7 +214,7 @@ class _ThrowingUpdateService implements UpdateService {
   String get owner => 'Rene-Kuhm';
 
   @override
-  String get repo => 'Gestor-de-Contrase-as';
+  String get repo => 'vaulta';
 
   @override
   Future<UpdateInfo> checkForUpdate() async {

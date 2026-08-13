@@ -13,7 +13,9 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw
 
-REPO = Path(r"F:\Gestor-de-Contrase-as")
+# Resolved from this file's location so the script works in any clone.
+# Override with VAULTA_REPO_ROOT if you run it from somewhere else.
+REPO = Path(os.environ.get("VAULTA_REPO_ROOT", Path(__file__).resolve().parent.parent))
 BRAND_DIR = REPO / "redesign" / "brand"
 
 # --- Brand colors (kept in sync with cv-app-icon-ink.svg) -----------

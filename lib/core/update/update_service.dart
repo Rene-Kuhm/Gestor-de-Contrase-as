@@ -88,7 +88,7 @@ class UpdateInfo {
 /// app reopens.
 class UpdateService {
   /// Builds an [UpdateService] bound to the GitHub [owner]/[repo]
-  /// (e.g. `Rene-Kuhm`/`Gestor-de-Contrase-as`) and an optional
+  /// (e.g. `Rene-Kuhm`/`vaulta`) and an optional
   /// [storage] for install-state persistence plus an optional
   /// [channel] override for tests.
   UpdateService({

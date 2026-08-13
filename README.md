@@ -9,11 +9,11 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Rene-Kuhm/Gestor-de-Contrase-as/releases/download/dev-latest/vaulta.apk">Descargar APK (Android)</a>
+  <a href="https://github.com/Rene-Kuhm/vaulta/releases/latest/download/vaulta.apk">Descargar APK (Android)</a>
   ·
-  <a href="https://github.com/Rene-Kuhm/Gestor-de-Contrase-as/releases/download/dev-latest/vaulta-windows-bundle.zip">Descargar bundle Windows</a>
+  <a href="https://github.com/Rene-Kuhm/vaulta/releases/latest/download/vaulta-windows-bundle.zip">Descargar bundle Windows</a>
   ·
-  <a href="https://github.com/Rene-Kuhm/Gestor-de-Contrase-as/releases/tag/dev-latest">Ver release</a>
+  <a href="https://github.com/Rene-Kuhm/vaulta/releases/latest">Ver release</a>
   ·
   <a href="https://www.tecnodespegue.com/">TecnoDespegue</a>
 </p>
@@ -44,6 +44,35 @@ El objetivo es ofrecer un vault local para guardar, buscar y gestionar credencia
 - Canal de actualizaciones Android desde GitHub Releases.
 - Build de Windows con tema oscuro forzado para garantizar contraste correcto sobre el fondo del escritorio.
 - Publicacion automatica de binarios firmados: `vaulta.apk` (Android) y `vaulta.exe` (Windows).
+
+## Capturas
+
+<table>
+  <tr>
+    <td width="25%"><img src="docs/publication/screenshots/01-onboarding.png" alt="Onboarding y creacion del vault" width="100%"></td>
+    <td width="25%"><img src="docs/publication/screenshots/02-dashboard.png" alt="Dashboard con metricas de seguridad" width="100%"></td>
+    <td width="25%"><img src="docs/publication/screenshots/03-search.png" alt="Busqueda interna de credenciales" width="100%"></td>
+    <td width="25%"><img src="docs/publication/screenshots/04-editor.png" alt="Editor de credenciales" width="100%"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Onboarding</sub></td>
+    <td align="center"><sub>Dashboard</sub></td>
+    <td align="center"><sub>Busqueda</sub></td>
+    <td align="center"><sub>Editor</sub></td>
+  </tr>
+  <tr>
+    <td width="25%"><img src="docs/publication/screenshots/05-detail.png" alt="Detalle de una credencial" width="100%"></td>
+    <td width="25%"><img src="docs/publication/screenshots/06-access.png" alt="Desbloqueo biometrico" width="100%"></td>
+    <td width="25%"><img src="docs/publication/screenshots/07-settings.png" alt="Ajustes y canal de actualizaciones" width="100%"></td>
+    <td width="25%"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Detalle</sub></td>
+    <td align="center"><sub>Desbloqueo</sub></td>
+    <td align="center"><sub>Ajustes</sub></td>
+    <td></td>
+  </tr>
+</table>
 
 ## Estado del producto
 
@@ -110,7 +139,7 @@ La sincronizacion remota con Supabase existe como base tecnica opcional/experime
 
 Descargar el APK firmado desde el release actual:
 
-[vaulta.apk](https://github.com/Rene-Kuhm/Gestor-de-Contrase-as/releases/download/dev-latest/vaulta.apk)
+[vaulta.apk](https://github.com/Rene-Kuhm/vaulta/releases/latest/download/vaulta.apk)
 
 Instalacion manual por ADB:
 
@@ -128,7 +157,7 @@ Ajustes > Buscar actualizaciones
 
 Descargar el bundle completo desde el release actual:
 
-[vaulta-windows-bundle.zip](https://github.com/Rene-Kuhm/Gestor-de-Contrase-as/releases/download/dev-latest/vaulta-windows-bundle.zip)
+[vaulta-windows-bundle.zip](https://github.com/Rene-Kuhm/vaulta/releases/latest/download/vaulta-windows-bundle.zip)
 
 Una vez descargado:
 

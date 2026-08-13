@@ -786,7 +786,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           UpdateSection(
             service: UpdateService(
               owner: 'Rene-Kuhm',
-              repo: 'Gestor-de-Contrase-as',
+              repo: 'vaulta',
               storage: widget.secureStorage,
             ),
           ),
